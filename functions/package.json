@@ -8,6 +8,7 @@
     "typecheck": "tsc -p tsconfig.test.json",
     "build": "tsc",
     "test": "npm run typecheck && vitest run",
+    "test:emulator": "vitest run test/importacao.emulator.test.ts",
     "serve": "firebase emulators:start --only auth,firestore,functions"
   },
   "dependencies": {

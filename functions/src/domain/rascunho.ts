@@ -10,8 +10,11 @@ export type CriarRascunhoInput = {
 
 /** Liga um comando ao conteúdo: mesmo commandId com dados diferentes é recusado. */
 export function hashRascunho(input: CriarRascunhoInput): string {
+  // Normaliza o CPF como é persistido, para que formatos equivalentes não
+  // produzam hashes divergentes.
+  const cpf = input.cpf.replace(/\D/g, '');
   return createHash('sha256')
-    .update(JSON.stringify({ nomeCompleto: input.nomeCompleto, profissao: input.profissao, cpf: input.cpf, igrejaId: input.igrejaId }))
+    .update(JSON.stringify({ nomeCompleto: input.nomeCompleto, profissao: input.profissao, cpf, igrejaId: input.igrejaId }))
     .digest('hex');
 }
 

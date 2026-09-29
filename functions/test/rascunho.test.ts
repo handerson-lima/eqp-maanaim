@@ -12,8 +12,14 @@ describe('contrato do rascunho', () => {
     expect(() => validarRascunho({ ...valido, papel: 'ADMIN' })).toThrow('INVALID_ARGUMENT');
   });
   it('liga o recibo ao conteúdo e muda com qualquer campo do domínio', () => {
-    expect(hashRascunho(valido)).toMatch(/^[0-9a-f]{64}$/);
-    expect(hashRascunho({ ...valido, igrejaId: 'outra' })).not.toBe(hashRascunho(valido));
-    expect(hashRascunho({ ...valido, cpf: '529.982.247-26' })).not.toBe(hashRascunho(valido));
+    const base = hashRascunho(valido);
+    expect(base).toMatch(/^[0-9a-f]{64}$/);
+    expect(hashRascunho({ ...valido })).toBe(base);
+    expect(hashRascunho({ ...valido, nomeCompleto: 'Ana de Souza' })).not.toBe(base);
+    expect(hashRascunho({ ...valido, profissao: 'Pedagoga' })).not.toBe(base);
+    expect(hashRascunho({ ...valido, cpf: '529.982.247-26' })).not.toBe(base);
+    expect(hashRascunho({ ...valido, igrejaId: 'outra' })).not.toBe(base);
+    // Formatos equivalentes de CPF não divergem o hash.
+    expect(hashRascunho({ ...valido, cpf: '52998224725' })).toBe(base);
   });
 });

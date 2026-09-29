@@ -11,3 +11,8 @@ firebase-debug.log
 firestore-debug.log
 flutter_app/.env*
 flutter_app/firebase_options.dart
+# Planilha local de carga administrativa (contém PII): nunca versionar
+igreja-pastor-email*
+**/igreja-pastor-email*
+*.planilha.local.csv
+complemento-pastores*.json

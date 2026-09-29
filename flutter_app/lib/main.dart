@@ -182,7 +182,8 @@ class _CadastroState extends State<Cadastro> {
       aviso = null;
     });
     try {
-      await widget.auth.cadastrar(email: email.text, senha: senha.text, dados: {
+      final resultado =
+          await widget.auth.cadastrar(email: email.text, senha: senha.text, dados: {
         'commandId': commandId,
         'nomeCompleto': nome.text,
         'profissao': profissao.text,
@@ -190,8 +191,9 @@ class _CadastroState extends State<Cadastro> {
         'igrejaId': igreja!
       });
       if (mounted) {
-        setState(() => aviso =
-            'Cadastro iniciado. Sua ficha está em rascunho; isto não concede aprovação ou função.');
+        setState(() => aviso = resultado.retomado
+            ? 'Sua ficha já estava em rascunho e foi retomada; isto não concede aprovação ou função.'
+            : 'Cadastro iniciado. Sua ficha está em rascunho; isto não concede aprovação ou função.');
       }
     } catch (_) {
       if (mounted) {
@@ -239,21 +241,35 @@ class _CadastroState extends State<Cadastro> {
                                         .snapshots(),
                                     builder: (_, s) {
                                       if (s.hasError) {
-                                        return const Padding(
-                                            padding:
-                                                EdgeInsets.only(bottom: 14),
-                                            child: Text(
-                                                'Não foi possível carregar as igrejas.'));
+                                        return Padding(
+                                            padding: const EdgeInsets.only(
+                                                bottom: 14),
+                                            child: Semantics(
+                                                liveRegion: true,
+                                                child: const Text(
+                                                    'Não foi possível carregar as igrejas.')));
                                       }
                                       if (!s.hasData) {
-                                        return const Padding(
-                                            padding:
-                                                EdgeInsets.only(bottom: 14),
-                                            child: Center(
-                                                child:
-                                                    CircularProgressIndicator()));
+                                        return Padding(
+                                            padding: const EdgeInsets.only(
+                                                bottom: 14),
+                                            child: Semantics(
+                                                liveRegion: true,
+                                                label: 'Carregando igrejas',
+                                                child: const Center(
+                                                    child:
+                                                        CircularProgressIndicator())));
                                       }
                                       final itens = s.data!.docs;
+                                      if (itens.isEmpty) {
+                                        return Padding(
+                                            padding: const EdgeInsets.only(
+                                                bottom: 14),
+                                            child: Semantics(
+                                                liveRegion: true,
+                                                child: const Text(
+                                                    'Nenhuma igreja disponível no momento.')));
+                                      }
                                       // Reconcilia a seleção: um valor que
                                       // deixou de existir não quebra o
                                       // dropdown.

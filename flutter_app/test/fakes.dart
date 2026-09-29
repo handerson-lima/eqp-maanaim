@@ -31,12 +31,14 @@ class RascunhoFake implements RascunhoGateway {
   int chamadas = 0;
   Map<String, String>? ultimo;
   bool falhar = false;
+  bool retomado = false;
 
   @override
-  Future<void> criarOuRetomar(Map<String, String> dados) async {
+  Future<RascunhoResultado> criarOuRetomar(Map<String, String> dados) async {
     chamadas++;
     ultimo = dados;
     if (falhar) throw Exception('falha simulada');
+    return RascunhoResultado(estado: 'RASCUNHO', retomado: retomado);
   }
 }
 

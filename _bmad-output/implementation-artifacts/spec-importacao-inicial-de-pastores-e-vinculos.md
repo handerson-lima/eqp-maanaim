@@ -2,9 +2,10 @@
 title: 'Importação inicial de pastores e vínculos'
 type: 'feature'
 created: '2026-09-29'
-status: 'ready-for-dev'
+status: 'in-progress'
 route: 'dispatch'
 review_loop_iteration: 0
+baseline_commit: 'e7284f6ca95dd671116df47f4295dbc3907eb396'
 context:
   - '_bmad-output/specs/spec-gestao-voluntarios-maanaim/SPEC.md'
   - '_bmad-output/planning-artifacts/architecture/architecture-eqp_maanaim-2026-09-28/ARCHITECTURE-SPINE.md'

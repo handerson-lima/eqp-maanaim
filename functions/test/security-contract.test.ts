@@ -12,7 +12,9 @@ describe('contratos de segurança executáveis', () => {
     expect(regras).toContain('match /{document=**} { allow read, write: if false; }');
     expect(regras).toContain('allow get, list: if resource.data.ativo == true;');
     expect(regras).toContain('allow write: if false;');
-    expect(regras).not.toContain('match /fichas');
+    // Nenhuma regra concede acesso condicionado a `request.auth`; a leitura da
+    // ficha é coberta pelo deny global.
+    expect(regras).not.toMatch(/allow\s+[^;]*request\.auth/);
   });
   it('exige App Check, autenticação, recibo idempotente e correlação para o rascunho', () => {
     expect(comando).toContain('enforceAppCheck: true');

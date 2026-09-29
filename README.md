@@ -26,3 +26,40 @@ Regras deny-by-default em `firestore.rules`: toda a escrita de domínio e toda l
 ## Pastores importados
 
 Pastores importados não recebem convite automático. Eles definem a primeira senha por **Esqueci minha senha**, como qualquer conta existente; esse fluxo não cria nem altera papel, vínculo ou escopo.
+
+## Carga inicial de pastores e vínculos
+
+Carga administrativa, idempotente e transacional que associa um Pastor Local vigente a cada igreja a partir da planilha local `igreja,pastor,email`. A planilha nunca é versionada e o relatório nunca ecoa PII.
+
+### Pré-requisitos
+
+- Igrejas canônicas já semeadas em `igrejas/{id}` com `codigo` como `String` e `ativo: true` (Story 1.2). Código ausente ou igreja inativa recusam a linha sem gravar vínculo parcial.
+- `npm run build --prefix functions` antes de executar o script (ele consome `functions/lib`).
+- Credenciais administrativas por Application Default Credentials (produção) ou variáveis do Emulator (`FIREBASE_AUTH_EMULATOR_HOST`, `FIRESTORE_EMULATOR_HOST`, `GCLOUD_PROJECT`).
+
+### Execução
+
+```bash
+# 1) simulação: valida planilha e base, sem gravar nada
+node scripts/importar-pastores-iniciais.mjs --dry-run "/caminho/local/igreja-pastor-email.csv"
+
+# 2) execução (emulador ou credenciais administrativas)
+node scripts/importar-pastores-iniciais.mjs --executar "/caminho/local/igreja-pastor-email.csv"
+```
+
+O script imprime um recibo JSON agregado (`codigoIgreja`, `status`, `motivo`) sem nomes, e-mails ou CPF, e sai com código `1` se houver qualquer linha recusada.
+
+### Comportamento
+
+- Deduplica a pessoa pela conta Firebase Authentication (e-mail); um pastor em várias igrejas gera uma única `pessoas/{uid}` e um vínculo próprio por igreja.
+- Cria a conta sem senha e sem convite; o pastor define a senha por recuperação na tela de login.
+- Mantém no máximo um Pastor Local vigente por igreja; se a igreja já tem outro responsável, recusa a linha e exige o fluxo explícito de substituição.
+- Os vínculos ausentes na planilha são acrescentados por referência a outra igreja do mesmo pastor: Macau (`240005`) pela identidade de Mossoró (`240006`) e Ponta Negra (`240029`) pela de Monte Alegre (`240022`), sem o sufixo `| RN`.
+- A vigência inicia na execução, em UTC; recibo (`commands`), evidência (`vinculosPastorIgreja`) e `auditOutbox` são gravados na mesma transação do vínculo.
+- Reexecutar é idempotente: não duplica pessoas, contas, igrejas ou vínculos e preserva nomes/vínculos editados depois.
+
+### Recuperação segura
+
+Se a Firebase CLI/emulador falhar, nenhuma transação parcial é confirmada: corrija o ambiente e reexecute o mesmo comando (ou a mesma planilha com novo `--command-id`). Linhas recusadas podem ser corrigidas e reenviadas; vínculos já criados retornam `JA_VIGENTE`.
+
+Coleções envolvidas: `igrejas` (catálogo e ponteiro vigente), `pessoas` (PII mínima), `vinculosPastorIgreja` (histórico append-only), `commands` e `auditOutbox` (correlação sem PII). Toda escrita direta do cliente é negada pelas Rules.

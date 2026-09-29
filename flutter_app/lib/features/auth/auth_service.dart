@@ -10,9 +10,16 @@ abstract interface class IdentidadeGateway {
   Future<void> enviarRedefinicao(String email, ActionCodeSettings settings);
 }
 
+/// Resultado permitido da callable de rascunho, sem PII.
+class RascunhoResultado {
+  const RascunhoResultado({required this.estado, required this.retomado});
+  final String estado;
+  final bool retomado;
+}
+
 /// Mutação de rascunho, sempre executada no backend autenticado.
 abstract interface class RascunhoGateway {
-  Future<void> criarOuRetomar(Map<String, String> dados);
+  Future<RascunhoResultado> criarOuRetomar(Map<String, String> dados);
 }
 
 class FirebaseIdentidadeGateway implements IdentidadeGateway {
@@ -40,8 +47,14 @@ class FirebaseRascunhoGateway implements RascunhoGateway {
   final FirebaseFunctions _functions;
 
   @override
-  Future<void> criarOuRetomar(Map<String, String> dados) async {
-    await _functions.httpsCallable('criarOuRetomarRascunho').call(dados);
+  Future<RascunhoResultado> criarOuRetomar(Map<String, String> dados) async {
+    final resposta =
+        await _functions.httpsCallable('criarOuRetomarRascunho').call(dados);
+    final dadosResposta = (resposta.data as Map).cast<String, dynamic>();
+    return RascunhoResultado(
+      estado: dadosResposta['estado'] as String? ?? 'RASCUNHO',
+      retomado: dadosResposta['retomado'] as bool? ?? false,
+    );
   }
 }
 
@@ -52,10 +65,13 @@ class AuthService {
 
   /// Só reaproveita a sessão quando ela já é a mesma identidade recém-criada
   /// para este e-mail; uma sessão de outra conta nunca recebe estes dados.
+  /// E-mail é comparado sem diferenciar maiúsculas/minúsculas, pois o Firebase
+  /// Auth normaliza o endereço armazenado.
   static bool precisaCriarIdentidade(String? emailAtual, String emailAlvo) =>
-      emailAtual == null || emailAtual != emailAlvo.trim();
+      emailAtual == null ||
+      emailAtual.trim().toLowerCase() != emailAlvo.trim().toLowerCase();
 
-  Future<void> cadastrar(
+  Future<RascunhoResultado> cadastrar(
       {required String email,
       required String senha,
       required Map<String, String> dados}) async {
@@ -65,7 +81,7 @@ class AuthService {
     if (precisaCriarIdentidade(_identidade.emailAtual, alvo)) {
       await _identidade.criarConta(alvo, senha);
     }
-    await _rascunho.criarOuRetomar(dados);
+    return _rascunho.criarOuRetomar(dados);
   }
 
   Future<void> entrar(String email, String senha) =>

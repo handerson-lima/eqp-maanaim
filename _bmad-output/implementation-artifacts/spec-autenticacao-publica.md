@@ -110,6 +110,45 @@ Rodada 2 (retomada): as camadas blind-hunter, edge-case-hunter e verification-ga
 - (carried) `false` — `flutter_app/pubspec.lock` contém uma única entrada `clock`, portanto não há chave YAML duplicada.
 - (carried) `false` — `expectedVersion` não é necessário para a criação imutável de um agregado inexistente nem para a retomada sem mutação; a transação já serializa ambas as condições.
 
+### Review Findings
+
+Rodada 3 (commit `e7284f6`, diff `e7284f6^..e7284f6`): camadas blind-hunter, edge-case-hunter, verification-gap e acceptance-auditor.
+
+**Decision-needed**
+
+- (resolvido) "Estado permitido inacessível / retorno da callable descartado" — decisão: entregar estado pela callable, sem reabrir leitura direta da ficha. Reclassificado como patch abaixo.
+- (resolvido) "Reenvio com novo `commandId` descarta dados editados" — decisão: recusar divergência (`already-exists`). Reclassificado como patch abaixo.
+
+**Patch**
+
+- [x] [Review][Patch] Retorno `{estado, retomado}` descartado e leitura do dono removida [flutter_app/lib/features/auth/auth_service.dart:43] — devolver o resultado da callable, propagar por `AuthService.cadastrar` e refletir no aviso/UI (criado vs. retomado), sem reabrir leitura direta da ficha (`firestore.rules`). [A1+B4+A2+A10]
+- [x] [Review][Patch] Reenvio com novo `commandId` e conteúdo divergente deve ser recusado [functions/src/commands/criarOuRetomarRascunho.ts:36] — comparar o conteúdo da submissão com a ficha existente e lançar `already-exists` quando divergir, em vez de retornar sucesso silencioso. [B5]
+- [x] [Review][Patch] `precisaCriarIdentidade` compara e-mail de forma case-sensitive [flutter_app/lib/features/auth/auth_service.dart:55] — Firebase normaliza o e-mail para minúsculas; retentativa com e-mail em caixa mista reexecuta `criarConta` e falha com `email-already-in-use`, prendendo o usuário. [B2+E1]
+- [x] [Review][Patch] `payloadHash` usa CPF não normalizado enquanto a ficha grava apenas dígitos [functions/src/domain/rascunho.ts:14] — formatos equivalentes geram hashes diferentes e um retry idempotente é recusado como `already-exists`. [B1+E5+A7]
+- [x] [Review][Patch] Ramo de reabertura de recibo recria o agregado sem evidência correlacionada e sem revalidar a igreja [functions/src/commands/criarOuRetomarRascunho.ts:31] — viola AD-8 (recriação sem `auditOutbox`) e aceita igreja inativa. [B3+E4+A6+E3]
+- [x] [Review][Patch] Teste de contrato de regras verifica ausência de substring, não a negação [functions/test/security-contract.test.ts:15] — `not.toContain('match /fichas')` quebra se um bloco de negação explícito for adicionado e não prova a recusa. [B6+A11]
+- [x] [Review][Patch] `comandoOpaco` sem teste contra o contrato de `commandId` do servidor [flutter_app/lib/main.dart:13] — nada garante `^[A-Za-z0-9_-]{16,128}$` nem unicidade. [B9+V3]
+- [x] [Review][Patch] Guarda de reenvio do botão Entrar sem teste [flutter_app/lib/main.dart:382] — nenhum teste exercita o caminho de `entrar`. [V4]
+- [x] [Review][Patch] Teste de sensibilidade de `hashRascunho` cobre 2 de 4 campos e não testa determinismo [functions/test/rascunho.test.ts:14] — `nomeCompleto`/`profissao` não são exercitados, apesar do Implementation Notes afirmar cobertura por campo. [V1]
+- [x] [Review][Patch] Seletor de igrejas sem estado vazio e indicador de carregamento não anunciado [flutter_app/lib/main.dart:256] — catálogo vazio deixa o dropdown sem saída; indicador sem região viva. [B8+E6]
+
+**Defer**
+
+- [x] [Review][Defer] Ramo transacional (divergência e reabertura) sem teste executável [functions/test/security-contract.test.ts:7] — deferred: integração por Emulator já registrada em `deferred-work.md`; os testes atuais só varrem o texto-fonte. [B7+V2]
+- [x] [Review][Defer] PWA sem ícones e sem alvo de deploy (`hosting`/`.firebaserc`) [flutter_app/web/manifest.json] — deferred: já registrado em `deferred-work.md`. [A8]
+- [x] [Review][Defer] Verificação de acessibilidade (teclado, 44 px, leitor de tela) não automatizada [flutter_app/lib/main.dart] — deferred: já registrado em `deferred-work.md`. [A9]
+
+**Rejected**
+
+- `false` — `PASSWORD_RESET_CONTINUE_URL` sem guarda no uso: o bootstrap valida `resetUrl.isEmpty` antes de subir a UI (`main.dart:34`) e a constante é compile-time nos dois pontos. [B10]
+- `false` — retentativa após reload falharia com `email-already-in-use`: o Firebase Web persiste a sessão, então após reload `emailAtual` não é nulo e o caminho de retomada é usado; a navegação de sessão restaurada segue como item já deferido. [A3]
+- `false` — `fichas/{uid}` violaria a convenção de ID opaco: UIDs do Firebase Auth já são identificadores opacos; o modelo por UID está registrado em `deferred-work.md`. [A5]
+- `false` — README diz `commands`/`auditOutbox` "sem PII" mas guardam `uid`/`actorUid`: UIDs são identificadores permitidos por AD-12, não PII. [B13]
+- `low` (não corrigido) — `pubspec.lock` editado à mão (`dart: ">=3.11.0"`): regenerado por `flutter pub get`; cosmético. [B11]
+- `low` (não corrigido) — recibo legado sem `payloadHash`: não há recibos de produção (greenfield); a guarda extra só afetaria estado de upgrade. [E2]
+- `low` (não corrigido) — `login_recuperacao_test` cobre apenas o ramo de falha: o caminho de resposta neutra, de maior risco, já está testado. [B12]
+- rejeitado por regra — "Emulator não executado e spec marcado como `done`": o único fix seria editar o próprio spec sob revisão. [A4]
+
 ## Design Notes
 
 Separar identidade de domínio evita que a criação de conta contorne a cadeia de aprovação. O rascunho precisa tolerar o intervalo entre Firebase Auth bem-sucedido e a primeira chamada autenticada, para que uma falha de rede não gere uma segunda ficha. A recuperação usa confirmação uniforme porque diferenças observáveis transformariam a tela pública em oráculo de contas.
