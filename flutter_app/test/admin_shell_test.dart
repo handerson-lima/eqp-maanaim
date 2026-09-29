@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fakes.dart';
+import 'package:eqp_maanaim/ui/identidade.dart';
 
 const _igrejas = <IgrejaCatalogo>[
   IgrejaCatalogo(id: '1', nome: 'Goianinha', codigo: '240008', ativo: true),
@@ -14,15 +15,22 @@ const _equipes = <EquipeCatalogo>[
   EquipeCatalogo(id: 'e1', nome: 'Apoio', ativo: true),
 ];
 
-Widget _shell({required VoidCallback onSair}) => MaterialApp(
-      home: AdminShell(
-        onSair: onSair,
-        catalogo: CatalogoFake(
-            resposta:
-                const CatalogoResposta(igrejas: _igrejas, equipes: _equipes)),
-        seed: SeedFake(),
-      ),
-    );
+Widget _shell({required VoidCallback onSair, double escala = 1}) => MaterialApp(
+  theme: temaMaanaim(),
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(
+      context,
+    ).copyWith(textScaler: TextScaler.linear(escala)),
+    child: child!,
+  ),
+  home: AdminShell(
+    onSair: onSair,
+    catalogo: CatalogoFake(
+      resposta: const CatalogoResposta(igrejas: _igrejas, equipes: _equipes),
+    ),
+    seed: SeedFake(),
+  ),
+);
 
 void _definirTamanho(WidgetTester tester, Size tamanho) {
   tester.view.physicalSize = tamanho;
@@ -31,9 +39,21 @@ void _definirTamanho(WidgetTester tester, Size tamanho) {
 }
 
 void main() {
+  for (final largura in [600.0, 1000.0]) {
+    testWidgets('navegação responsiva em $largura com texto ampliado', (
+      tester,
+    ) async {
+      _definirTamanho(tester, Size(largura, 900));
+      await tester.pumpWidget(_shell(onSair: () {}, escala: 2));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ConsultaCatalogo), findsOneWidget);
+    });
+  }
   group('AdminShell desktop (≥600px)', () {
-    testWidgets('exibe NavigationRail com papel ativo e sign-out',
-        (tester) async {
+    testWidgets('exibe NavigationRail com papel ativo e sign-out', (
+      tester,
+    ) async {
       _definirTamanho(tester, const Size(800, 600));
       bool saiu = false;
       await tester.pumpWidget(_shell(onSair: () => saiu = true));

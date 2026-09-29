@@ -3,15 +3,15 @@ name: Sistema de Gestão de Voluntários do Maanaim
 status: final
 sources:
   - ../../PRD-GESTAO-VOLUNTARIOS-MAANAIM-v1.1.md
-updated: 2026-09-28
+updated: 2026-09-29
 colors:
-  primary: '#1F5B45'
+  primary: '#005BD8'
   primary-foreground: '#FFFFFF'
   surface: '#FFFFFF'
-  surface-subtle: '#F6F8F6'
-  ink: '#17211C'
-  muted: '#5C6A62'
-  border: '#D6E0D9'
+  surface-subtle: '#F3F7FB'
+  ink: '#13233D'
+  muted: '#50627A'
+  border: '#DCE5EF'
   success: '#16794A'
   warning: '#9A6700'
   danger: '#B42318'
@@ -28,11 +28,11 @@ components:
 
 ## Brand & Style
 
-**[ASSUMPTION]** Interface institucional, sóbria e acolhedora: clareza sobre o estado do processo acima de ornamentação. O sistema não possui identidade visual fornecida; estes tokens são provisórios e devem ser substituídos por diretrizes do Maanaim quando existirem.
+Referência visual fornecida pelo usuário em 29/09/2026: interface institucional com navegação azul-marinho (#0C2940), ações azuis, fundo azul muito claro e painéis brancos com bordas discretas. No acesso desktop, marca à esquerda e formulário à direita; no celular, marca compacta acima do formulário. Usar o nome Maanaim até que os arquivos oficiais do logotipo e da fotografia estejam disponíveis.
 
 ## Colors
 
-Verde identifica ação principal e continuidade; cores de estado só reforçam texto e ícone. Nunca usar vermelho para rejeição sem a explicação e a ação seguinte.
+Azul identifica ações principais; verde identifica estados positivos; cores de estado só reforçam texto e ícone. Nunca usar vermelho para rejeição sem a explicação e a ação seguinte.
 
 ## Typography
 
@@ -66,3 +66,7 @@ Campos e botões usam `{rounded.sm}`; cartões e painéis usam `{rounded.md}`. S
 | Explicar quem deve agir e o que bloqueia | Exibir apenas “pendente” |
 | Preservar histórico e contexto de decisão | Oferecer edição/exclusão de eventos |
 | Confirmar ações irreversíveis operacionalmente | Usar confirmação genérica sem alvo ou consequência |
+
+## Aplicação da referência
+
+Cabeçalho claro com identidade e papel ativo; menu lateral escuro no desktop; conteúdo organizado em painéis com títulos curtos. As telas futuras seguem essa composição, adaptando tabelas para cartões no celular. A imagem é referência de aparência, não fonte de dados, permissões ou funcionalidades. Não reproduzir contagens fictícias, login Google sem implementação ou rótulos de rejeição ao voluntário: prevalecem os contratos do domínio. Campos interativos mantêm contorno com contraste próprio, distinto das bordas decorativas.
