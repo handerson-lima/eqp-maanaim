@@ -100,7 +100,9 @@ async function principal() {
     '../functions/lib/domain/importacaoPastores.js'
   );
 
-  const app = getApps().length ? getApp() : initializeApp();
+  // Com ADC de usuário o Auth não infere o projeto; use GOOGLE_CLOUD_PROJECT/GCLOUD_PROJECT.
+  const projeto = env.GOOGLE_CLOUD_PROJECT ?? env.GCLOUD_PROJECT ?? null;
+  const app = getApps().length ? getApp() : initializeApp(projeto ? { projectId: projeto } : undefined);
   const db = getFirestore(app);
 
   const ator = await db.collection('autoridadesAdministrativas').doc(uid).get();

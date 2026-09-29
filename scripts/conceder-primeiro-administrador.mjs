@@ -18,7 +18,9 @@ async function principal() {
   const { getAuth } = requireFromFunctions('firebase-admin/auth');
   const { getFirestore, FieldValue } = requireFromFunctions('firebase-admin/firestore');
   const { reconciliarClaimAdministrativa } = await import('../functions/lib/repositories/autoridadeAdministrativa.js');
-  const app = getApps().length ? getApp() : initializeApp();
+  // Com ADC de usuário o Auth não infere o projeto; use GOOGLE_CLOUD_PROJECT/GCLOUD_PROJECT.
+  const projeto = env.GOOGLE_CLOUD_PROJECT ?? env.GCLOUD_PROJECT ?? null;
+  const app = getApps().length ? getApp() : initializeApp(projeto ? { projectId: projeto } : undefined);
   const db = getFirestore(app);
   await getAuth(app).getUser(uid); // antes da transação; falha sem parcial.
   await db.runTransaction(async tx => {
