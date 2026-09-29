@@ -77,6 +77,24 @@ context:
 
 ## Review Triage Log
 
+### Review Findings
+
+- [ ] [Review][Patch] Sessão existente pode associar dados de uma nova inscrição ao UID incorreto [flutter_app/lib/features/auth/auth_service.dart:16]
+- [ ] [Review][Patch] Recibo idempotente não vincula o comando ao conteúdo nem preserva resultado correlacionado [functions/src/commands/criarOuRetomarRascunho.ts:13]
+- [ ] [Review][Patch] Criação de rascunho não produz evento/evidência e metadados mínimos correlacionados [functions/src/commands/criarOuRetomarRascunho.ts:25]
+- [ ] [Review][Patch] Leituras diretas expõem documentos de domínio e catálogo administrativo completo [firestore.rules:5]
+- [ ] [Review][Patch] Ações públicas não cumprem uniformemente alvo mínimo de 44 px e login permite envios concorrentes [flutter_app/lib/main.dart:67]
+- [ ] [Review][Patch] Seletor de igrejas falha silenciosamente para carregamento/erro e valor administrativo malformado [flutter_app/lib/main.dart:214]
+- [ ] [Review][Patch] `commandId` previsível não atende ao requisito de identificador opaco [flutter_app/lib/main.dart:146]
+- [ ] [Review][Patch] Proteção contra enumeração de e-mail no provedor não está documentada nem verificável por ambiente [README.md:7]
+- [ ] [Review][Patch] Não há testes executáveis do handoff Auth→callable e da transação do comando [flutter_app/lib/features/auth/auth_service.dart:12]
+- [ ] [Review][Patch] A pendência de integração Firebase Emulator permanece aberta para Rules e Functions [firebase.json:1]
+
+#### Rejected
+
+- false — `flutter_app/pubspec.lock` contém uma única entrada `clock`, portanto não há chave YAML duplicada.
+- false — `expectedVersion` não é necessário para a criação imutável de um agregado inexistente nem para a retomada sem mutação; a transação já serializa ambas as condições.
+
 ## Design Notes
 
 Separar identidade de domínio evita que a criação de conta contorne a cadeia de aprovação. O rascunho precisa tolerar o intervalo entre Firebase Auth bem-sucedido e a primeira chamada autenticada, para que uma falha de rede não gere uma segunda ficha. A recuperação usa confirmação uniforme porque diferenças observáveis transformariam a tela pública em oráculo de contas.
