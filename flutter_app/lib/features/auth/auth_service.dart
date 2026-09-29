@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -9,6 +10,12 @@ abstract interface class IdentidadeGateway {
   Future<void> entrar(String email, String senha);
   Future<void> enviarRedefinicao(String email, ActionCodeSettings settings);
   Future<bool> possuiAdministracao();
+
+  /// Encerra a sessão autenticada.
+  Future<void> sair();
+
+  /// Stream que emite o estado de autenticação (login/logout).
+  Stream<User?> authStateChanges();
 }
 
 /// Resultado permitido da callable de rascunho, sem PII.
@@ -21,6 +28,46 @@ class RascunhoResultado {
 /// Mutação de rascunho, sempre executada no backend autenticado.
 abstract interface class RascunhoGateway {
   Future<RascunhoResultado> criarOuRetomar(Map<String, String> dados);
+}
+
+/// Resultado do seed de catálogo, sem PII.
+class SeedResultado {
+  const SeedResultado({required this.dados});
+  final Map<String, dynamic> dados;
+
+  int _inteiro(List<String> chaves) {
+    for (final chave in chaves) {
+      final valor = dados[chave];
+      if (valor is num) return valor.toInt();
+      if (valor is String) {
+        final convertido = int.tryParse(valor);
+        if (convertido != null) return convertido;
+      }
+    }
+    return 0;
+  }
+
+  int get igrejasCriadas => _inteiro(const ['igrejasCriadas', 'igrejasCreated']);
+  int get equipesCriadas => _inteiro(const ['equipesCriadas', 'equipesCreated']);
+
+  /// `true` quando o backend reconheceu o `commandId` e devolveu o recibo já
+  /// gravado, sem reexecutar a mutação (idempotência).
+  bool get repetido => dados['repetido'] == true;
+
+  String get versaoDataset => (dados['datasetVersao'] ?? '').toString();
+
+  String get resumo {
+    final estado =
+        repetido ? 'Recibo idempotente (já executado)' : 'Execução concluída';
+    final versao = versaoDataset.isEmpty ? '' : ' · Dataset: $versaoDataset';
+    return 'Igrejas criadas: $igrejasCriadas · Equipes criadas: '
+        '$equipesCriadas · $estado$versao';
+  }
+}
+
+/// Disparo do seed de catálogo, sempre executado no backend autenticado.
+abstract interface class SeedGateway {
+  Future<SeedResultado> semearCatalogo(String commandId);
 }
 
 /// Nome da Custom Claim administrativa; espelha o backend.
@@ -56,6 +103,12 @@ class FirebaseIdentidadeGateway implements IdentidadeGateway {
     final token = await usuario.getIdTokenResult(true);
     return claimAdministrativaAtiva(token.claims);
   }
+
+  @override
+  Future<void> sair() => _auth.signOut();
+
+  @override
+  Stream<User?> authStateChanges() => _auth.authStateChanges();
 }
 
 class FirebaseRascunhoGateway implements RascunhoGateway {
@@ -71,6 +124,20 @@ class FirebaseRascunhoGateway implements RascunhoGateway {
       estado: dadosResposta['estado'] as String? ?? 'RASCUNHO',
       retomado: dadosResposta['retomado'] as bool? ?? false,
     );
+  }
+}
+
+class FirebaseSeedGateway implements SeedGateway {
+  FirebaseSeedGateway(this._functions);
+  final FirebaseFunctions _functions;
+
+  @override
+  Future<SeedResultado> semearCatalogo(String commandId) async {
+    final resposta = await _functions
+        .httpsCallable('semearCatalogoInicial')
+        .call(<String, dynamic>{'commandId': commandId});
+    final dados = (resposta.data as Map).cast<String, dynamic>();
+    return SeedResultado(dados: dados);
   }
 }
 
@@ -106,6 +173,10 @@ class AuthService {
   /// Renovar token evita que a UI mantenha uma concessão/revogação antiga.
   Future<bool> possuiAdministracao() => _identidade.possuiAdministracao();
 
+  Future<void> sair() => _identidade.sair();
+
+  Stream<User?> authStateChanges() => _identidade.authStateChanges();
+
   Future<void> recuperar(String email) => _identidade.enviarRedefinicao(
       email.trim(),
       ActionCodeSettings(
@@ -115,3 +186,4 @@ class AuthService {
   static const mensagemRecuperacaoNeutra =
       'Se houver uma conta elegível, as instruções para definir nova senha foram enviadas.';
 }
+

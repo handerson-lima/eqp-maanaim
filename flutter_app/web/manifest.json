@@ -1,1 +1,31 @@
-{"name":"Maanaim","short_name":"Maanaim","start_url":".","display":"standalone","background_color":"#FFFFFF","theme_color":"#1B5E20","description":"Gestão de voluntários"}
+{
+  "name": "Maanaim — Gestão de Voluntários",
+  "short_name": "Maanaim",
+  "start_url": ".",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1B5E20",
+  "description": "PWA administrativa para gestão de voluntários do Maanaim",
+  "id": "/",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import 'package:eqp_maanaim/main.dart';
+import 'package:eqp_maanaim/comando.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

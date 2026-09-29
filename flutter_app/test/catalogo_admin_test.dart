@@ -1,8 +1,8 @@
 import 'dart:async';
 
+import 'package:eqp_maanaim/features/admin/admin_shell.dart';
 import 'package:eqp_maanaim/features/admin/catalogo_service.dart';
 import 'package:eqp_maanaim/features/admin/consulta_catalogo.dart';
-import 'package:eqp_maanaim/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -108,13 +108,14 @@ void main() {
     expect(gateway.chamadas, 2);
   });
 
-  testWidgets('AdministracaoInicial conecta a consulta de catálogo',
-      (tester) async {
+  testWidgets('AdminShell conecta a consulta de catálogo', (tester) async {
     await tester.pumpWidget(MaterialApp(
-        home: AdministracaoInicial(
+        home: AdminShell(
+            onSair: () {},
             catalogo: CatalogoFake(
                 resposta: const CatalogoResposta(
-                    igrejas: _igrejas, equipes: _equipes)))));
+                    igrejas: _igrejas, equipes: _equipes)),
+            seed: SeedFake())));
     await tester.pumpAndSettle();
     expect(find.byType(ConsultaCatalogo), findsOneWidget);
     expect(find.text('Igapó - 240001'), findsOneWidget);

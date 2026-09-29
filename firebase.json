@@ -6,6 +6,13 @@
     "ignore": ["node_modules", ".git", "firebase-debug.log", "test", "*.local"],
     "predeploy": ["\"$RESOURCE_DIR/node_modules/.bin/tsc\" -p \"$RESOURCE_DIR\""]
   },
+  "hosting": {
+    "public": "flutter_app/build/web",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      { "source": "**", "destination": "/index.html" }
+    ]
+  },
   "emulators": {
     "auth": { "port": 9099 },
     "functions": { "port": 5001 },

@@ -30,6 +30,12 @@ class IdentidadeEntrarPendente implements IdentidadeGateway {
 
   @override
   Future<bool> possuiAdministracao() async => false;
+
+  @override
+  Future<void> sair() async {}
+
+  @override
+  Stream<User?> authStateChanges() => const Stream<User?>.empty();
 }
 
 void main() {

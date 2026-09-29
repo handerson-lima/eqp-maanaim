@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,18 +5,11 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'comando.dart';
 import 'features/auth/auth_service.dart';
 import 'features/auth/validadores.dart';
 import 'features/admin/catalogo_service.dart';
-import 'features/admin/consulta_catalogo.dart';
-
-/// Identificador opaco usado como `commandId` idempotente.
-String comandoOpaco() {
-  final r = Random.secure();
-  return List<int>.generate(16, (_) => r.nextInt(256))
-      .map((b) => b.toRadixString(16).padLeft(2, '0'))
-      .join();
-}
+import 'features/admin/admin_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,10 +54,12 @@ Future<void> main() async {
     runApp(const ConfiguracaoAusente());
     return;
   }
+  final functions = FirebaseFunctions.instance;
   runApp(MaanaimApp(
       AuthService(FirebaseIdentidadeGateway(FirebaseAuth.instance),
-          FirebaseRascunhoGateway(FirebaseFunctions.instance)),
-      catalogo: FirebaseCatalogoGateway(FirebaseFunctions.instance)));
+          FirebaseRascunhoGateway(functions)),
+      catalogo: FirebaseCatalogoGateway(functions),
+      seed: FirebaseSeedGateway(functions)));
 }
 
 class ConfiguracaoAusente extends StatelessWidget {
@@ -77,9 +71,10 @@ class ConfiguracaoAusente extends StatelessWidget {
 }
 
 class MaanaimApp extends StatelessWidget {
-  const MaanaimApp(this.auth, {super.key, this.catalogo});
+  const MaanaimApp(this.auth, {super.key, this.catalogo, this.seed});
   final AuthService auth;
   final CatalogoGateway? catalogo;
+  final SeedGateway? seed;
   @override
   Widget build(BuildContext c) => MaterialApp(
       title: 'Maanaim',
@@ -93,13 +88,43 @@ class MaanaimApp extends StatelessWidget {
               style: OutlinedButton.styleFrom(minimumSize: const Size(44, 48))),
           textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(minimumSize: const Size(44, 48)))),
-      home: Inicio(auth, catalogo: catalogo));
+      home: RaizSessao(auth, catalogo: catalogo, seed: seed));
+}
+
+/// Raiz da aplicação: ouve `authStateChanges` para restaurar sessão
+/// ao recarregar e rotear automaticamente entre login, rascunho e admin.
+class RaizSessao extends StatelessWidget {
+  const RaizSessao(this.auth, {super.key, this.catalogo, this.seed});
+  final AuthService auth;
+  final CatalogoGateway? catalogo;
+  final SeedGateway? seed;
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<User?>(
+        stream: auth.authStateChanges(),
+        builder: (context, estado) {
+          if (estado.connectionState == ConnectionState.waiting) {
+            return Scaffold(
+                body: SafeArea(
+                    child: Center(
+                        child: Semantics(
+                            label: 'Verificando sessão',
+                            child: const CircularProgressIndicator()))));
+          }
+          final usuario = estado.data;
+          if (usuario == null) {
+            return Inicio(auth);
+          }
+          return AreaAutenticada(auth, catalogo: catalogo, seed: seed);
+        },
+      );
 }
 
 class AreaAutenticada extends StatefulWidget {
-  const AreaAutenticada(this.auth, {super.key, this.catalogo});
+  const AreaAutenticada(this.auth, {super.key, this.catalogo, this.seed});
   final AuthService auth;
   final CatalogoGateway? catalogo;
+  final SeedGateway? seed;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -110,6 +135,11 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
   void _retentar() => setState(() {
         _autorizacao = widget.auth.possuiAdministracao();
       });
+
+  Future<void> _sair() async {
+    await widget.auth.sair();
+    // O StreamBuilder em RaizSessao reagirá ao logout.
+  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<bool>(
@@ -137,9 +167,23 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
                           child: const CircularProgressIndicator()))));
         }
         return estado.data!
-            ? AdministracaoInicial(catalogo: widget.catalogo)
-            : const Scaffold(
-                body: SafeArea(
+            ? AdminShell(
+                onSair: _sair,
+                catalogo: widget.catalogo,
+                seed: widget.seed,
+              )
+            : Scaffold(
+                appBar: AppBar(
+                  title: const Text('Maanaim'),
+                  actions: [
+                    IconButton(
+                      onPressed: _sair,
+                      icon: const Icon(Icons.logout),
+                      tooltip: 'Sair',
+                    ),
+                  ],
+                ),
+                body: const SafeArea(
                     child: Center(
                         child: Padding(
                             padding: EdgeInsets.all(24),
@@ -147,30 +191,9 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
       });
 }
 
-class AdministracaoInicial extends StatelessWidget {
-  const AdministracaoInicial({super.key, this.catalogo});
-  final CatalogoGateway? catalogo;
-  @override
-  Widget build(BuildContext context) {
-    final gateway = catalogo;
-    return Scaffold(
-        appBar: AppBar(title: const Text('Administração')),
-        body: SafeArea(
-            child: gateway == null
-                ? Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Semantics(
-                        header: true,
-                        child: const Text(
-                            'Área administrativa inicial. As opções disponíveis serão exibidas conforme sua autorização.')))
-                : ConsultaCatalogo(gateway)));
-  }
-}
-
 class Inicio extends StatelessWidget {
-  const Inicio(this.auth, {super.key, this.catalogo});
+  const Inicio(this.auth, {super.key});
   final AuthService auth;
-  final CatalogoGateway? catalogo;
   @override
   Widget build(BuildContext c) => Scaffold(
       body: SafeArea(
@@ -201,8 +224,7 @@ class Inicio extends StatelessWidget {
                                 onPressed: () => Navigator.push(
                                     c,
                                     MaterialPageRoute(
-                                        builder: (_) =>
-                                            Login(auth, catalogo: catalogo))),
+                                        builder: (_) => Login(auth))),
                                 child: const Text('Entrar'))
                           ]))))));
 }
@@ -398,9 +420,8 @@ class _CadastroState extends State<Cadastro> {
 }
 
 class Login extends StatefulWidget {
-  const Login(this.auth, {super.key, this.catalogo});
+  const Login(this.auth, {super.key});
   final AuthService auth;
-  final CatalogoGateway? catalogo;
   @override
   State<Login> createState() => _LoginState();
 }
@@ -471,14 +492,12 @@ class _LoginState extends State<Login> {
                                             try {
                                               await widget.auth.entrar(
                                                   email.text, senha.text);
+                                              // O StreamBuilder em RaizSessao
+                                              // reagirá ao login; basta voltar.
                                               if (mounted) {
                                                 Navigator.of(context)
-                                                    .pushAndRemoveUntil(
-                                                        MaterialPageRoute(
-                                                            builder: (_) =>
-                                                                AreaAutenticada(widget.auth,
-                                                                    catalogo: widget.catalogo)),
-                                                        (_) => false);
+                                                    .popUntil(
+                                                        (route) => route.isFirst);
                                               }
                                             } catch (_) {
                                               if (mounted) {

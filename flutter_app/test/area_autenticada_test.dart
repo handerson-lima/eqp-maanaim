@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:eqp_maanaim/features/auth/auth_service.dart';
+import 'package:eqp_maanaim/features/admin/admin_shell.dart';
 import 'package:eqp_maanaim/main.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,24 +20,29 @@ class _AuthAdmin extends AuthService {
     consultas++;
     return _resposta();
   }
+
+  @override
+  Future<void> sair() async {}
+
+  @override
+  Stream<User?> authStateChanges() => const Stream<User?>.empty();
 }
 
 void main() {
-  testWidgets('administrador autorizado vê a área administrativa',
+  testWidgets('administrador autorizado vê o shell administrativo',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
         home: AreaAutenticada(_AuthAdmin(() async => true))));
     await tester.pump();
-    expect(find.text('Administração'), findsOneWidget);
-    expect(find.byType(AdministracaoInicial), findsOneWidget);
+    expect(find.byType(AdminShell), findsOneWidget);
   });
 
-  testWidgets('sessão sem privilégio não vê a área administrativa',
+  testWidgets('sessão sem privilégio não vê o shell administrativo',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
         home: AreaAutenticada(_AuthAdmin(() async => false))));
     await tester.pump();
-    expect(find.byType(AdministracaoInicial), findsNothing);
+    expect(find.byType(AdminShell), findsNothing);
     expect(find.textContaining('rascunho'), findsOneWidget);
   });
 
@@ -44,13 +52,13 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: AreaAutenticada(auth)));
     await tester.pump();
     expect(find.textContaining('Não foi possível confirmar'), findsOneWidget);
-    expect(find.byType(AdministracaoInicial), findsNothing);
+    expect(find.byType(AdminShell), findsNothing);
 
     auth.proximaResposta(() async => true);
     await tester.tap(find.widgetWithText(ElevatedButton, 'Tentar novamente'));
     await tester.pump();
     await tester.pump();
-    expect(find.byType(AdministracaoInicial), findsOneWidget);
+    expect(find.byType(AdminShell), findsOneWidget);
     expect(auth.consultas, 2);
   });
 

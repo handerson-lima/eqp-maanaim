@@ -43,3 +43,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-seed-idempotente-de-igrejas-e-equipes.md`
   summary: Expor o disparo do seed inicial do catálogo na área administrativa.
   evidence: A callable `semearCatalogoInicial` existe e é testada, mas nenhuma superfície do produto a invoca; o administrador precisa de ferramenta externa com Auth/App Check e um `commandId` opaco. O escopo aprovado desta story cobria o comando de backend e a consulta read-only, deixando a ação de gestão para a story de gestão administrativa.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-1-1-2-frontend-admin-pwa.md`
+  summary: Tratar erro do stream `authStateChanges` em `RaizSessao` sem rebaixar uma sessão ativa para a tela de login.
+  evidence: `RaizSessao.build` (`flutter_app/lib/main.dart:111-127`) trata apenas `waiting` e `data == null`; um snapshot com erro cai em `Inicio`, escondendo a sessão. Severidade não verificada (`medium` se verdadeiro): é preciso confirmar se o stream de `FirebaseAuth.authStateChanges()` pode emitir erro em algum caminho real; se não puder, o finding não procede.
