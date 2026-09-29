@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'features/auth/auth_service.dart';
 import 'features/auth/validadores.dart';
+import 'features/admin/catalogo_service.dart';
+import 'features/admin/consulta_catalogo.dart';
 
 /// Identificador opaco usado como `commandId` idempotente.
 String comandoOpaco() {
@@ -60,9 +62,10 @@ Future<void> main() async {
     runApp(const ConfiguracaoAusente());
     return;
   }
-  runApp(MaanaimApp(AuthService(
-      FirebaseIdentidadeGateway(FirebaseAuth.instance),
-      FirebaseRascunhoGateway(FirebaseFunctions.instance))));
+  runApp(MaanaimApp(
+      AuthService(FirebaseIdentidadeGateway(FirebaseAuth.instance),
+          FirebaseRascunhoGateway(FirebaseFunctions.instance)),
+      catalogo: FirebaseCatalogoGateway(FirebaseFunctions.instance)));
 }
 
 class ConfiguracaoAusente extends StatelessWidget {
@@ -74,8 +77,9 @@ class ConfiguracaoAusente extends StatelessWidget {
 }
 
 class MaanaimApp extends StatelessWidget {
-  const MaanaimApp(this.auth, {super.key});
+  const MaanaimApp(this.auth, {super.key, this.catalogo});
   final AuthService auth;
+  final CatalogoGateway? catalogo;
   @override
   Widget build(BuildContext c) => MaterialApp(
       title: 'Maanaim',
@@ -89,12 +93,13 @@ class MaanaimApp extends StatelessWidget {
               style: OutlinedButton.styleFrom(minimumSize: const Size(44, 48))),
           textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(minimumSize: const Size(44, 48)))),
-      home: Inicio(auth));
+      home: Inicio(auth, catalogo: catalogo));
 }
 
 class AreaAutenticada extends StatefulWidget {
-  const AreaAutenticada(this.auth, {super.key});
+  const AreaAutenticada(this.auth, {super.key, this.catalogo});
   final AuthService auth;
+  final CatalogoGateway? catalogo;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -132,7 +137,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
                           child: const CircularProgressIndicator()))));
         }
         return estado.data!
-            ? const AdministracaoInicial()
+            ? AdministracaoInicial(catalogo: widget.catalogo)
             : const Scaffold(
                 body: SafeArea(
                     child: Center(
@@ -143,16 +148,29 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
 }
 
 class AdministracaoInicial extends StatelessWidget {
-  const AdministracaoInicial({super.key});
+  const AdministracaoInicial({super.key, this.catalogo});
+  final CatalogoGateway? catalogo;
   @override
-  Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Administração')),
-      body: SafeArea(child: Padding(padding: const EdgeInsets.all(24), child: Semantics(header: true, child: const Text('Área administrativa inicial. As opções disponíveis serão exibidas conforme sua autorização.')))));
+  Widget build(BuildContext context) {
+    final gateway = catalogo;
+    return Scaffold(
+        appBar: AppBar(title: const Text('Administração')),
+        body: SafeArea(
+            child: gateway == null
+                ? Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Semantics(
+                        header: true,
+                        child: const Text(
+                            'Área administrativa inicial. As opções disponíveis serão exibidas conforme sua autorização.')))
+                : ConsultaCatalogo(gateway)));
+  }
 }
 
 class Inicio extends StatelessWidget {
-  const Inicio(this.auth, {super.key});
+  const Inicio(this.auth, {super.key, this.catalogo});
   final AuthService auth;
+  final CatalogoGateway? catalogo;
   @override
   Widget build(BuildContext c) => Scaffold(
       body: SafeArea(
@@ -183,7 +201,8 @@ class Inicio extends StatelessWidget {
                                 onPressed: () => Navigator.push(
                                     c,
                                     MaterialPageRoute(
-                                        builder: (_) => Login(auth))),
+                                        builder: (_) =>
+                                            Login(auth, catalogo: catalogo))),
                                 child: const Text('Entrar'))
                           ]))))));
 }
@@ -379,8 +398,9 @@ class _CadastroState extends State<Cadastro> {
 }
 
 class Login extends StatefulWidget {
-  const Login(this.auth, {super.key});
+  const Login(this.auth, {super.key, this.catalogo});
   final AuthService auth;
+  final CatalogoGateway? catalogo;
   @override
   State<Login> createState() => _LoginState();
 }
@@ -456,7 +476,8 @@ class _LoginState extends State<Login> {
                                                     .pushAndRemoveUntil(
                                                         MaterialPageRoute(
                                                             builder: (_) =>
-                                                                AreaAutenticada(widget.auth)),
+                                                                AreaAutenticada(widget.auth,
+                                                                    catalogo: widget.catalogo)),
                                                         (_) => false);
                                               }
                                             } catch (_) {

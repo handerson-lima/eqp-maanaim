@@ -17,6 +17,7 @@ A tela de recuperação sempre mostra uma mensagem neutra, sem revelar se o e-ma
 ## Modelo de dados (Firestore)
 
 - `igrejas/{igrejaId}` — catálogo administrável, sem PII. O cliente só lê igrejas ativas; escrita negada.
+- `equipes/{equipeId}` — catálogo administrável, sem PII. O cliente só lê equipes ativas; escrita negada.
 - `fichas/{uid}` — ficha privada (contém CPF e demais PII). Nunca é lida ou gravada diretamente pelo cliente; o estado permitido vem da callable.
 - `commands/{commandId}` — recibo idempotente correlacionado ao comando; sem PII.
 - `auditOutbox/{commandId}` — evidência auditável append-only; sem PII.
@@ -33,6 +34,10 @@ Após criar a identidade no Firebase Authentication, compile as Functions (`npm 
 ## Pastores importados
 
 Pastores importados não recebem convite automático. Eles definem a primeira senha por **Esqueci minha senha**, como qualquer conta existente; esse fluxo não cria nem altera papel, vínculo ou escopo.
+
+## Catálogo inicial de igrejas e equipes
+
+O catálogo canônico (25 igrejas e 14 equipes do PRD) é semeado pela callable `semearCatalogoInicial`, restrita a administrador autorizado com App Check. O comando é idempotente por chave natural (código `String` da igreja; nome normalizado da equipe): cria só o ausente, nunca sobrescreve alterações administrativas, grava `commands/{commandId}` e `auditOutbox/{commandId}` na mesma transação e aceita replay apenas com o mesmo `commandId`/`payloadHash` (comando divergente é recusado). A callable `consultarCatalogo`, também read-only e autorizada, devolve igrejas como "Nome - Código", ordenadas por nome e pesquisáveis por nome ou código. A leitura de `igrejas`/`equipes` ativas é permitida ao cliente (dropdown público); a escrita permanece negada.
 
 ## Carga inicial de pastores e vínculos
 

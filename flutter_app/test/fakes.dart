@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:eqp_maanaim/features/admin/catalogo_service.dart';
 import 'package:eqp_maanaim/features/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -51,4 +54,21 @@ class AuthRecuperacaoFalha extends AuthService {
 
   @override
   Future<void> recuperar(String email) async => throw Exception('falha simulada');
+}
+
+class CatalogoFake implements CatalogoGateway {
+  CatalogoFake({this.resposta});
+  CatalogoResposta? resposta;
+  bool falhar = false;
+  int chamadas = 0;
+  Completer<void>? pendente;
+
+  @override
+  Future<CatalogoResposta> consultar({String? termo}) async {
+    chamadas++;
+    if (pendente != null) await pendente!.future;
+    if (falhar) throw Exception('falha simulada');
+    return resposta ??
+        const CatalogoResposta(igrejas: <IgrejaCatalogo>[], equipes: <EquipeCatalogo>[]);
+  }
 }

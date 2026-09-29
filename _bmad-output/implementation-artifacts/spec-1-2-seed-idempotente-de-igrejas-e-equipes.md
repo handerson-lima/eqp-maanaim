@@ -2,7 +2,7 @@
 title: 'Seed idempotente de igrejas e equipes'
 type: 'feature'
 created: '2026-09-29'
-status: 'in-progress'
+status: 'review'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: '039a26f98597690af66d849de93c31981bc79ff2'
@@ -53,14 +53,14 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `functions/src/domain/catalogo.ts` -- tipos `Igreja`/`Equipe`, chave natural (código / nome normalizado), validação pura, hash do payload e ordenação/pesquisa -- centraliza a idempotência e a regra de apresentação.
-- [ ] `functions/src/domain/seedCatalogo.ts` -- dataset canônico versionado do PRD §44/§46 (25 igrejas + 14 equipes, sem PII) -- fonte única do seed.
-- [ ] `functions/src/repositories/catalogo.ts` -- portas Firestore para buscar por código/nome normalizado, aplicar o seed transacional (recibo + `auditOutbox`) e listar/pesquisar ordenado, seguindo `firestoreImportacao.ts`.
-- [ ] `functions/src/commands/semearCatalogoInicial.ts` -- callable v2 com App Check, Auth, autoridade administrativa, `commandId`/`payloadHash` e transação -- única fronteira de mutação.
-- [ ] `functions/src/commands/consultarCatalogo.ts` + `functions/src/index.ts` -- callable read-only autorizada que devolve o catálogo ordenado/pesquisável; exportar ambos os comandos.
-- [ ] `firestore.rules` -- liberar leitura de `equipes` ativas e manter escrita negada.
-- [ ] `flutter_app/lib/features/admin/` + `flutter_app/lib/main.dart` -- gateway de catálogo e tela mobile-first read-only de lista/pesquisa com estados de carregamento/erro/vazio acessíveis, conectada a `AdministracaoInicial`.
-- [ ] `functions/test/` e `flutter_app/test/` -- testes de domínio (base vazia/parcial, reexecução, comando divergente, duplicidade de código, ordenação/pesquisa) e widget; ampliar contratos de segurança textuais.
+- [x] `functions/src/domain/catalogo.ts` -- tipos `Igreja`/`Equipe`, chave natural (código / nome normalizado), validação pura, hash do payload e ordenação/pesquisa -- centraliza a idempotência e a regra de apresentação.
+- [x] `functions/src/domain/seedCatalogo.ts` -- dataset canônico versionado do PRD §44/§46 (25 igrejas + 14 equipes, sem PII) -- fonte única do seed.
+- [x] `functions/src/repositories/catalogo.ts` -- portas Firestore para buscar por código/nome normalizado, aplicar o seed transacional (recibo + `auditOutbox`) e listar/pesquisar ordenado, seguindo `firestoreImportacao.ts`.
+- [x] `functions/src/commands/semearCatalogoInicial.ts` -- callable v2 com App Check, Auth, autoridade administrativa, `commandId`/`payloadHash` e transação -- única fronteira de mutação.
+- [x] `functions/src/commands/consultarCatalogo.ts` + `functions/src/index.ts` -- callable read-only autorizada que devolve o catálogo ordenado/pesquisável; exportar ambos os comandos.
+- [x] `firestore.rules` -- liberar leitura de `equipes` ativas e manter escrita negada.
+- [x] `flutter_app/lib/features/admin/` + `flutter_app/lib/main.dart` -- gateway de catálogo e tela mobile-first read-only de lista/pesquisa com estados de carregamento/erro/vazio acessíveis, conectada a `AdministracaoInicial`.
+- [x] `functions/test/` e `flutter_app/test/` -- testes de domínio (base vazia/parcial, reexecução, comando divergente, duplicidade de código, ordenação/pesquisa) e widget; ampliar contratos de segurança textuais.
 
 **Acceptance Criteria:**
 - Given base vazia ou parcial, when o seed é executado por administrador autorizado, then cria as igrejas, códigos e equipes previstos sem duplicar registros.
@@ -69,6 +69,14 @@ context:
 - Given uma sessão sem autoridade, when tenta semear ou consultar o catálogo, then é negada sem mutação e sem revelar dados.
 
 ## Implementation Notes
+
+Implementado o seed idempotente e a consulta read-only do catálogo. O domínio (`catalogo.ts`) concentra validação pura, chave natural (código da igreja / nome normalizado da equipe), hash SHA-256 versionado do dataset, IDs opacos determinísticos (`ig_`/`eq_` ancorados à chave natural) e ordenação/pesquisa sem acento. O dataset canônico (`seedCatalogo.ts`) tem 25 igrejas e 14 equipes, sem PII (responsáveis ficam para a Story 1.4).
+
+O repositório (`repositories/catalogo.ts`) executa tudo numa única transação: valida a autoridade canônica (`autoridadesAdministrativas/{uid}`) dentro da transação, aceita replay com o mesmo `commandId`/`payloadHash`/autor, recusa comando divergente, lê o catálogo existente e só cria o ausente por chave natural ou ID determinístico (nunca `update`/`set`), gravando `commands/{commandId}` e `auditOutbox/{commandId}` no mesmo commit. As callables `semearCatalogoInicial` e `consultarCatalogo` exigem App Check, Auth e autoridade vigente; a consulta devolve igrejas como "Nome - Código" ordenadas e filtráveis. As Rules liberam leitura de `equipes` ativas mantendo escrita negada.
+
+No Flutter, `features/admin/catalogo_service.dart` oferece o gateway callable e a normalização/filtro puro; `consulta_catalogo.dart` é uma tela mobile-first com busca, estados de carregamento/erro/vazio anunciados e estado inativo comunicado por texto além de ícone. `AdministracaoInicial` conecta a tela sem regredir a guarda existente.
+
+**Verificação executada:** `npm test --prefix functions` (52 testes, 5 de Emulator pulados sem Emulator), `npm run build --prefix functions`, `flutter analyze --fatal-infos` (sem diagnósticos) e `flutter test` (23 testes). A transação real foi exercitada no Emulator Firestore via `firebase emulators:exec --only firestore,storage,functions`: os 5 testes de `catalogo.emulator.test.ts` passaram (base vazia, reexecução preservando alteração administrativa, comando divergente, ausência de autoridade e consulta ordenada). O comando literal do spec com `npm test` dentro do `emulators:exec` falha por bug do npm embarcado na CLI (`Cannot read properties of undefined (reading 'stdin')`, já registrado em `deferred-work.md`); a suíte foi executada no Emulator chamando o `vitest` de `functions/node_modules` diretamente.
 
 ## Spec Change Log
 

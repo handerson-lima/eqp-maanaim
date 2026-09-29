@@ -8,6 +8,9 @@ const comando = readFileSync(join(raiz, 'functions', 'src', 'commands', 'criarOu
 const bootstrapWeb = readFileSync(join(raiz, 'flutter_app', 'lib', 'main.dart'), 'utf8');
 const admin = readFileSync(join(raiz, 'functions', 'src', 'commands', 'gerenciarAutoridadeAdministrativa.ts'), 'utf8');
 const storage = readFileSync(join(raiz, 'storage.rules'), 'utf8');
+const semear = readFileSync(join(raiz, 'functions', 'src', 'commands', 'semearCatalogoInicial.ts'), 'utf8');
+const consultar = readFileSync(join(raiz, 'functions', 'src', 'commands', 'consultarCatalogo.ts'), 'utf8');
+const repoCatalogo = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'catalogo.ts'), 'utf8');
 
 describe('contratos de segurança executáveis', () => {
   it('nega escrita de domínio e leitura direta de ficha pelo cliente', () => {
@@ -56,5 +59,30 @@ describe('contratos de segurança executáveis', () => {
     const recibo = admin.match(/tx\.create\(recibo, \{([^}]*)\}\)/)?.[1];
     expect(recibo).toBeDefined();
     expect(recibo).not.toContain('alvoUid');
+  });
+  it('libera leitura de equipes ativas mantendo a escrita negada', () => {
+    expect(regras).toMatch(/match \/equipes\/\{[^}]*\}/);
+    expect(regras).toContain('allow get, list: if resource.data.ativo == true;');
+    expect(regras).toContain('allow write: if false;');
+  });
+  it('protege o seed do catálogo com App Check, autoridade e transação idempotente', () => {
+    expect(semear).toContain('enforceAppCheck: true');
+    expect(semear).toContain('if (!request.auth)');
+    expect(semear).toContain('semearCatalogo');
+    expect(semear).not.toMatch(/console\.(log|error)/);
+    expect(repoCatalogo).toContain('podeAdministrar');
+    expect(repoCatalogo).toContain('runTransaction');
+    expect(repoCatalogo).toContain('reciboSnap.exists');
+    expect(repoCatalogo).toContain('payloadHash');
+    expect(repoCatalogo).toContain("tx.create(reciboRef");
+    expect(repoCatalogo).toContain("tx.create(auditoriaRef");
+    // Seed só cria o ausente: nunca atualiza nem sobrescreve o catálogo.
+    expect(repoCatalogo).not.toMatch(/tx\.(update|set)\(/);
+  });
+  it('exige autoridade na consulta do catálogo e não registra PII', () => {
+    expect(consultar).toContain('enforceAppCheck: true');
+    expect(consultar).toContain('podeAdministrar');
+    expect(consultar).not.toMatch(/console\.(log|error)/);
+    expect(repoCatalogo).not.toMatch(/cpf|email|nomeCompleto|senha|token/i);
   });
 });
