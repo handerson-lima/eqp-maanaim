@@ -5,8 +5,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'features/auth/auth_service.dart';
 import 'features/auth/validadores.dart';
+
+/// Identificador opaco usado como `commandId` idempotente.
+String comandoOpaco() {
+  final r = Random.secure();
+  return List<int>.generate(16, (_) => r.nextInt(256))
+      .map((b) => b.toRadixString(16).padLeft(2, '0'))
+      .join();
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,25 +38,31 @@ Future<void> main() async {
     runApp(const ConfiguracaoAusente());
     return;
   }
-  await Firebase.initializeApp(
-      options: FirebaseOptions(
-          apiKey: apiKey,
-          appId: appId,
-          messagingSenderId: messagingSenderId,
-          projectId: projectId,
-          authDomain: authDomain));
-  await FirebaseAppCheck.instance
-      .activate(webProvider: ReCaptchaV3Provider(appCheckSiteKey));
-  const usarEmuladores = bool.fromEnvironment('FIREBASE_USE_EMULATORS');
-  if (usarEmuladores) {
-    const host = String.fromEnvironment('FIREBASE_EMULATOR_HOST',
-        defaultValue: '127.0.0.1');
-    await FirebaseAuth.instance.useAuthEmulator(host, 9099);
-    FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
-    FirebaseFunctions.instance.useFunctionsEmulator(host, 5001);
+  try {
+    await Firebase.initializeApp(
+        options: FirebaseOptions(
+            apiKey: apiKey,
+            appId: appId,
+            messagingSenderId: messagingSenderId,
+            projectId: projectId,
+            authDomain: authDomain));
+    await FirebaseAppCheck.instance
+        .activate(webProvider: ReCaptchaV3Provider(appCheckSiteKey));
+    const usarEmuladores = bool.fromEnvironment('FIREBASE_USE_EMULATORS');
+    if (usarEmuladores) {
+      const host = String.fromEnvironment('FIREBASE_EMULATOR_HOST',
+          defaultValue: '127.0.0.1');
+      await FirebaseAuth.instance.useAuthEmulator(host, 9099);
+      FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
+      FirebaseFunctions.instance.useFunctionsEmulator(host, 5001);
+    }
+  } catch (_) {
+    runApp(const ConfiguracaoAusente());
+    return;
   }
-  runApp(MaanaimApp(
-      AuthService(FirebaseAuth.instance, FirebaseFunctions.instance)));
+  runApp(MaanaimApp(AuthService(
+      FirebaseIdentidadeGateway(FirebaseAuth.instance),
+      FirebaseRascunhoGateway(FirebaseFunctions.instance))));
 }
 
 class ConfiguracaoAusente extends StatelessWidget {
@@ -69,8 +84,11 @@ class MaanaimApp extends StatelessWidget {
           inputDecorationTheme:
               const InputDecorationTheme(border: OutlineInputBorder()),
           elevatedButtonTheme: ElevatedButtonThemeData(
-              style:
-                  ElevatedButton.styleFrom(minimumSize: const Size(44, 48)))),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(44, 48))),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+              style: OutlinedButton.styleFrom(minimumSize: const Size(44, 48))),
+          textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(minimumSize: const Size(44, 48)))),
       home: Inicio(auth));
 }
 
@@ -145,9 +163,8 @@ class _CadastroState extends State<Cadastro> {
   @override
   void initState() {
     super.initState();
-    // O mesmo identificador é usado se a resposta da callable se perder.
-    commandId =
-        '${DateTime.now().microsecondsSinceEpoch}${Random().nextInt(999999)}';
+    // O mesmo identificador opaco é usado se a resposta da callable se perder.
+    commandId = comandoOpaco();
   }
 
   @override
@@ -210,7 +227,10 @@ class _CadastroState extends State<Cadastro> {
                                 _campo(profissao, 'Profissão',
                                     (v) => obrigatorio(v, 'Profissão')),
                                 _campo(cpf, 'CPF', cpfValido,
-                                    tipo: TextInputType.number),
+                                    tipo: TextInputType.number,
+                                    formatters: [
+                                      FilteringTextInputFormatter.digitsOnly
+                                    ]),
                                 StreamBuilder<
                                         QuerySnapshot<Map<String, dynamic>>>(
                                     stream: FirebaseFirestore.instance
@@ -218,9 +238,33 @@ class _CadastroState extends State<Cadastro> {
                                         .where('ativo', isEqualTo: true)
                                         .snapshots(),
                                     builder: (_, s) {
-                                      final itens = s.data?.docs ?? [];
+                                      if (s.hasError) {
+                                        return const Padding(
+                                            padding:
+                                                EdgeInsets.only(bottom: 14),
+                                            child: Text(
+                                                'Não foi possível carregar as igrejas.'));
+                                      }
+                                      if (!s.hasData) {
+                                        return const Padding(
+                                            padding:
+                                                EdgeInsets.only(bottom: 14),
+                                            child: Center(
+                                                child:
+                                                    CircularProgressIndicator()));
+                                      }
+                                      final itens = s.data!.docs;
+                                      // Reconcilia a seleção: um valor que
+                                      // deixou de existir não quebra o
+                                      // dropdown.
+                                      final selecionada = itens
+                                              .any((d) => d.id == igreja)
+                                          ? igreja
+                                          : null;
                                       return DropdownButtonFormField<String>(
-                                          initialValue: igreja,
+                                          key: ValueKey(
+                                              itens.map((d) => d.id).join('|')),
+                                          initialValue: selecionada,
                                           decoration: const InputDecoration(
                                               labelText: 'Igreja'),
                                           items: itens
@@ -256,7 +300,9 @@ class _CadastroState extends State<Cadastro> {
                               ])))))));
   Widget _campo(TextEditingController controller, String label,
           String? Function(String?) valida,
-          {TextInputType? tipo, bool segredo = false}) =>
+          {TextInputType? tipo,
+          bool segredo = false,
+          List<TextInputFormatter>? formatters}) =>
       Padding(
           padding: const EdgeInsets.only(bottom: 14),
           child: TextFormField(
@@ -264,6 +310,7 @@ class _CadastroState extends State<Cadastro> {
               decoration: InputDecoration(labelText: label),
               validator: valida,
               keyboardType: tipo,
+              inputFormatters: formatters,
               obscureText: segredo,
               autocorrect: !segredo,
               enableSuggestions: !segredo));
@@ -335,21 +382,30 @@ class _LoginState extends State<Login> {
                                     onPressed: carregando
                                         ? null
                                         : () async {
-                                            if (f.currentState!.validate()) {
-                                              try {
-                                                await widget.auth.entrar(
-                                                    email.text, senha.text);
-                                                if (mounted) {
-                                                  Navigator.of(context)
-                                                      .pushAndRemoveUntil(
-                                                          MaterialPageRoute(
-                                                              builder: (_) =>
-                                                                  const AreaAutenticada()),
-                                                          (_) => false);
-                                                }
-                                              } catch (_) {
+                                            if (!f.currentState!.validate()) {
+                                              return;
+                                            }
+                                            setState(() => carregando = true);
+                                            try {
+                                              await widget.auth.entrar(
+                                                  email.text, senha.text);
+                                              if (mounted) {
+                                                Navigator.of(context)
+                                                    .pushAndRemoveUntil(
+                                                        MaterialPageRoute(
+                                                            builder: (_) =>
+                                                                const AreaAutenticada()),
+                                                        (_) => false);
+                                              }
+                                            } catch (_) {
+                                              if (mounted) {
                                                 setState(() => aviso =
                                                     'Não foi possível entrar. Verifique seus dados e tente novamente.');
+                                              }
+                                            } finally {
+                                              if (mounted) {
+                                                setState(
+                                                    () => carregando = false);
                                               }
                                             }
                                           },

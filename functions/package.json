@@ -1,11 +1,13 @@
 {
   "name": "maanaim-functions",
   "private": true,
+  "type": "module",
   "engines": { "node": "20" },
   "main": "lib/index.js",
   "scripts": {
+    "typecheck": "tsc -p tsconfig.test.json",
     "build": "tsc",
-    "test": "vitest run",
+    "test": "npm run typecheck && vitest run",
     "serve": "firebase emulators:start --only auth,firestore,functions"
   },
   "dependencies": {

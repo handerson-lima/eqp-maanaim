@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validarRascunho } from '../src/domain/rascunho.js';
+import { hashRascunho, validarRascunho } from '../src/domain/rascunho.js';
 
 const valido = { commandId: 'a'.repeat(16), nomeCompleto: 'Ana da Silva', profissao: 'Professora', cpf: '529.982.247-25', igrejaId: 'igreja-abc' };
 describe('contrato do rascunho', () => {
@@ -10,5 +10,10 @@ describe('contrato do rascunho', () => {
   });
   it('recusa campos fora do contrato da callable', () => {
     expect(() => validarRascunho({ ...valido, papel: 'ADMIN' })).toThrow('INVALID_ARGUMENT');
+  });
+  it('liga o recibo ao conteúdo e muda com qualquer campo do domínio', () => {
+    expect(hashRascunho(valido)).toMatch(/^[0-9a-f]{64}$/);
+    expect(hashRascunho({ ...valido, igrejaId: 'outra' })).not.toBe(hashRascunho(valido));
+    expect(hashRascunho({ ...valido, cpf: '529.982.247-26' })).not.toBe(hashRascunho(valido));
   });
 });

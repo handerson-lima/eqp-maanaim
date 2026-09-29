@@ -2,7 +2,7 @@
 title: 'Autenticação pública de voluntários'
 type: 'feature'
 created: '2026-09-29'
-status: 'in-review'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: '6ec97d57d0677b7a4665e0cc720fae4a62c81cfa'
@@ -69,31 +69,46 @@ context:
 
 ## Implementation Notes
 
-- Bootstrap Flutter/Firebase, Functions, Rules e documentação foram criados. App Check Web é ativado antes da UI por chave pública fornecida em `dart-define`; nenhuma configuração de ambiente foi versionada.
-- O `commandId` é preservado pela tela durante retentativas após criação de identidade, evitando recibo/outbox adicional se a resposta da callable falhar.
-- `flutter analyze`, `flutter test` (3), `npm test --prefix functions` (6), `npm run build --prefix functions` e `git diff --check` passaram. `firebase emulators:exec` não iniciou devido a falha da Firebase CLI que produziu `firepit-log.txt`; integração Emulator permanece pendente de ambiente funcional.
+- Bootstrap Flutter/Firebase, Functions, Rules e documentação foram criados. App Check Web é ativado antes da UI por chave pública fornecida em `dart-define`; nenhuma configuração de ambiente foi versionada, e falha de bootstrap cai em `ConfiguracaoAusente`.
+- O `commandId` é opaco (`Random.secure()`) e preservado pela tela durante retentativas após criação de identidade; o recibo grava `payloadHash` e `correlationId`, então replay do mesmo comando com dados diferentes é recusado e não há recibo/outbox adicional para retomada sem mutação.
+- Rodada de review (2) aplicou as correções do triage log: vínculo de identidade por e-mail, recibo ligado ao conteúdo, evidência correlacionada, ficha não legível pelo cliente, alvos de 44 px, login não concorrente, seleção de igrejas resiliente, guarda de bootstrap, formatador de CPF e testes executáveis do handoff/resposta neutra.
+- `flutter analyze`, `flutter test` (8), `npm test --prefix functions` (8, com typecheck) e `npm run build --prefix functions` passaram. `firebase emulators:exec` não iniciou devido a falha da Firebase CLI que produziu `firepit-log.txt`; integração Emulator permanece pendente de ambiente funcional.
 
 ## Spec Change Log
 
 ## Review Triage Log
 
-### Review Findings
+Rodada 2 (retomada): as camadas blind-hunter, edge-case-hunter e verification-gap foram reexecutadas sobre o diff desde o baseline. Cada achado recebeu um verdicto; `carried` marca os que já constavam da rodada anterior.
 
-- [ ] [Review][Patch] Sessão existente pode associar dados de uma nova inscrição ao UID incorreto [flutter_app/lib/features/auth/auth_service.dart:16]
-- [ ] [Review][Patch] Recibo idempotente não vincula o comando ao conteúdo nem preserva resultado correlacionado [functions/src/commands/criarOuRetomarRascunho.ts:13]
-- [ ] [Review][Patch] Criação de rascunho não produz evento/evidência e metadados mínimos correlacionados [functions/src/commands/criarOuRetomarRascunho.ts:25]
-- [ ] [Review][Patch] Leituras diretas expõem documentos de domínio e catálogo administrativo completo [firestore.rules:5]
-- [ ] [Review][Patch] Ações públicas não cumprem uniformemente alvo mínimo de 44 px e login permite envios concorrentes [flutter_app/lib/main.dart:67]
-- [ ] [Review][Patch] Seletor de igrejas falha silenciosamente para carregamento/erro e valor administrativo malformado [flutter_app/lib/main.dart:214]
-- [ ] [Review][Patch] `commandId` previsível não atende ao requisito de identificador opaco [flutter_app/lib/main.dart:146]
-- [ ] [Review][Patch] Proteção contra enumeração de e-mail no provedor não está documentada nem verificável por ambiente [README.md:7]
-- [ ] [Review][Patch] Não há testes executáveis do handoff Auth→callable e da transação do comando [flutter_app/lib/features/auth/auth_service.dart:12]
-- [ ] [Review][Patch] A pendência de integração Firebase Emulator permanece aberta para Rules e Functions [firebase.json:1]
+### Patch — corrigidos nesta rodada
 
-#### Rejected
+- `flutter_app/lib/features/auth/auth_service.dart:18` — (carried) sessão de qualquer conta pulava a criação de identidade e podia gravar nova inscrição sob UID alheio; retentativa não distinguia resultado. Corrigido com `precisaCriarIdentidade(emailAtual, alvo)`, que só reaproveita a sessão do mesmo e-mail, e gateways `IdentidadeGateway`/`RascunhoGateway` testáveis.
+- `functions/src/commands/criarOuRetomarRascunho.ts:17` — (carried) recibo idempotente não vinculava o comando ao conteúdo nem preservava resultado; mesmo `commandId` com dados diferentes descartava a edição, e recibo sem ficha reportava sucesso. Corrigido: `hashRascunho` grava `payloadHash`; replay divergente é recusado (`already-exists`) e ficha ausente é recriada na mesma transação.
+- `functions/src/commands/criarOuRetomarRascunho.ts:25` — (carried) criação de rascunho não gerava evidência correlacionada. Corrigido: recibo e `auditOutbox` carregam `commandId`/`correlationId`/`actorUid`, sem PII.
+- `firestore.rules:5` — (carried) leitura direta expunha a ficha (CPF/PII) e o catálogo completo. Corrigido: leitura direta de `fichas` negada (estado permitido vem só da callable); `igrejas/{id}` mantém `get`/`list` apenas de itens `ativo`, com escrita negada.
+- `flutter_app/lib/main.dart:67` — (carried) alvos de toque abaixo de 44 px e login aceitava envios concorrentes. Corrigido: temas de `ElevatedButton`/`OutlinedButton`/`TextButton` com `minimumSize (44, 48)`; `carregando` desabilita o botão durante o `entrar`.
+- `flutter_app/lib/main.dart:214` — (carried) seletor de igrejas falhava em silêncio e podia quebrar quando o valor selecionado saía dos itens. Corrigido: trata `hasError`/`!hasData`, reconcilia a seleção e usa `key` pelo conjunto de IDs.
+- `flutter_app/lib/main.dart:146` — (carried) `commandId` previsível não atendia a identificador opaco. Corrigido: `comandoOpaco()` gera 16 bytes de `Random.secure()` em hex.
+- `flutter_app/lib/main.dart:350` — `setState` após descarte na falha de login. Corrigido: guardas `mounted` no `catch` e `finally`.
+- `flutter_app/lib/main.dart:39` — `Firebase.initializeApp`/App Check sem guarda derrubavam a tela em branco. Corrigido: `try/catch` com fallback `ConfiguracaoAusente`.
+- `flutter_app/lib/main.dart:212` — CPF aceitava qualquer caractere. Corrigido: `FilteringTextInputFormatter.digitsOnly`.
+- `README.md:3` — versão Dart divergia do lock (`>=3.5` vs `>=3.11`). Corrigido: `pubspec.yaml` e README alinhados a `>=3.11`.
+- `README.md:7` — (carried) enumeração de e-mail sem proteção documentada. Corrigido: seções de recuperação/enumeração e modelo de dados das coleções.
+- `firebase.json:3` / `functions` — `test/` publicado no deploy, testes fora do typecheck e formato ESM ambíguo. Corrigido: `ignore` de `test`, `tsconfig.test.json` com `typecheck` no `test`, `"type": "module"`.
+- `functions/test/security-contract.test.ts:28` — asserções vacuosas (`?? ''`). Corrigido: regex passou a exigir match (`toBeDefined`) e ganhou asserções de `payloadHash`/`correlationId`/rules; `hashRascunho` tem teste de determinismo e sensibilidade a cada campo.
+- `flutter_app/lib/features/auth/auth_service.dart:12` / `main.dart:291` — (carried) handoff Auth→callable e resposta neutra sem teste executável. Corrigido: `auth_service_test.dart` (fakes) cobre criação, retentativa, UID alheio e recuperação; `login_recuperacao_test.dart` verifica a resposta neutra quando a recuperação falha.
 
-- false — `flutter_app/pubspec.lock` contém uma única entrada `clock`, portanto não há chave YAML duplicada.
-- false — `expectedVersion` não é necessário para a criação imutável de um agregado inexistente nem para a retomada sem mutação; a transação já serializa ambas as condições.
+### Defer — registrados em `deferred-work.md`
+
+- Integração por Firebase Emulator da transação da callable e das Rules permanece pendente (a CLI falha ao iniciar neste ambiente) — item já aberto.
+- Manifesto PWA sem ícones; sem `hosting`/`.firebaserc`; sem restauração de sessão/sign-out; sem verificação de e-mail; sem unicidade de CPF; ficha modelada por UID; estado da callable descartado no cliente; `commands`/`auditOutbox` sem consumidor/TTL; verificação automatizada de acessibilidade; CI; retenção/minimização de PII; validação duplicada Dart/TS.
+
+### Rejeitados
+
+- `false` — recuperação "engole" erros: a resposta uniforme é requisito explícito do intent (anti-enumeração); manter neutra é o comportamento correto.
+- `false` — `igrejas.list` sem App Check nas Rules: Rules do Firestore não expressam App Check (é configuração de projeto) e o catálogo não contém PII.
+- (carried) `false` — `flutter_app/pubspec.lock` contém uma única entrada `clock`, portanto não há chave YAML duplicada.
+- (carried) `false` — `expectedVersion` não é necessário para a criação imutável de um agregado inexistente nem para a retomada sem mutação; a transação já serializa ambas as condições.
 
 ## Design Notes
 

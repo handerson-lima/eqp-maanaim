@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 export type CriarRascunhoInput = {
   commandId: string;
   nomeCompleto: string;
@@ -5,6 +7,13 @@ export type CriarRascunhoInput = {
   cpf: string;
   igrejaId: string;
 };
+
+/** Liga um comando ao conteúdo: mesmo commandId com dados diferentes é recusado. */
+export function hashRascunho(input: CriarRascunhoInput): string {
+  return createHash('sha256')
+    .update(JSON.stringify({ nomeCompleto: input.nomeCompleto, profissao: input.profissao, cpf: input.cpf, igrejaId: input.igrejaId }))
+    .digest('hex');
+}
 
 const cpfValido = (cpf: string): boolean => {
   const numeros = cpf.replace(/\D/g, '');

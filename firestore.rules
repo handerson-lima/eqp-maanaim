@@ -1,19 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Catálogo público e administrável. O cliente nunca altera estes registros.
+    // Catálogo administrável e sem PII. O cliente nunca altera estes registros.
     match /igrejas/{igrejaId} {
       allow get, list: if resource.data.ativo == true;
       allow write: if false;
     }
 
-    // O rascunho é privado, mas só as Cloud Functions podem criá-lo ou alterá-lo.
-    match /fichas/{uid} {
-      allow get: if request.auth != null && request.auth.uid == uid;
-      allow list, create, update, delete: if false;
-    }
-
-    // Nenhum agregado, permissão, vínculo, recibo ou auditoria é gravável pelo cliente.
+    // A ficha (com CPF e demais PII), recibos, auditoria e qualquer outro
+    // agregado nunca são lidos ou gravados diretamente pelo cliente: o estado
+    // permitido é devolvido exclusivamente por Cloud Function autenticada.
     match /{document=**} { allow read, write: if false; }
   }
 }

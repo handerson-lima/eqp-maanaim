@@ -2,6 +2,7 @@
   "firestore": { "rules": "firestore.rules", "indexes": "firestore.indexes.json" },
   "functions": {
     "source": "functions",
+    "ignore": ["node_modules", ".git", "firebase-debug.log", "test", "*.local"],
     "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
   },
   "emulators": {

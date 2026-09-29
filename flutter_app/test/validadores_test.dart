@@ -13,8 +13,9 @@ void main() {
     expect(AuthService.mensagemRecuperacaoNeutra.toLowerCase(),
         isNot(contains('não existe')));
   });
-  test('uma sessão existente retoma o rascunho sem nova identidade', () {
-    expect(AuthService.deveCriarIdentidade(null), isTrue);
-    expect(AuthService.deveCriarIdentidade(Object()), isFalse);
+  test('uma sessão de outro e-mail não recebe os dados desta inscrição', () {
+    expect(AuthService.precisaCriarIdentidade(null, 'a@b.com'), isTrue);
+    expect(AuthService.precisaCriarIdentidade('a@b.com', 'a@b.com'), isFalse);
+    expect(AuthService.precisaCriarIdentidade('outro@x.com', 'a@b.com'), isTrue);
   });
 }
