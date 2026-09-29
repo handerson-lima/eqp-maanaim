@@ -37,3 +37,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-1-acesso-administrativo-seguro.md`
   summary: Revalidar a existência da identidade de destino dentro da transação.
   evidence: A callable valida `getUser` antes da transação, mas um alvo excluído entre a validação e o commit grava autoridade ativa para conta inexistente e deixa o recibo em `PENDENTE_CLAIM`.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-2-seed-idempotente-de-igrejas-e-equipes.md`
+  summary: Gestão administrativa de igrejas e equipes (edição e inativação sem exclusão física).
+  evidence: O núcleo desta story ficou no seed idempotente e na consulta read-only (AC1–AC3); a inativação (AC4) e a edição do catálogo foram diferidas para conter o escopo e o tamanho do spec, e serão retomadas em uma story de gestão administrativa.
