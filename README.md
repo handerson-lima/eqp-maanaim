@@ -39,6 +39,18 @@ Pastores importados não recebem convite automático. Eles definem a primeira se
 
 O catálogo canônico (25 igrejas e 14 equipes do PRD) é semeado pela callable `semearCatalogoInicial`, restrita a administrador autorizado com App Check. O comando é idempotente por chave natural (código `String` da igreja; nome normalizado da equipe): cria só o ausente, nunca sobrescreve alterações administrativas, grava `commands/{commandId}` e `auditOutbox/{commandId}` na mesma transação e aceita replay apenas com o mesmo `commandId`/`payloadHash` (comando divergente é recusado). A callable `consultarCatalogo`, também read-only e autorizada, devolve igrejas como "Nome - Código", ordenadas por nome e pesquisáveis por nome ou código. A leitura de `igrejas`/`equipes` ativas é permitida ao cliente (dropdown público); a escrita permanece negada.
 
+### Seed operacional
+
+Enquanto não há superfície para disparar o seed e a callable exige App Check, execute-o localmente com ADC/emulador (o UID é usado só como chave da autoridade canônica e nunca aparece na saída):
+
+```bash
+npm run build --prefix functions
+UID_ADMINISTRADOR=<uid> npm run semear-catalogo-inicial --prefix functions -- --dry-run   # simula, sem gravar
+UID_ADMINISTRADOR=<uid> npm run semear-catalogo-inicial --prefix functions -- --executar  # aplica o seed
+```
+
+O script valida `autoridadesAdministrativas/{uid}` antes de qualquer gravação, cria apenas o ausente e imprime o recibo em JSON. Reexecutar é idempotente.
+
 ## Carga inicial de pastores e vínculos
 
 Carga administrativa, idempotente e transacional que associa um Pastor Local vigente a cada igreja a partir da planilha local `igreja,pastor,email`. A planilha nunca é versionada e o relatório nunca ecoa PII.

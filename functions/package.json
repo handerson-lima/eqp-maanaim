@@ -10,6 +10,7 @@
     "test": "npm run typecheck && vitest run",
     "test:emulator": "vitest run test/importacao.emulator.test.ts test/catalogo.emulator.test.ts",
     "conceder-primeiro-admin": "node ../scripts/conceder-primeiro-administrador.mjs",
+    "semear-catalogo-inicial": "node ../scripts/semear-catalogo-inicial.mjs",
     "serve": "firebase emulators:start --only auth,firestore,storage,functions"
   },
   "dependencies": {
