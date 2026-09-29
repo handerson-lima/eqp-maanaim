@@ -8,6 +8,7 @@ abstract interface class IdentidadeGateway {
   Future<void> criarConta(String email, String senha);
   Future<void> entrar(String email, String senha);
   Future<void> enviarRedefinicao(String email, ActionCodeSettings settings);
+  Future<bool> possuiAdministracao();
 }
 
 /// Resultado permitido da callable de rascunho, sem PII.
@@ -21,6 +22,13 @@ class RascunhoResultado {
 abstract interface class RascunhoGateway {
   Future<RascunhoResultado> criarOuRetomar(Map<String, String> dados);
 }
+
+/// Nome da Custom Claim administrativa; espelha o backend.
+const String claimAdministrativa = 'maanaimAdmin';
+
+/// Lê a claim administrativa do mapa de claims, aceitando apenas `true`.
+bool claimAdministrativaAtiva(Map<String, dynamic>? claims) =>
+    claims?[claimAdministrativa] == true;
 
 class FirebaseIdentidadeGateway implements IdentidadeGateway {
   FirebaseIdentidadeGateway(this._auth);
@@ -40,6 +48,14 @@ class FirebaseIdentidadeGateway implements IdentidadeGateway {
   @override
   Future<void> enviarRedefinicao(String email, ActionCodeSettings settings) =>
       _auth.sendPasswordResetEmail(email: email, actionCodeSettings: settings);
+
+  @override
+  Future<bool> possuiAdministracao() async {
+    final usuario = _auth.currentUser;
+    if (usuario == null) return false;
+    final token = await usuario.getIdTokenResult(true);
+    return claimAdministrativaAtiva(token.claims);
+  }
 }
 
 class FirebaseRascunhoGateway implements RascunhoGateway {
@@ -86,6 +102,9 @@ class AuthService {
 
   Future<void> entrar(String email, String senha) =>
       _identidade.entrar(email.trim(), senha);
+
+  /// Renovar token evita que a UI mantenha uma concessão/revogação antiga.
+  Future<bool> possuiAdministracao() => _identidade.possuiAdministracao();
 
   Future<void> recuperar(String email) => _identidade.enviarRedefinicao(
       email.trim(),

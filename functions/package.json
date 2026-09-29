@@ -9,7 +9,8 @@
     "build": "tsc",
     "test": "npm run typecheck && vitest run",
     "test:emulator": "vitest run test/importacao.emulator.test.ts",
-    "serve": "firebase emulators:start --only auth,firestore,functions"
+    "conceder-primeiro-admin": "node ../scripts/conceder-primeiro-administrador.mjs",
+    "serve": "firebase emulators:start --only auth,firestore,storage,functions"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",

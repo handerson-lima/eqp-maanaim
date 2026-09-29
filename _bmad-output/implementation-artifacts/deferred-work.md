@@ -22,3 +22,18 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-importacao-inicial-de-pastores-e-vinculos.md`
   summary: Orquestrar a suíte de Emulator da carga inicial em runner automatizado.
   evidence: A persistência real (adapter Firestore/Auth de `firestoreImportacao.ts`) só é exercitada por `importacao.emulator.test.ts`, marcada com `skipIf` sem `FIRESTORE_EMULATOR_HOST`/`FIREBASE_AUTH_EMULATOR_HOST`; o script `test:emulator` não chama `firebase emulators:exec` e não há CI, então o comando padrão passa com a suíte pulada.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-1-acesso-administrativo-seguro.md`
+  summary: Exercitar no Emulator a callable de administração, o reconciliador de claim, o script operacional e as Rules de Firestore/Storage.
+  evidence: A verificação depende de Auth/Firestore/Storage Emulator; a CLI falha ao iniciar o Emulator neste ambiente (mesma causa registrada para `spec-autenticacao-publica`), então a cobertura segue em testes de domínio e contratos de texto.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-1-acesso-administrativo-seguro.md`
+  summary: Definir consumidor/materializador de `auditOutbox` e retomada de recibos `PENDENTE_CLAIM`.
+  evidence: A transação grava recibo e outbox, mas nenhum worker drena a outbox nem finaliza a claim após falha entre a gravação canônica e a projeção externa; um crash deixa estado recuperável apenas manualmente.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-1-acesso-administrativo-seguro.md`
+  summary: Compartilhar o nome da Custom Claim administrativa entre Dart e TypeScript.
+  evidence: `maanaimAdmin` é literal em `auth_service.dart` e em `functions/src/domain/autoridadeAdministrativa.ts`; sem contrato compartilhado, uma renomeação de um lado silenciosamente desautoriza o outro.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-1-acesso-administrativo-seguro.md`
+  summary: Serializar a escrita de Custom Claims para não perder claims de outros domínios em corridas.
+  evidence: `setCustomUserClaims` substitui o mapa inteiro; duas reconciliações sobrepostas (callable + bootstrap) podem reescrever claims alheias a partir de uma leitura anterior, e o teto de tentativas apenas detecta a corrida da revisão canônica.
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-1-acesso-administrativo-seguro.md`
+  summary: Revalidar a existência da identidade de destino dentro da transação.
+  evidence: A callable valida `getUser` antes da transação, mas um alvo excluído entre a validação e o commit grava autoridade ativa para conta inexistente e deixa o recibo em `PENDENTE_CLAIM`.

@@ -92,16 +92,62 @@ class MaanaimApp extends StatelessWidget {
       home: Inicio(auth));
 }
 
-class AreaAutenticada extends StatelessWidget {
-  const AreaAutenticada({super.key});
+class AreaAutenticada extends StatefulWidget {
+  const AreaAutenticada(this.auth, {super.key});
+  final AuthService auth;
   @override
-  Widget build(BuildContext context) => const Scaffold(
-      body: SafeArea(
-          child: Center(
-              child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                      'Acesso realizado. Sua ficha pode continuar em rascunho.')))));
+  State<AreaAutenticada> createState() => _AreaAutenticadaState();
+}
+
+class _AreaAutenticadaState extends State<AreaAutenticada> {
+  late Future<bool> _autorizacao = widget.auth.possuiAdministracao();
+
+  void _retentar() => setState(() {
+        _autorizacao = widget.auth.possuiAdministracao();
+      });
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<bool>(
+      future: _autorizacao,
+      builder: (context, estado) {
+        if (estado.hasError) {
+          return Scaffold(
+              body: SafeArea(
+                  child: Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Semantics(
+                liveRegion: true,
+                child: const Text('Não foi possível confirmar sua autorização.')),
+            const SizedBox(height: 12),
+            ElevatedButton(
+                onPressed: _retentar, child: const Text('Tentar novamente')),
+          ]))));
+        }
+        if (!estado.hasData) {
+          return Scaffold(
+              body: SafeArea(
+                  child: Center(
+                      child: Semantics(
+                          label: 'Carregando autorização',
+                          child: const CircularProgressIndicator()))));
+        }
+        return estado.data!
+            ? const AdministracaoInicial()
+            : const Scaffold(
+                body: SafeArea(
+                    child: Center(
+                        child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text('Acesso realizado. Sua ficha pode continuar em rascunho.')))));
+      });
+}
+
+class AdministracaoInicial extends StatelessWidget {
+  const AdministracaoInicial({super.key});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+      appBar: AppBar(title: const Text('Administração')),
+      body: SafeArea(child: Padding(padding: const EdgeInsets.all(24), child: Semantics(header: true, child: const Text('Área administrativa inicial. As opções disponíveis serão exibidas conforme sua autorização.')))));
 }
 
 class Inicio extends StatelessWidget {
@@ -410,7 +456,7 @@ class _LoginState extends State<Login> {
                                                     .pushAndRemoveUntil(
                                                         MaterialPageRoute(
                                                             builder: (_) =>
-                                                                const AreaAutenticada()),
+                                                                AreaAutenticada(widget.auth)),
                                                         (_) => false);
                                               }
                                             } catch (_) {

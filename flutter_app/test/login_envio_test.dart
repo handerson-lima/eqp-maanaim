@@ -27,6 +27,9 @@ class IdentidadeEntrarPendente implements IdentidadeGateway {
   @override
   Future<void> enviarRedefinicao(
       String email, ActionCodeSettings settings) async {}
+
+  @override
+  Future<bool> possuiAdministracao() async => false;
 }
 
 void main() {

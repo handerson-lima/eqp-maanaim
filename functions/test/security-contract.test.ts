@@ -6,6 +6,8 @@ const raiz = resolve(process.cwd(), '..');
 const regras = readFileSync(join(raiz, 'firestore.rules'), 'utf8');
 const comando = readFileSync(join(raiz, 'functions', 'src', 'commands', 'criarOuRetomarRascunho.ts'), 'utf8');
 const bootstrapWeb = readFileSync(join(raiz, 'flutter_app', 'lib', 'main.dart'), 'utf8');
+const admin = readFileSync(join(raiz, 'functions', 'src', 'commands', 'gerenciarAutoridadeAdministrativa.ts'), 'utf8');
+const storage = readFileSync(join(raiz, 'storage.rules'), 'utf8');
 
 describe('contratos de segurança executáveis', () => {
   it('nega escrita de domínio e leitura direta de ficha pelo cliente', () => {
@@ -37,5 +39,22 @@ describe('contratos de segurança executáveis', () => {
     expect(auditoria).toBeDefined();
     expect(recibo).not.toMatch(/nomeCompleto|cpf|profissao|email|senha|token/);
     expect(auditoria).not.toMatch(/nomeCompleto|cpf|profissao|email|senha|token/);
+  });
+  it('protege administração com App Check, autorização canônica e continuidade', () => {
+    expect(admin).toContain('enforceAppCheck: true');
+    expect(admin).toContain('podeAdministrar');
+    expect(admin).toContain('alvoUid === request.auth.uid');
+    // A última administração ativa é contada apenas entre autoridades válidas.
+    expect(admin).toContain('filter(d => podeAdministrar');
+    expect(admin).toContain('reconciliarClaimAdministrativa');
+    expect(admin).not.toMatch(/console\.(log|error)/);
+    expect(storage).toContain('allow read, write: if false');
+  });
+  it('recusa comando divergente e não persiste o UID do alvo no recibo', () => {
+    expect(admin).toContain('payloadHash');
+    expect(admin).toContain('r.payloadHash !== payloadHash');
+    const recibo = admin.match(/tx\.create\(recibo, \{([^}]*)\}\)/)?.[1];
+    expect(recibo).toBeDefined();
+    expect(recibo).not.toContain('alvoUid');
   });
 });

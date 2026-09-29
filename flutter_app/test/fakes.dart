@@ -25,6 +25,9 @@ class IdentidadeFake implements IdentidadeGateway {
   Future<void> enviarRedefinicao(String email, ActionCodeSettings settings) async {
     redefinicoes++;
   }
+
+  @override
+  Future<bool> possuiAdministracao() async => false;
 }
 
 class RascunhoFake implements RascunhoGateway {

@@ -20,8 +20,15 @@ A tela de recuperação sempre mostra uma mensagem neutra, sem revelar se o e-ma
 - `fichas/{uid}` — ficha privada (contém CPF e demais PII). Nunca é lida ou gravada diretamente pelo cliente; o estado permitido vem da callable.
 - `commands/{commandId}` — recibo idempotente correlacionado ao comando; sem PII.
 - `auditOutbox/{commandId}` — evidência auditável append-only; sem PII.
+- `autoridadesAdministrativas/{uid}` — autoridade canônica de administração (fonte de verdade do papel); a Custom Claim é apenas projeção reconciliada. Sem PII.
 
 Regras deny-by-default em `firestore.rules`: toda a escrita de domínio e toda leitura de ficha são negadas ao cliente.
+
+## Primeiro administrador
+
+Após criar a identidade no Firebase Authentication, compile as Functions (`npm run build --prefix functions`, o script consome `functions/lib`) e execute o processo local com ADC/IAM e o UID somente em memória: `UID_ADMINISTRADOR=<uid> npm run conceder-primeiro-admin --prefix functions`. O script não aceita e-mail, senha ou token, não imprime o UID e pode ser repetido para retomar a reconciliação da Custom Claim. A variável segura é `UID_ADMINISTRADOR` (não versione seu valor). O operador precisa de acesso mínimo a Firebase Auth e Firestore; não existe endpoint HTTP para esse bootstrap. As dependências são resolvidas a partir de `functions/node_modules` (não há `node_modules` na raiz).
+
+`storage.rules` também nega leitura e escrita direta. Para validar Rules no Emulator, inicie `firebase emulators:exec --only firestore,storage,functions "npm test --prefix functions"`.
 
 ## Pastores importados
 

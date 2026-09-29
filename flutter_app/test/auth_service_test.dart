@@ -45,4 +45,16 @@ void main() {
     await AuthService(identidade, RascunhoFake()).recuperar('talvez@x.com');
     expect(identidade.redefinicoes, 1);
   });
+
+  test('sem claim emitida pelo backend não apresenta administração', () async {
+    expect(await AuthService(IdentidadeFake(), RascunhoFake()).possuiAdministracao(), isFalse);
+  });
+
+  test('só a claim administrativa exatamente verdadeira autoriza', () {
+    expect(claimAdministrativaAtiva({claimAdministrativa: true}), isTrue);
+    expect(claimAdministrativaAtiva({claimAdministrativa: false}), isFalse);
+    expect(claimAdministrativaAtiva({claimAdministrativa: 'true'}), isFalse);
+    expect(claimAdministrativaAtiva({'outro': true}), isFalse);
+    expect(claimAdministrativaAtiva(null), isFalse);
+  });
 }
