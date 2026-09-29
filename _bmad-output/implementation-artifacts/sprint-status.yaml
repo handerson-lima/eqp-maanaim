@@ -38,7 +38,7 @@ development_status:
   epic-1: in-progress
   1-1-acesso-administrativo-seguro: review
   1-2-seed-idempotente-de-igrejas-e-equipes: review
-  1-3-gestão-administrativa-de-pessoas-e-papéis: ready-for-dev
+  1-3-gestão-administrativa-de-pessoas-e-papéis: backlog
   1-4-gestão-temporal-de-vínculos-de-responsabilidade: backlog
   1-5-publicação-e-versionamento-do-primeiro-termo: backlog
   epic-1-retrospective: optional

@@ -61,9 +61,11 @@ describe('contratos de segurança executáveis', () => {
     expect(recibo).not.toContain('alvoUid');
   });
   it('libera leitura de equipes ativas mantendo a escrita negada', () => {
-    expect(regras).toMatch(/match \/equipes\/\{[^}]*\}/);
-    expect(regras).toContain('allow get, list: if resource.data.ativo == true;');
-    expect(regras).toContain('allow write: if false;');
+    const bloco = regras.match(/match \/equipes\/\{equipeId\} \{([\s\S]*?)\n    \}/)?.[1];
+    expect(bloco).toBeDefined();
+    expect(bloco).toContain('allow get, list: if resource.data.ativo == true;');
+    expect(bloco).toContain('allow write: if false;');
+    expect(bloco).not.toContain('if true');
   });
   it('protege o seed do catálogo com App Check, autoridade e transação idempotente', () => {
     expect(semear).toContain('enforceAppCheck: true');

@@ -16,6 +16,14 @@ type Entrada = {
 const indisponivel = (code: 'permission-denied' | 'invalid-argument' | 'aborted') =>
   new HttpsError(code, 'Operação administrativa indisponível.');
 
+function codigoDoErro(erro: unknown): string | number | null {
+  if (erro && typeof erro === 'object' && 'code' in erro) {
+    const codigo = (erro as { code?: unknown }).code;
+    if (typeof codigo === 'string' || typeof codigo === 'number') return codigo;
+  }
+  return null;
+}
+
 /**
  * Única fronteira de mutação do catálogo: exige App Check, Auth e autoridade
  * administrativa canônica vigente, validada na transação.
@@ -50,6 +58,12 @@ export const semearCatalogoInicial = onCall(
         throw indisponivel('permission-denied');
       }
       if (erro instanceof ComandoDivergenteError) {
+        throw indisponivel('aborted');
+      }
+      // Dois seeds legítimos concorrentes criam os mesmos IDs: a corrida vira
+      // um comando divergente seguro, nunca um erro interno cru.
+      const codigo = codigoDoErro(erro);
+      if (codigo === 6 || codigo === 'already-exists') {
         throw indisponivel('aborted');
       }
       throw erro;

@@ -125,15 +125,13 @@ class _ConsultaCatalogoState extends State<ConsultaCatalogo> {
         leading: const Icon(Icons.church_outlined),
         title: Text(igreja.rotulo),
         subtitle: igreja.ativo ? null : const Text('Inativa'),
-        trailing:
-            igreja.ativo ? null : const Icon(Icons.block, semanticLabel: 'Inativa'),
+        trailing: igreja.ativo ? null : const Icon(Icons.block),
       );
 
   Widget _itemEquipe(EquipeCatalogo equipe) => ListTile(
         leading: const Icon(Icons.groups_outlined),
         title: Text(equipe.nome),
         subtitle: equipe.ativo ? null : const Text('Inativa'),
-        trailing:
-            equipe.ativo ? null : const Icon(Icons.block, semanticLabel: 'Inativa'),
+        trailing: equipe.ativo ? null : const Icon(Icons.block),
       );
 }

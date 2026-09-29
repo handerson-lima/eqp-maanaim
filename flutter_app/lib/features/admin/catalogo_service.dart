@@ -55,8 +55,9 @@ const Map<String, String> _semAcento = {
 
 /// Normaliza para busca: sem acento e sem caixa, espelhando o backend.
 String normalizarBusca(String valor) {
+  final colapsado = valor.trim().replaceAll(RegExp(r'\s+'), ' ');
   final buffer = StringBuffer();
-  for (final caractere in valor.toLowerCase().split('')) {
+  for (final caractere in colapsado.toLowerCase().split('')) {
     buffer.write(_semAcento[caractere] ?? caractere);
   }
   return buffer.toString();

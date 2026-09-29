@@ -1,12 +1,28 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { deleteApp, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import type { CallableRequest } from 'firebase-functions/v2/https';
 import {
   ComandoDivergenteError,
   SemAutoridadeError,
+  type ResumoCatalogo,
+  type ResultadoSemeadura,
 } from '../src/domain/catalogo.js';
 import { DATASET_CATALOGO } from '../src/domain/seedCatalogo.js';
+import { consultarCatalogo } from '../src/commands/consultarCatalogo.js';
+import { semearCatalogoInicial } from '../src/commands/semearCatalogoInicial.js';
 import { lerCatalogo, semearCatalogo } from '../src/repositories/catalogo.js';
+
+// Executa o handler cru da callable (`.run`), sem o middleware de App Check/Auth.
+const requisitar = <T>(
+  handler: { run: (request: CallableRequest<T>) => unknown },
+  data: T,
+  auth?: { uid: string },
+) =>
+  handler.run({
+    data,
+    auth: auth as CallableRequest<T>['auth'],
+  } as unknown as CallableRequest<T>);
 
 // Só exercita o Emulator quando ele está ativo (firebase emulators:exec).
 const habilitado = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
@@ -122,5 +138,46 @@ describe.skipIf(!habilitado)('seed do catálogo no Emulator', () => {
     const igapó = await lerCatalogo(db, '240001');
     expect(igapó.igrejas).toHaveLength(1);
     expect(igapó.igrejas[0].rotulo).toBe('Igapó Administrada - 240001');
+  });
+
+  it('callables negam sessão sem autoridade administrativa', async () => {
+    await expect(
+      requisitar(semearCatalogoInicial, { commandId: 'e'.repeat(32) }),
+    ).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(
+      requisitar(consultarCatalogo, {}, { uid: 'sem-autoridade' }),
+    ).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(requisitar(consultarCatalogo, {})).rejects.toMatchObject({
+      code: 'permission-denied',
+    });
+  });
+
+  it('callable autorizada semeia e recusa replay divergente', async () => {
+    const commandId = 'f'.repeat(32);
+    const resultado = (await requisitar(
+      semearCatalogoInicial,
+      { commandId },
+      { uid: ADMIN_UID },
+    )) as ResultadoSemeadura;
+    expect(resultado.totalIgrejas).toBe(DATASET_CATALOGO.igrejas.length);
+    expect(
+      (await getFirestore(app).collection('commands').doc(commandId).get()).exists,
+    ).toBe(true);
+
+    await getFirestore(app)
+      .collection('commands')
+      .doc(commandId)
+      .update({ payloadHash: 'hash-alterado' });
+    await expect(
+      requisitar(semearCatalogoInicial, { commandId }, { uid: ADMIN_UID }),
+    ).rejects.toMatchObject({ code: 'aborted' });
+  });
+
+  it('consulta autorizada devolve igrejas como "Nome - Código"', async () => {
+    const resposta = (await requisitar(consultarCatalogo, {}, {
+      uid: ADMIN_UID,
+    })) as ResumoCatalogo;
+    expect(resposta.igrejas).toHaveLength(DATASET_CATALOGO.igrejas.length);
+    expect(resposta.igrejas[0].rotulo).toMatch(/ - \d{6}$/);
   });
 });

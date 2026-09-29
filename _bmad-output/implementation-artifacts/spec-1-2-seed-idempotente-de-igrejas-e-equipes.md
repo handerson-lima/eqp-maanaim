@@ -2,7 +2,7 @@
 title: 'Seed idempotente de igrejas e equipes'
 type: 'feature'
 created: '2026-09-29'
-status: 'review'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: '039a26f98597690af66d849de93c31981bc79ff2'
@@ -76,11 +76,36 @@ O repositório (`repositories/catalogo.ts`) executa tudo numa única transação
 
 No Flutter, `features/admin/catalogo_service.dart` oferece o gateway callable e a normalização/filtro puro; `consulta_catalogo.dart` é uma tela mobile-first com busca, estados de carregamento/erro/vazio anunciados e estado inativo comunicado por texto além de ícone. `AdministracaoInicial` conecta a tela sem regredir a guarda existente.
 
-**Verificação executada:** `npm test --prefix functions` (52 testes, 5 de Emulator pulados sem Emulator), `npm run build --prefix functions`, `flutter analyze --fatal-infos` (sem diagnósticos) e `flutter test` (23 testes). A transação real foi exercitada no Emulator Firestore via `firebase emulators:exec --only firestore,storage,functions`: os 5 testes de `catalogo.emulator.test.ts` passaram (base vazia, reexecução preservando alteração administrativa, comando divergente, ausência de autoridade e consulta ordenada). O comando literal do spec com `npm test` dentro do `emulators:exec` falha por bug do npm embarcado na CLI (`Cannot read properties of undefined (reading 'stdin')`, já registrado em `deferred-work.md`); a suíte foi executada no Emulator chamando o `vitest` de `functions/node_modules` diretamente.
+**Verificação executada:** `npm test --prefix functions` (47 testes aprovados; 2 do catálogo e 2 da importação pulados sem Emulator), `npm run build --prefix functions`, `flutter analyze --fatal-infos` (sem diagnósticos) e `flutter test` (23 testes). A transação real foi exercitada no Emulator Firestore via `firebase emulators:exec --only firestore`: os 8 testes de `catalogo.emulator.test.ts` passaram (base vazia, reexecução preservando alteração administrativa, comando divergente, ausência de autoridade via repositório e via callables, callable autorizada que semeia, replay divergente → `aborted`, consulta ordenada e consulta autorizada). Os dois últimos testes foram acrescentados na auditoria de matriz do step-03 para cobrir executavelmente a negação da consulta sem autoridade.
+
+**Observação operacional:** o comando literal do spec com `npm test` dentro do `emulators:exec` falha por bug do npm embarcado na CLI (`Cannot read properties of undefined (reading 'stdin')`, já registrado em `deferred-work.md`); a suíte foi executada no Emulator chamando `/usr/local/bin/node functions/node_modules/vitest/vitest.mjs` diretamente. O subagente de implementação também criou dois commits (`1c21f01`, `569c56d`) e um spec não aprovado da Story 1.3; o spec 1.3 foi removido e o status de 1.3 revertido para `backlog` na etapa de verificação.
 
 ## Spec Change Log
 
 ## Review Triage Log
+
+| Origem | Achado | Veredito e evidência | Rota |
+| --- | --- | --- | --- |
+| blind-hunter / verification-gap | `semearCatalogo` não chama `validarDataset` | low — `catalogo.test.ts` afirma `validarDataset(DATASET_CATALOGO) == []` no comando padrão, então um dataset inválido não passa no teste; o guard em runtime cobriria estado não demonstrável e exige branch extra. | rejeitado |
+| blind-hunter | `ContextoSeedCatalogo.agora` nunca lido | low — campo morto; `FieldValue.serverTimestamp()` já fornece o tempo do servidor exigido. | rejeitado |
+| blind-hunter | `nomeNormalizado` calculado com `chaveEquipe` e nunca lido | low — dado redundante; a busca normaliza em runtime; sem leitor, não há dano. | rejeitado |
+| blind-hunter | Estado "Inativa" anunciado duas vezes (subtitle + `semanticLabel`) | medium — leitor de tela repetiria o estado; corrigido tornando o ícone decorativo e mantendo o texto. | patch |
+| blind-hunter / edge-case | `normalizarBusca` (Flutter) não colapsa espaços como `normalizarNome` (TS) | low — busca local poderia divergir do backend com espaços irregulares; corrigido com trim + colapso de espaços. | patch |
+| blind-hunter | Caminho `termo` do servidor não usado pela UI (busca local) | false — a busca por nome/código funciona no cliente e atende o AC; sem mau resultado. | rejeitado |
+| blind-hunter / edge-case | `deferred-work.md` associa inativação a "AC4" (no spec, sessão sem autoridade) | low — referência documental ambígua; corrigida para "4º critério de aceite do épico". | patch |
+| blind-hunter | `.run` bypassa App Check; nenhum teste prova rejeição sem App Check | low — `enforceAppCheck: true` é fornecido pelo framework e está correto; exercê-lo exige Emulator de Functions, já diferido na Story 1.1. | rejeitado |
+| blind-hunter | Sem gatilho de seed no produto nem procedimento documentado | medium — a callable existe e é testada, mas nenhuma superfície a invoca; o escopo aprovado excluiu a UI de gestão; registrado em `deferred-work.md`. | defer |
+| blind-hunter | `hashDataset` sensível à ordem do array | low — reordenar o dataset versionado altera o conteúdo e um `commandId` antigo deve mesmo ser recusado; cenário improvável. | rejeitado |
+| blind-hunter | Corrida de dois seeds com `commandId` distintos expõe `ALREADY_EXISTS` cru | medium — verificado; corrigido mapeando o código 6/`already-exists` para `aborted` seguro na callable. | patch |
+| blind-hunter | Ortografia do dataset inconsistente vs PRD | false — verificado linha a linha: o dataset reproduz literalmente o PRD §44/§46 ("Caico", "Lagoa D Anta", "São José de Mipibú" etc.). | rejeitado |
+| blind-hunter / verification-gap | Teste da regra de `equipes` casava strings também presentes no bloco `igrejas` | medium — verificado com bloco vazio: as três asserções passavam; corrigido extraindo o corpo do bloco e afirmando dentro dele. | patch |
+| blind-hunter | Verificação de autoridade aberta em três lugares sem guarda compartilhada | low — duplicação sem dano nomeado; a consulta é read-only e o seed valida na transação. | rejeitado |
+| blind-hunter | `CatalogoResposta.vazio` e `IgrejaCatalogo.rotulo` sem uso | low — superfície morta no cliente; sem impacto funcional. | rejeitado |
+| edge-case | Carregamento sem `liveRegion` | low — label de Semantics presente e consistente com `main.dart`; sem regressão. | rejeitado |
+| edge-case | `lerCatalogo` lê as duas coleções fora de transação | low — leitura administrativa eventual expõe janela transitória, sem dano persistente. | rejeitado |
+| verification-gap | Suíte de Emulator do catálogo não roda no comando padrão nem em `test:emulator` | medium — `test:emulator` só rodava a importação; corrigido incluindo `catalogo.emulator.test.ts`. | patch |
+| verification-gap | Mapeamento de erro divergente e caminho admin da callable não exercitados | medium — adicionados testes de callable autorizada que semeia e de replay divergente → `aborted`. | patch |
+| verification-gap | Testes do Emulator dependentes de ordem | low — não altera o comportamento verificado; a suíte passa isolada no Emulator. | rejeitado |
 
 ## Design Notes
 
@@ -93,4 +118,4 @@ O PRD §51 nomeia a flag da igreja como `ativa`; o repositório já usa `ativo` 
 - `npm run build --prefix functions` -- esperado: TypeScript compila para deploy.
 - `flutter analyze --fatal-infos` -- esperado: app e tela administrativa sem diagnósticos (executar em `flutter_app`).
 - `flutter test` -- esperado: guarda administrativa e consulta aprovadas (executar em `flutter_app`).
-- `firebase emulators:exec --only firestore,storage,functions "npm test --prefix functions"` -- esperado: Rules e callable recusam caminhos não autorizados no Emulator.
+- `firebase emulators:exec --only firestore "/usr/local/bin/node functions/node_modules/vitest/vitest.mjs run --root functions test/catalogo.emulator.test.ts"` -- esperado: 8 testes de seed/consulta aprovados no Emulator (o `emulators:exec ... "npm test"` documentado na Story 1.1 falha por bug do npm embarcado na CLI).
