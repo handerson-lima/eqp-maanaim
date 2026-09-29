@@ -15,14 +15,43 @@ const ausentes = readFileSync(
 
 const PII = /nomeCompleto|cpf|profissao|email|senha|token/;
 
+/** Extrai o objeto de um `tx.create(...)` com chaves balanceadas (sem truncar em `}`). */
+function extrairCorpo(fonte: string, marcador: string): string | null {
+  const inicio = fonte.indexOf(marcador);
+  if (inicio < 0) return null;
+  const abre = fonte.indexOf('{', inicio);
+  if (abre < 0) return null;
+  let profundidade = 0;
+  for (let i = abre; i < fonte.length; i += 1) {
+    const caractere = fonte[i];
+    if (caractere === '{') profundidade += 1;
+    else if (caractere === '}') {
+      profundidade -= 1;
+      if (profundidade === 0) return fonte.slice(abre, i + 1);
+    }
+  }
+  return null;
+}
+
 describe('contratos de segurança da carga inicial', () => {
-  it('mantém Rules deny-by-default para pessoas, vínculos e auditoria', () => {
+  it('só permite as leituras mínimas ou negação explícita; o resto cai no deny global', () => {
+    // Prova estrutural: toda instrução `allow` do arquivo é uma das permitidas.
+    const permissivas = regras.match(/allow\s+[^;]*;/g) ?? [];
+    expect(permissivas.length).toBeGreaterThan(0);
+    for (const regra of permissivas) {
+      expect([
+        'allow get, list: if resource.data.ativo == true;',
+        'allow write: if false;',
+        'allow read, write: if false;',
+      ]).toContain(regra.replace(/\s+/g, ' ').trim());
+    }
+    // O catch-all nega por padrão pessoas, vínculos, recibos e auditoria.
     expect(regras).toContain(
       'match /{document=**} { allow read, write: if false; }',
     );
-    expect(regras).not.toContain('match /pessoas');
-    expect(regras).not.toContain('match /vinculosPastorIgreja');
-    expect(regras).not.toContain('match /auditOutbox');
+    // Nenhuma regra concede acesso condicionado a autenticação (que poderia
+    // abrir uma coleção de domínio).
+    expect(regras).not.toMatch(/allow\s+[^;]*request\.auth/);
   });
 
   it('grava vínculo, recibo e auditoria na mesma transação', () => {
@@ -35,12 +64,12 @@ describe('contratos de segurança da carga inicial', () => {
   });
 
   it('não registra PII no vínculo, no recibo nem na auditoria', () => {
-    const vinculo = adaptador.match(/tx\.create\(vinculoRef, \{([^}]*)\}\)/)?.[1];
-    const recibo = adaptador.match(/tx\.create\(reciboRef, \{([^}]*)\}\)/)?.[1];
-    const auditoria = adaptador.match(/tx\.create\(auditoriaRef, \{([^}]*)\}\)/)?.[1];
-    expect(vinculo).toBeDefined();
-    expect(recibo).toBeDefined();
-    expect(auditoria).toBeDefined();
+    const vinculo = extrairCorpo(adaptador, 'tx.create(vinculoRef');
+    const recibo = extrairCorpo(adaptador, 'tx.create(reciboRef');
+    const auditoria = extrairCorpo(adaptador, 'tx.create(auditoriaRef');
+    expect(vinculo).not.toBeNull();
+    expect(recibo).not.toBeNull();
+    expect(auditoria).not.toBeNull();
     expect(vinculo).not.toMatch(PII);
     expect(recibo).not.toMatch(PII);
     expect(auditoria).not.toMatch(PII);

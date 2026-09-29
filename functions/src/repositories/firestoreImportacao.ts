@@ -1,7 +1,6 @@
 import type { Auth, UserRecord } from 'firebase-admin/auth';
 import {
   FieldValue,
-  Timestamp,
   type Firestore,
 } from 'firebase-admin/firestore';
 import {
@@ -163,7 +162,7 @@ export function criarPortasFirestore(
           codigoIgreja: entrada.codigoIgreja,
           papel: PAPEL_PASTOR_LOCAL,
           estado: 'VIGENTE',
-          inicioVigencia: Timestamp.fromDate(contexto.agora),
+          inicioVigencia: FieldValue.serverTimestamp(),
           fimVigencia: null,
           origem: contexto.origem,
           commandId: contexto.commandId,

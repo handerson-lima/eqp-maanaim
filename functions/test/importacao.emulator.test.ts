@@ -64,6 +64,11 @@ describe.skipIf(!habilitado)('carga inicial no Emulator', () => {
     expect(primeiro.recusados).toBe(1);
     const vinculos = await db.collection('vinculosPastorIgreja').get();
     expect(vinculos.size).toBe(2);
+    // A vigência é carimbada pelo servidor, não pelo relógio do operador.
+    for (const vinculo of vinculos.docs) {
+      expect(vinculo.data().inicioVigencia).toBeDefined();
+      expect(vinculo.data().inicioVigencia).not.toBeNull();
+    }
     const pessoas = await db.collection('pessoas').get();
     expect(pessoas.size).toBe(1);
 

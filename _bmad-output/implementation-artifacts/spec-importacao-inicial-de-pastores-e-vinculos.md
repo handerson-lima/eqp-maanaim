@@ -2,7 +2,7 @@
 title: 'Importação inicial de pastores e vínculos'
 type: 'feature'
 created: '2026-09-29'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: 'e7284f6ca95dd671116df47f4295dbc3907eb396'
@@ -51,11 +51,11 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `functions/` e configuração Firebase versionada -- estabelecer comandos administrativos autenticados, schema mínimo, Rules deny-by-default e suporte a Emulator para a carga segura.
-- [ ] `functions/commands/importarPastoresIniciais.*` -- validar fonte local, deduplicar pessoa por identidade definida, criar vínculos transacionais e gerar recibo/auditoria sem PII.
-- [ ] `scripts/importar-pastores-iniciais.*` -- disponibilizar uma execução administrativa local, com validação prévia, modo de simulação e saída agregada segura.
-- [ ] `functions/**/*.test.*` e testes Emulator -- cobrir idempotência, vínculo único, conflito, dados inválidos e ausência de escrita parcial.
-- [ ] `.gitignore` e documentação operacional -- impedir commit da planilha e documentar pré-requisitos, execução e recuperação segura.
+- [x] `functions/` e configuração Firebase versionada -- estabelecer comandos administrativos autenticados, schema mínimo, Rules deny-by-default e suporte a Emulator para a carga segura.
+- [x] `functions/commands/importarPastoresIniciais.*` -- validar fonte local, deduplicar pessoa por identidade definida, criar vínculos transacionais e gerar recibo/auditoria sem PII.
+- [x] `scripts/importar-pastores-iniciais.*` -- disponibilizar uma execução administrativa local, com validação prévia, modo de simulação e saída agregada segura.
+- [x] `functions/**/*.test.*` e testes Emulator -- cobrir idempotência, vínculo único, conflito, dados inválidos e ausência de escrita parcial.
+- [x] `.gitignore` e documentação operacional -- impedir commit da planilha e documentar pré-requisitos, execução e recuperação segura.
 
 **Acceptance Criteria:**
 - Given uma base com as igrejas canônicas e uma planilha validada, when administrador autorizado executa a carga, then cada linha cria ou reutiliza um pastor e seu vínculo vigente sem expor PII.
@@ -66,9 +66,50 @@ context:
 
 ## Implementation Notes
 
+- `functions/src/domain/importacaoPastores.ts` — validação prévia global (código/nome/e-mail, duplicidade e ambiguidade de identidade) e executor com portas de persistência; cada linha é atômica e o modo `SIMULACAO` não grava.
+- `functions/src/domain/planilhaPastores.ts` — parser CSV local (cabeçalho `igreja,pastor,email`), remove BOM/aspas e o sufixo `| RN`.
+- `functions/src/domain/vinculosAusentes.ts` — acrescenta Macau (`240005`) e Ponta Negra (`240029`) herdando a identidade referenciada por código (`240006`/`240022`); nenhum nome/e-mail versionado.
+- `functions/src/repositories/firestoreImportacao.ts` — adapta Auth + Firestore; deduplica a pessoa pela conta Firebase Authentication e grava vínculo, recibo (`commands`) e `auditOutbox` na mesma transação sobre o documento canônico da igreja, sem PII.
+- `functions/src/commands/importarPastoresIniciais.ts` — execução administrativa local (Admin SDK/IAM ou Emulator); `scripts/importar-pastores-iniciais.mjs` — CLI com `--dry-run`/`--executar`, `--command-id`, `--origem` e relatório agregado sem PII.
+- Schema: `igrejas` (catálogo + ponteiro `pastorLocalVigentePessoaId`/`...VinculoId`), `pessoas/{uid}` (PII mínima), `vinculosPastorIgreja` (histórico append-only, `inicioVigencia` UTC), `commands/{commandId--codigo}` e `auditOutbox/{commandId--codigo}`.
+- Contas de pastor são criadas sem senha e sem convite; a primeira senha vem da recuperação na tela de login.
+
 ## Spec Change Log
 
 ## Review Triage Log
+
+Rodada 1 (diff `e7284f6..HEAD` + árvore de trabalho): camadas blind-hunter, edge-case-hunter e verification-gap. Observação: um processo externo criou o commit `0ce51d8` ("code review") durante a execução, varrendo arquivos desta entrega junto de mudanças de `flutter_app`/autenticação não autorais; os achados da superfície pública de auth foram rejeitados como fora do intent desta spec (pertencem a `spec-autenticacao-publica.md`, já `done`).
+
+### Patch — corrigidos nesta rodada
+
+- `scripts/importar-pastores-iniciais.mjs:59` — `--dry-run` e `--executar` juntos venciam silenciosamente (último) e `--command-id`/`--origem` sem valor caíam em id aleatório, quebrando a idempotência pretendida. Corrigido: erro `MODO_CONFLITANTE` e `VALOR_OBRIGATORIO`. [BH15+EC3+EC4]
+- `functions/src/repositories/firestoreImportacao.ts:1268` — `inicioVigencia` usava o relógio do operador (`contexto.agora`) enquanto `criadoEm`/recibo/auditoria usavam `FieldValue.serverTimestamp()`, misturando relógios e violando o tempo de servidor. Corrigido: vigência gravada com timestamp do servidor. [BH20]
+- `functions/test/importacaoPastores.test.ts` — composição `prepararEntradas` (parser + vínculos ausentes) usada pelo CLI não era exercitada; alterá-la silenciosamente perderia 240005/240029 com toda a suíte verde. Corrigido: teste com CSV de duas linhas (240006/240022) exigindo quatro entradas. [VG4]
+- `functions/test/importacao-seguranca.test.ts:30` — asserções negativas fracas (`not.toContain('match /pessoas')`) e captura PII com `[^}]*` truncando no primeiro `}`; ambas não provavam a recusa. Corrigido: espelha a prova de negação de `security-contract.test.ts` e a captura passa a validar o corpo completo. [BH12+BH13]
+- `README.md:43` — dizia que o recibo expõe apenas `codigoIgreja`/`status`/`motivo`, mas o CLI serializa o resultado completo (contagens, `commandId`, `origem`). Corrigido: contrato de saída documentado fielmente. [BH17]
+
+### Defer — registrados em `deferred-work.md`
+
+- `functions/package.json:11` + `functions/test/importacao.emulator.test.ts:9` — a persistência real (adapter Firestore/Auth) só é exercitada pela suíte de Emulator, `skipIf` sem orquestração no comando padrão; `test:emulator` não chama `firebase emulators:exec`. A suíte existe e roda manualmente; falta o runner automatizado, dependente do ambiente de Emulator/CI já registrado. [BH10+VG2]
+
+### Rejeitados
+
+- `false` — `processarEntrada` não consulta recibo e o `--dry-run` divergiria do `--executar`: o ponteiro `pastorLocalVigentePessoaId` é verificado antes do ramo `SIMULACAO`, então uma carga já executada retorna `JA_VIGENTE` na simulação. [BH1]
+- `false` — `payloadHash` curto-circuita antes de revalidar `ativo`/vigente: `processarEntrada` verifica `igreja.ativo` e o ponteiro vigente antes de chamar `aplicarVinculo`. [BH2]
+- `false` — códigos 240005/240029 hardcoded contrariam "não use listas hardcoded": a decisão congelada do intent nomeia exatamente esses vínculos ausentes; é seed pontual, não catálogo administrável. [BH9]
+- `false` — hash sobre nome sem acento mascararia mudança de grafia: preservar nomes já existentes sem substituí-los é requisito explícito ("os nomes canônicos não serão substituídos"). [BH18]
+- `false` — README contradiz o resultado de 25 vínculos: o pré-requisito (base de igrejas) e o resultado do emulador com base semeada manualmente são coerentes, não contraditórios. [BH16]
+- `low` (rejeitado) — erro de porta não mapeado (`IGREJA_AMBIGUA`, `REFERENCIA_AUSENTE`) aborta a carga: cada linha já é transacional; parar diante de base/source corrompido é falha alta e segura, e as linhas do matrix já recusam por linha. [BH3+EC2+EC6]
+- `low` (rejeitado) — pessoa/conta Auth criada fora da transação pode ficar órfã em corrida ou `commandId` divergente: inalcançável nas linhas do matrix (conflito/inexistente/inativa são recusados antes de `garantirIdentidade`); o vínculo+recibo+auditoria permanecem na mesma transação. O fix adicionaria porta/rollback. [BH4+EC8]
+- `low` (rejeitado) — parser divide linhas antes de tratar aspas (newline embutido) e descarta colunas extras: formato-fonte é CSV simples de três colunas; fix exigiria parser de estado completo. [BH6+EC5]
+- `low` (rejeitado) — linhas recusadas sem índice de linha e apenas o primeiro motivo: casos canônicos carregam `codigoIgreja`; o relatório permanece sem PII e acionável no fluxo real. [BH7+BH8]
+- `low` (rejeitado) — `codigo: String(dados.codigo ?? codigo)` mascara drift de schema: base canônica garante `codigo` como `String`; coercão defensiva sem dano demonstrado. [BH5]
+- `low` (rejeitado) — `afterAll` do teste de Emulator apaga `igrejas`: suíte isolada, sem outro suite de Emulator concorrente. [BH11]
+- `false` (fora do intent) — `RascunhoResultado.estado` sem consumidor e ramo "retomada" sem teste de widget: superfície de autenticação pública, não do contrato de importação. [BH14+VG3]
+- `false` (fora do intent) — `catch (_)` de Cadastro não distingue `already-exists`: superfície de autenticação pública. [BH19]
+- `false` (fora do intent) — `igreja!` com catálogo vazio no Cadastro: superfície de autenticação pública. [EC1]
+- `false` (fora do intent) — remoção da checagem `match /fichas` em `security-contract.test.ts`: teste da spec de autenticação pública, já revisada. [EC7]
+- `false` (fora do intent) — `precisaCriarIdentidade` case-insensitive sem asserção de cobertura: correção da spec de autenticação pública, já revisada. [VG1]
 
 ## Design Notes
 
@@ -79,3 +120,13 @@ A carga é uma operação inicial controlada, não uma funcionalidade de importa
 **Commands:**
 - `firebase emulators:exec <suite-de-testes>` -- esperado: testes de Rules, transações e idempotência aprovados.
 - `<comando-de-importação> --dry-run <arquivo-local>` -- esperado: validação completa e contagens agregadas, sem gravar nem exibir PII.
+
+**Executado:**
+- `npm test --prefix functions` — 27 testes aprovados (com typecheck); suíte de Emulator `importacao.emulator.test.ts` — 2 aprovados sob `firebase emulators:exec`.
+- Carga real no Emulator (planilha em `~/Downloads`): `--dry-run` 25 `CRIARIA`; `--executar` 25 `CRIADO`; reexecução 25 `JA_VIGENTE`. Estado final: 12 pessoas/contas Auth, 25 vínculos, 25 recibos, 25 eventos de auditoria, 25 igrejas com exatamente um vigente, 0 campos de PII em vínculo/recibo/auditoria. Com a base semeada apenas nas igrejas presentes na planilha, as duas linhas ausentes (240005/240029) recusam como `IGREJA_INEXISTENTE`, confirmando a atomicidade por linha.
+- `inicioVigencia` persistido com timestamp do servidor (alinhado a `criadoEm`/recibo/auditoria).
+- CLI: `--dry-run --executar` → `MODO_CONFLITANTE` (exit 2); `--command-id`/`--origem` sem valor → `VALOR_OBRIGATORIO`.
+- Observação de ambiente: dentro de `firebase emulators:exec`, o `node` embutido da CLI (v20) quebrou o vitest; a suíte roda com o node do sistema em caminho absoluto.
+
+**Pendências conhecidas:**
+- O seed canônico de igrejas (Story 1.2) é pré-requisito e ainda não foi implementado; sem ele a carga recusa as linhas como `IGREJA_INEXISTENTE`.

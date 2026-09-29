@@ -19,3 +19,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-autenticacao-publica.md`
   summary: Unificar a validação Dart/TS, expor o estado da callable ao cliente e cobrir acessibilidade/CI.
   evidence: Regras de campo e mensagem genérica duplicadas em `validadores.dart`/`rascunho.ts`; `cadastrar` descarta `estado`/`retomado`; não há verificação automatizada de teclado/44 px/leitor de tela nem workflow de CI.
+- source_spec: `_bmad-output/implementation-artifacts/spec-importacao-inicial-de-pastores-e-vinculos.md`
+  summary: Orquestrar a suíte de Emulator da carga inicial em runner automatizado.
+  evidence: A persistência real (adapter Firestore/Auth de `firestoreImportacao.ts`) só é exercitada por `importacao.emulator.test.ts`, marcada com `skipIf` sem `FIRESTORE_EMULATOR_HOST`/`FIREBASE_AUTH_EMULATOR_HOST`; o script `test:emulator` não chama `firebase emulators:exec` e não há CI, então o comando padrão passa com a suíte pulada.

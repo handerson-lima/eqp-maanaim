@@ -47,7 +47,7 @@ node scripts/importar-pastores-iniciais.mjs --dry-run "/caminho/local/igreja-pas
 node scripts/importar-pastores-iniciais.mjs --executar "/caminho/local/igreja-pastor-email.csv"
 ```
 
-O script imprime um recibo JSON agregado (`codigoIgreja`, `status`, `motivo`) sem nomes, e-mails ou CPF, e sai com código `1` se houver qualquer linha recusada.
+O script imprime o `ResultadoImportacao` em JSON: `commandId`, `origem`, `modo`, `status`, as contagens (`total`, `criados`, `jaVigentes`, `simulados`, `recusados`) e `linhas`, cada uma com `codigoIgreja`, `status` e, quando recusada, `motivo` — nunca nomes, e-mails ou CPF. Sai com código `1` se houver qualquer linha recusada.
 
 ### Comportamento
 

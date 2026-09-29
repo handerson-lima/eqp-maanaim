@@ -32,12 +32,25 @@ function lerArgumentos(args) {
   const restantes = [];
   for (let i = 0; i < args.length; i += 1) {
     const argumento = args[i];
-    if (argumento === '--dry-run') opcoes.modo = 'SIMULACAO';
-    else if (argumento === '--executar') opcoes.modo = 'EXECUCAO';
-    else if (argumento === '--command-id') opcoes.commandId = args[++i] ?? null;
-    else if (argumento === '--origem') opcoes.origem = args[++i] ?? null;
-    else if (argumento.startsWith('--')) throw new Error(`OPCAO_DESCONHECIDA`);
-    else restantes.push(argumento);
+    if (argumento === '--dry-run' || argumento === '--executar') {
+      const modo = argumento === '--dry-run' ? 'SIMULACAO' : 'EXECUCAO';
+      if (opcoes.modo !== null && opcoes.modo !== modo) {
+        throw new Error('MODO_CONFLITANTE');
+      }
+      opcoes.modo = modo;
+    } else if (argumento === '--command-id' || argumento === '--origem') {
+      const valor = args[i + 1];
+      if (valor === undefined || valor.startsWith('--')) {
+        throw new Error('VALOR_OBRIGATORIO');
+      }
+      i += 1;
+      if (argumento === '--command-id') opcoes.commandId = valor;
+      else opcoes.origem = valor;
+    } else if (argumento.startsWith('--')) {
+      throw new Error('OPCAO_DESCONHECIDA');
+    } else {
+      restantes.push(argumento);
+    }
   }
   opcoes.caminho = restantes[0] ?? null;
   if (opcoes.modo === null) throw new Error('MODO_OBRIGATORIO');

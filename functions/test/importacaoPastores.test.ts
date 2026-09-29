@@ -3,6 +3,7 @@ import {
   ComandoDivergenteError,
   ConflitoVinculoError,
   IgrejaInativaError,
+  extrairCodigoIgreja,
   idDaLinha,
   importarPastoresIniciais,
   validarEntradas,
@@ -14,6 +15,7 @@ import {
 } from '../src/domain/importacaoPastores.js';
 import { parsearPlanilhaPastores } from '../src/domain/planilhaPastores.js';
 import { aplicarVinculosAusentes } from '../src/domain/vinculosAusentes.js';
+import { prepararEntradas } from '../src/commands/importarPastoresIniciais.js';
 
 class PortasFake implements PortasImportacao {
   igrejas = new Map<string, IgrejaResumo>();
@@ -130,6 +132,31 @@ describe('planilha e vínculos ausentes', () => {
     expect(entradas[3]).toMatchObject({
       codigoIgreja: '240029',
       nomePastor: 'MAURO AZEVEDO INACIO | RN',
+      email: 'mauro@example.com',
+    });
+  });
+
+  it('compõe parser e vínculos ausentes no fluxo usado pela CLI', () => {
+    const csv = [
+      'igreja,pastor,email',
+      '240006 - MOSSORÓ,VICENTE DE PAULO BRAGA,vbraga@example.com',
+      '240022 - MONTE ALEGRE,MAURO AZEVEDO INACIO | RN,mauro@example.com',
+    ].join('\n');
+
+    const entradas = prepararEntradas(csv);
+
+    expect(entradas).toHaveLength(4);
+    const porCodigo = new Map(
+      entradas.map((entrada) => [
+        extrairCodigoIgreja(entrada.codigoIgreja),
+        entrada,
+      ]),
+    );
+    expect(porCodigo.get('240005')).toMatchObject({
+      nomePastor: 'VICENTE DE PAULO BRAGA',
+      email: 'vbraga@example.com',
+    });
+    expect(porCodigo.get('240029')).toMatchObject({
       email: 'mauro@example.com',
     });
   });
