@@ -1,6 +1,6 @@
 # eqp_maanaim
 
-Bootstrap de autenticação pública. Use Flutter estável (Dart >=3.11, conforme `flutter_app/pubspec.lock`), Node 20 e Firebase CLI compatível.
+Bootstrap de autenticação pública. Use Flutter estável (Dart >=3.11, conforme `flutter_app/pubspec.lock`), Node 22 e Firebase CLI compatível.
 
 ## Ambiente local
 
