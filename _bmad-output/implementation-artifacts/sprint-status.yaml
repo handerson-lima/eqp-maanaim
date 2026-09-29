@@ -1,0 +1,81 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 09-28-2026 22:53
+last_updated: 09-28-2026 22:53
+project: eqp_maanaim
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-acesso-administrativo-seguro: backlog
+  1-2-seed-idempotente-de-igrejas-e-equipes: backlog
+  1-3-gestão-administrativa-de-pessoas-e-papéis: backlog
+  1-4-gestão-temporal-de-vínculos-de-responsabilidade: backlog
+  1-5-publicação-e-versionamento-do-primeiro-termo: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-criar-e-manter-ficha-permanente: backlog
+  2-2-selecionar-equipes-e-visualizar-participações-de-rascunho: backlog
+  2-3-ler-e-aceitar-o-termo-vigente: backlog
+  2-4-enviar-ficha-e-iniciar-aprovações: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-fila-e-decisão-do-pastor-local: backlog
+  3-2-aprovações-paralelas-por-responsável-de-equipe: backlog
+  3-3-conclusão-pelo-coordenador-e-ativação: backlog
+  3-4-comunicação-de-decisões-e-acompanhamento-por-público: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-consultar-ficha-participações-e-histórico-autorizado: backlog
+  4-2-solicitar-equipe-adicional: backlog
+  4-3-cancelar-participação-ou-voluntariado: backlog
+  4-4-solicitar-e-aprovar-reativação: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-calcular-vigência-anual-e-alertas-de-renovação: backlog
+  5-2-manifestar-interesse-de-renovação-por-equipe: backlog
+  5-3-processar-aprovação-e-conclusão-do-ciclo-anual: backlog
+  5-4-exibir-dashboards-de-renovação-por-papel: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-registrar-e-reconciliar-evidência-auditoria-imutável: backlog
+  6-2-consultar-auditoria-e-relatórios-autorizados: backlog
+  6-3-gerar-e-entregar-pdf-privado-da-ficha: backlog
+  6-4-aplicar-retenção-minimização-e-controles-operacionais-de-dad: backlog
+  6-5-acesso-inclusivo-e-responsivo-às-superfícies-do-voluntariado: backlog
+  6-6-verificar-segurança-índices-e-ambientes-firebase: backlog
+  epic-6-retrospective: optional
