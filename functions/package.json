@@ -1,0 +1,19 @@
+{
+  "name": "maanaim-functions",
+  "private": true,
+  "engines": { "node": "20" },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "serve": "firebase emulators:start --only auth,firestore,functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

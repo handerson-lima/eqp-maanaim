@@ -1,0 +1,13 @@
+# Ferramentas e segredos locais
+.dart_tool/
+.firebase/
+.flutter-plugins*
+build/
+node_modules/
+functions/lib/
+functions/coverage/
+firepit-log.txt
+firebase-debug.log
+firestore-debug.log
+flutter_app/.env*
+flutter_app/firebase_options.dart
