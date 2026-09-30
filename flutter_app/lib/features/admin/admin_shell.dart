@@ -4,16 +4,25 @@ import '../../ui/identidade.dart';
 import '../auth/auth_service.dart';
 import 'consulta_catalogo.dart';
 import 'catalogo_service.dart';
+import 'pessoas_papeis.dart';
+import 'pessoas_service.dart';
 import 'seed_catalogo.dart';
 
 /// Shell administrativo responsivo: `NavigationRail` no desktop (≥600px)
 /// e `Drawer` no mobile, com papel ativo visível e sign-out.
 class AdminShell extends StatefulWidget {
-  const AdminShell({super.key, required this.onSair, this.catalogo, this.seed});
+  const AdminShell({
+    super.key,
+    required this.onSair,
+    this.catalogo,
+    this.seed,
+    this.pessoas,
+  });
 
   final VoidCallback onSair;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
+  final PessoasGateway? pessoas;
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -32,6 +41,11 @@ class _AdminShellState extends State<AdminShell> {
       icone: Icons.cloud_upload_outlined,
       iconeAtivo: Icons.cloud_upload,
       rotulo: 'Seed',
+    ),
+    _Destino(
+      icone: Icons.manage_accounts_outlined,
+      iconeAtivo: Icons.manage_accounts,
+      rotulo: 'Pessoas e Papéis',
     ),
   ];
 
@@ -55,6 +69,16 @@ class _AdminShellState extends State<AdminShell> {
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text('Serviço de seed indisponível.'),
+                ),
+              );
+      case 2:
+        final pessoas = widget.pessoas;
+        return pessoas != null
+            ? PessoasPapeis(pessoas)
+            : const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('Serviço de pessoas e papéis indisponível.'),
                 ),
               );
       default:

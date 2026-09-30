@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:eqp_maanaim/features/admin/catalogo_service.dart';
+import 'package:eqp_maanaim/features/admin/pessoas_service.dart';
 import 'package:eqp_maanaim/features/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -23,7 +24,8 @@ class IdentidadeFake implements IdentidadeGateway {
   int redefinicoes = 0;
   int logouts = 0;
   bool admin;
-  final StreamController<User?> _authController = StreamController<User?>.broadcast();
+  final StreamController<User?> _authController =
+      StreamController<User?>.broadcast();
 
   @override
   String? get emailAtual => email;
@@ -41,7 +43,10 @@ class IdentidadeFake implements IdentidadeGateway {
   }
 
   @override
-  Future<void> enviarRedefinicao(String email, ActionCodeSettings settings) async {
+  Future<void> enviarRedefinicao(
+    String email,
+    ActionCodeSettings settings,
+  ) async {
     redefinicoes++;
   }
 
@@ -93,7 +98,8 @@ class AuthRecuperacaoFalha extends AuthService {
   AuthRecuperacaoFalha() : super(IdentidadeFake(), RascunhoFake());
 
   @override
-  Future<void> recuperar(String email) async => throw Exception('falha simulada');
+  Future<void> recuperar(String email) async =>
+      throw Exception('falha simulada');
 }
 
 class CatalogoFake implements CatalogoGateway {
@@ -109,7 +115,81 @@ class CatalogoFake implements CatalogoGateway {
     if (pendente != null) await pendente!.future;
     if (falhar) throw Exception('falha simulada');
     return resposta ??
-        const CatalogoResposta(igrejas: <IgrejaCatalogo>[], equipes: <EquipeCatalogo>[]);
+        const CatalogoResposta(
+          igrejas: <IgrejaCatalogo>[],
+          equipes: <EquipeCatalogo>[],
+        );
+  }
+}
+
+class PessoasFake implements PessoasGateway {
+  PessoasFake({this.resposta});
+  PessoasResposta? resposta;
+  bool falhar = false;
+  bool salvarFalhar = false;
+  bool alterarFalhar = false;
+  int consultas = 0;
+  int salvamentos = 0;
+  int alteracoes = 0;
+  String? termo;
+  String? ultimoCommandId;
+  String? ultimoAlvo;
+  String? ultimoPapel;
+  bool? ultimoConceder;
+  int? ultimaVersao;
+  String? ultimoNome;
+  String? ultimoCpf;
+  bool? ultimoCoordenador;
+
+  PessoasResposta _base() =>
+      resposta ?? const PessoasResposta(pessoas: <PessoaAdministrativa>[]);
+
+  @override
+  Future<PessoasResposta> consultar({String? termo}) async {
+    consultas++;
+    this.termo = termo;
+    if (falhar) throw Exception('falha simulada');
+    return _base();
+  }
+
+  @override
+  Future<PessoaSalva> salvarPessoa({
+    required String commandId,
+    String? uid,
+    required String nomeCompleto,
+    required String email,
+    required bool coordenador,
+    String? cpf,
+  }) async {
+    salvamentos++;
+    ultimoCommandId = commandId;
+    ultimoNome = nomeCompleto;
+    ultimoCpf = cpf;
+    ultimoCoordenador = coordenador;
+    if (salvarFalhar) throw Exception('falha simulada');
+    return PessoaSalva(
+      uid: uid ?? 'novo-uid',
+      coordenador: coordenador,
+      repetido: false,
+    );
+  }
+
+  @override
+  Future<PapeisResultado> alterarPapeis({
+    required String commandId,
+    required String alvoUid,
+    required int versao,
+    required String papel,
+    required bool conceder,
+  }) async {
+    alteracoes++;
+    ultimoCommandId = commandId;
+    ultimoAlvo = alvoUid;
+    ultimoPapel = papel;
+    ultimoConceder = conceder;
+    ultimaVersao = versao;
+    if (alterarFalhar) throw Exception('falha simulada');
+    return const PapeisResultado(papeis: <String>[], repetido: false);
   }
 }
 
@@ -127,11 +207,13 @@ class SeedFake implements SeedGateway {
     chamadas++;
     ultimoCommandId = commandId;
     if (falhar) throw Exception('falha simulada');
-    return SeedResultado(dados: {
-      'repetido': repetido,
-      'datasetVersao': datasetVersao,
-      'igrejasCriadas': igrejasCriadas,
-      'equipesCriadas': equipesCriadas,
-    });
+    return SeedResultado(
+      dados: {
+        'repetido': repetido,
+        'datasetVersao': datasetVersao,
+        'igrejasCriadas': igrejasCriadas,
+        'equipesCriadas': equipesCriadas,
+      },
+    );
   }
 }

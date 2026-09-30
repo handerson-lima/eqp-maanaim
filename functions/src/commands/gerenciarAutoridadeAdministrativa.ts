@@ -42,7 +42,9 @@ export const alterarAutoridadeAdministrativa = onCall({ enforceAppCheck: true },
       const ativos = await tx.get(db.collection('autoridadesAdministrativas').where('ativa', '==', true));
       if (ativos.docs.filter(d => podeAdministrar(d.data())).length <= 1) throw erro('failed-precondition');
     }
-    const proxima = { ativa: input.conceder, papel: PAPEL_ADMINISTRADOR, versao: versao + 1, revisao: (atual?.revisao ?? 0) + 1, claimStatus: 'PENDENTE', atualizadoEm: FieldValue.serverTimestamp() };
+    // Converte para o formato plural canônico: mantém a autoridade da 1.1
+    // eficaz mesmo sobre documentos já tocados pela 1.3 e remove o campo legado.
+    const proxima = { ativa: input.conceder, papeis: input.conceder ? [PAPEL_ADMINISTRADOR] : [], papel: FieldValue.delete(), versao: versao + 1, revisao: (atual?.revisao ?? 0) + 1, claimStatus: 'PENDENTE', atualizadoEm: FieldValue.serverTimestamp() };
     tx.set(alvo, proxima, { merge: true });
     tx.create(recibo, { action: 'ALTERAR_AUTORIDADE_ADMINISTRATIVA', actorUid: request.auth!.uid, payloadHash, correlationId, estado: 'PENDENTE_CLAIM', criadoEm: FieldValue.serverTimestamp() });
     tx.create(db.collection('auditOutbox').doc(input.commandId as string), { commandId: input.commandId, correlationId, actorUid: request.auth!.uid, action: input.conceder ? 'AUTORIDADE_CONCEDIDA' : 'AUTORIDADE_REVOGADA', antes: atual?.ativa === true, depois: input.conceder, criadoEm: FieldValue.serverTimestamp() });

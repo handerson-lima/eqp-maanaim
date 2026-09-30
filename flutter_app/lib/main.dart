@@ -10,6 +10,7 @@ import 'ui/identidade.dart';
 import 'features/auth/auth_service.dart';
 import 'features/auth/validadores.dart';
 import 'features/admin/catalogo_service.dart';
+import 'features/admin/pessoas_service.dart';
 import 'features/admin/admin_shell.dart';
 
 Future<void> main() async {
@@ -71,6 +72,7 @@ Future<void> main() async {
       ),
       catalogo: FirebaseCatalogoGateway(functions),
       seed: FirebaseSeedGateway(functions),
+      pessoas: FirebasePessoasGateway(functions),
     ),
   );
 }
@@ -86,25 +88,39 @@ class ConfiguracaoAusente extends StatelessWidget {
 }
 
 class MaanaimApp extends StatelessWidget {
-  const MaanaimApp(this.auth, {super.key, this.catalogo, this.seed});
+  const MaanaimApp(
+    this.auth, {
+    super.key,
+    this.catalogo,
+    this.seed,
+    this.pessoas,
+  });
   final AuthService auth;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
+  final PessoasGateway? pessoas;
   @override
   Widget build(BuildContext c) => MaterialApp(
     title: 'Maanaim',
     theme: temaMaanaim(),
-    home: RaizSessao(auth, catalogo: catalogo, seed: seed),
+    home: RaizSessao(auth, catalogo: catalogo, seed: seed, pessoas: pessoas),
   );
 }
 
 /// Raiz da aplicação: ouve `authStateChanges` para restaurar sessão
 /// ao recarregar e rotear automaticamente entre login, rascunho e admin.
 class RaizSessao extends StatelessWidget {
-  const RaizSessao(this.auth, {super.key, this.catalogo, this.seed});
+  const RaizSessao(
+    this.auth, {
+    super.key,
+    this.catalogo,
+    this.seed,
+    this.pessoas,
+  });
   final AuthService auth;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
+  final PessoasGateway? pessoas;
 
   @override
   Widget build(BuildContext context) => StreamBuilder<User?>(
@@ -126,16 +142,28 @@ class RaizSessao extends StatelessWidget {
       if (usuario == null) {
         return Inicio(auth);
       }
-      return AreaAutenticada(auth, catalogo: catalogo, seed: seed);
+      return AreaAutenticada(
+        auth,
+        catalogo: catalogo,
+        seed: seed,
+        pessoas: pessoas,
+      );
     },
   );
 }
 
 class AreaAutenticada extends StatefulWidget {
-  const AreaAutenticada(this.auth, {super.key, this.catalogo, this.seed});
+  const AreaAutenticada(
+    this.auth, {
+    super.key,
+    this.catalogo,
+    this.seed,
+    this.pessoas,
+  });
   final AuthService auth;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
+  final PessoasGateway? pessoas;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -197,6 +225,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
               onSair: _sair,
               catalogo: widget.catalogo,
               seed: widget.seed,
+              pessoas: widget.pessoas,
             )
           : Scaffold(
               appBar: AppBar(

@@ -4,3 +4,6 @@ export { criarOuRetomarRascunho } from './commands/criarOuRetomarRascunho.js';
 export { alterarAutoridadeAdministrativa } from './commands/gerenciarAutoridadeAdministrativa.js';
 export { semearCatalogoInicial } from './commands/semearCatalogoInicial.js';
 export { consultarCatalogo } from './commands/consultarCatalogo.js';
+export { salvarPessoa } from './commands/salvarPessoa.js';
+export { gerenciarPapeis } from './commands/gerenciarPapeis.js';
+export { consultarPessoas } from './commands/consultarPessoas.js';

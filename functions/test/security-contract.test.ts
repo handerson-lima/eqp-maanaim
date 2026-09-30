@@ -11,6 +11,10 @@ const storage = readFileSync(join(raiz, 'storage.rules'), 'utf8');
 const semear = readFileSync(join(raiz, 'functions', 'src', 'commands', 'semearCatalogoInicial.ts'), 'utf8');
 const consultar = readFileSync(join(raiz, 'functions', 'src', 'commands', 'consultarCatalogo.ts'), 'utf8');
 const repoCatalogo = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'catalogo.ts'), 'utf8');
+const salvarPessoa = readFileSync(join(raiz, 'functions', 'src', 'commands', 'salvarPessoa.ts'), 'utf8');
+const gerenciarPapeis = readFileSync(join(raiz, 'functions', 'src', 'commands', 'gerenciarPapeis.ts'), 'utf8');
+const consultarPessoas = readFileSync(join(raiz, 'functions', 'src', 'commands', 'consultarPessoas.ts'), 'utf8');
+const repoPessoas = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'pessoas.ts'), 'utf8');
 
 describe('contratos de segurança executáveis', () => {
   it('nega escrita de domínio e leitura direta de ficha pelo cliente', () => {
@@ -33,7 +37,9 @@ describe('contratos de segurança executáveis', () => {
     expect(bootstrapWeb).toContain("FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY");
     expect(bootstrapWeb).toContain('FirebaseAppCheck.instance');
     expect(bootstrapWeb).toContain('ReCaptchaV3Provider(appCheckSiteKey)');
-    expect(bootstrapWeb.indexOf('FirebaseAppCheck.instance')).toBeLessThan(bootstrapWeb.indexOf('runApp(MaanaimApp'));
+    const chamadaApp = bootstrapWeb.search(/runApp\(\s*MaanaimApp/);
+    expect(chamadaApp).toBeGreaterThan(-1);
+    expect(bootstrapWeb.indexOf('FirebaseAppCheck.instance')).toBeLessThan(chamadaApp);
   });
   it('não registra PII no recibo ou na auditoria', () => {
     const recibo = comando.match(/tx\.create\(recibo, \{([^}]*)\}\)/)?.[1];
@@ -86,5 +92,42 @@ describe('contratos de segurança executáveis', () => {
     expect(consultar).toContain('podeAdministrar');
     expect(consultar).not.toMatch(/console\.(log|error)/);
     expect(repoCatalogo).not.toMatch(/cpf|email|nomeCompleto|senha|token/i);
+  });
+  it('protege o cadastro de pessoa com App Check, autoridade e sem PII no recibo', () => {
+    expect(salvarPessoa).toContain('enforceAppCheck: true');
+    expect(salvarPessoa).toContain('if (!request.auth)');
+    expect(salvarPessoa).toContain('validarPessoa');
+    expect(salvarPessoa).not.toMatch(/console\.(log|error)/);
+    expect(repoPessoas).toContain('podeAdministrar');
+    expect(repoPessoas).toContain('runTransaction');
+    expect(repoPessoas).toContain('reciboSnap.exists');
+    expect(repoPessoas).toContain('payloadHash');
+    const recibo = repoPessoas.match(/tx\.create\(reciboRef, \{([^}]*)\}\)/)?.[1];
+    const auditoria = repoPessoas.match(/tx\.create\(auditoriaRef, \{([^}]*)\}\)/)?.[1];
+    expect(recibo).toBeDefined();
+    expect(auditoria).toBeDefined();
+    expect(recibo).not.toMatch(/cpf|nomeCompleto|email/);
+    expect(auditoria).not.toMatch(/cpf|nomeCompleto|email/);
+  });
+  it('bloqueia autoatribuição, último ADMIN e exige autoridade em transação', () => {
+    expect(gerenciarPapeis).toContain('enforceAppCheck: true');
+    expect(gerenciarPapeis).toContain('alvoUid === request.auth.uid');
+    expect(gerenciarPapeis).toContain('reconciliarClaimAdministrativa');
+    expect(gerenciarPapeis).not.toMatch(/console\.(log|error)/);
+    expect(repoPessoas).toContain('UltimoAdminError');
+    expect(repoPessoas).toContain("where('ativa', '==', true)");
+    expect(repoPessoas).toContain('podeAdministrar');
+  });
+  it('mantém a consulta de pessoas autorizada e nunca devolve CPF', () => {
+    expect(consultarPessoas).toContain('enforceAppCheck: true');
+    expect(consultarPessoas).toContain('podeAdministrar');
+    expect(consultarPessoas).not.toMatch(/console\.(log|error)/);
+    const blocoConsulta = repoPessoas.match(/export async function lerPessoas[\s\S]*?\n\}/)?.[0];
+    expect(blocoConsulta).toBeDefined();
+    expect(blocoConsulta).not.toMatch(/cpf/);
+  });
+  it('nega leitura e escrita de pessoa, papel e CPF pelos Rules', () => {
+    expect(regras).toContain('match /{document=**} { allow read, write: if false; }');
+    expect(regras).not.toMatch(/pessoas|coordenadores|autoridadesAdministrativas/);
   });
 });

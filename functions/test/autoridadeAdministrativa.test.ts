@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   NOME_CLAIM_ADMINISTRATIVA,
+  NOME_CLAIM_COORDENADOR,
   PAPEL_ADMINISTRADOR,
+  PAPEL_COORDENADOR,
   aplicarClaimAdministrativa,
+  aplicarClaimsSistema,
   hashAlteracao,
+  papeisEfetivos,
   podeAdministrar,
 } from '../src/domain/autoridadeAdministrativa.js';
 
@@ -22,6 +26,33 @@ describe('autoridade administrativa canônica', () => {
     const revogada = aplicarClaimAdministrativa(existentes, false);
     expect(revogada.outroDominio).toBe('x');
     expect(revogada).not.toHaveProperty(NOME_CLAIM_ADMINISTRATIVA);
+  });
+
+  it('é retrocompatível com o papel singular e projeta uma claim por papel', () => {
+    expect(podeAdministrar({ ativa: true, papel: PAPEL_ADMINISTRADOR })).toBe(true);
+    expect(papeisEfetivos({ ativa: true, papel: PAPEL_ADMINISTRADOR })).toEqual([
+      PAPEL_ADMINISTRADOR,
+    ]);
+    expect(podeAdministrar({ ativa: true, papeis: [PAPEL_ADMINISTRADOR] })).toBe(true);
+    expect(podeAdministrar({ ativa: true, papeis: [PAPEL_COORDENADOR] })).toBe(false);
+    const claims = aplicarClaimsSistema({}, [PAPEL_ADMINISTRADOR, PAPEL_COORDENADOR]);
+    expect(claims[NOME_CLAIM_ADMINISTRATIVA]).toBe(true);
+    expect(claims[NOME_CLAIM_COORDENADOR]).toBe(true);
+  });
+
+  it('faz o plural prevalecer quando os dois campos coexistem', () => {
+    // O campo plural presente é a fonte, mesmo vazio: por isso todo writer
+    // precisa convergir para `papeis` e remover o `papel` legado.
+    expect(
+      papeisEfetivos({ ativa: true, papeis: [], papel: PAPEL_ADMINISTRADOR }),
+    ).toEqual([]);
+    expect(
+      papeisEfetivos({
+        ativa: true,
+        papeis: [PAPEL_COORDENADOR],
+        papel: PAPEL_ADMINISTRADOR,
+      }),
+    ).toEqual([PAPEL_COORDENADOR]);
   });
 
   it('liga o recibo ao alvo e ao sentido sem persistir o UID', () => {
