@@ -12,3 +12,5 @@ export { consultarVinculos } from './commands/consultarVinculos.js';
 export { publicarTermo } from './commands/publicarTermo.js';
 export { consultarTermos } from './commands/consultarTermos.js';
 export { obterTermoVigente } from './commands/obterTermoVigente.js';
+export { obterMinhaFicha } from './commands/obterMinhaFicha.js';
+export { salvarMinhaFicha } from './commands/salvarMinhaFicha.js';

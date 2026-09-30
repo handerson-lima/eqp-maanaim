@@ -14,6 +14,8 @@ import 'features/admin/pessoas_service.dart';
 import 'features/admin/termos_service.dart';
 import 'features/admin/vinculos_service.dart';
 import 'features/admin/admin_shell.dart';
+import 'features/voluntario/ficha_service.dart';
+import 'features/voluntario/minha_ficha_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,6 +79,7 @@ Future<void> main() async {
       pessoas: FirebasePessoasGateway(functions),
       vinculos: FirebaseVinculosGateway(functions),
       termos: FirebaseTermosService(functions: functions),
+      ficha: FirebaseFichaGateway(functions),
     ),
   );
 }
@@ -100,6 +103,7 @@ class MaanaimApp extends StatelessWidget {
     this.pessoas,
     this.vinculos,
     this.termos,
+    this.ficha,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -107,6 +111,7 @@ class MaanaimApp extends StatelessWidget {
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
+  final FichaGateway? ficha;
   @override
   Widget build(BuildContext c) => MaterialApp(
     title: 'Maanaim',
@@ -118,6 +123,7 @@ class MaanaimApp extends StatelessWidget {
       pessoas: pessoas,
       vinculos: vinculos,
       termos: termos,
+      ficha: ficha,
     ),
   );
 }
@@ -133,6 +139,7 @@ class RaizSessao extends StatefulWidget {
     this.pessoas,
     this.vinculos,
     this.termos,
+    this.ficha,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -140,6 +147,7 @@ class RaizSessao extends StatefulWidget {
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
+  final FichaGateway? ficha;
 
   @override
   State<RaizSessao> createState() => _RaizSessaoState();
@@ -211,6 +219,7 @@ class _RaizSessaoState extends State<RaizSessao> {
         pessoas: widget.pessoas,
         vinculos: widget.vinculos,
         termos: widget.termos,
+        ficha: widget.ficha,
       );
     },
   );
@@ -225,6 +234,7 @@ class AreaAutenticada extends StatefulWidget {
     this.pessoas,
     this.vinculos,
     this.termos,
+    this.ficha,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -232,6 +242,7 @@ class AreaAutenticada extends StatefulWidget {
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
+  final FichaGateway? ficha;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -308,30 +319,64 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
               vinculos: widget.vinculos,
               termos: widget.termos,
             )
-          : Scaffold(
-              appBar: AppBar(
-                title: const Text('Maanaim'),
-                actions: [
-                  IconButton(
-                    onPressed: _sair,
-                    icon: const Icon(Icons.logout),
-                    tooltip: 'Sair',
-                  ),
-                ],
-              ),
-              body: const SafeArea(
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text(
-                      'Acesso realizado. Sua ficha pode continuar em rascunho.',
-                    ),
-                  ),
-                ),
-              ),
+          : MinhaFichaScreen(
+              fichaGateway: _obterFichaGateway(),
+              catalogoGateway: _obterCatalogoGateway(),
+              onSair: _sair,
+              userName: widget.auth.emailAtual,
             );
     },
   );
+
+  FichaGateway _obterFichaGateway() {
+    if (widget.ficha != null) return widget.ficha!;
+    try {
+      return FirebaseFichaGateway(FirebaseFunctions.instance);
+    } catch (_) {
+      return const _FichaMemoriaFallback();
+    }
+  }
+
+  CatalogoGateway _obterCatalogoGateway() {
+    if (widget.catalogo != null) return widget.catalogo!;
+    try {
+      return FirebaseCatalogoGateway(FirebaseFunctions.instance);
+    } catch (_) {
+      return const _CatalogoMemoriaFallback();
+    }
+  }
+}
+
+class _FichaMemoriaFallback implements FichaGateway {
+  const _FichaMemoriaFallback();
+
+  @override
+  Future<ObterFichaResposta> obterMinhaFicha() async =>
+      const ObterFichaResposta(existe: false);
+
+  @override
+  Future<SalvarFichaResposta> salvarMinhaFicha(SalvarFichaEntrada entrada) async =>
+      SalvarFichaResposta(
+        sucesso: true,
+        repetido: false,
+        ficha: FichaModel(
+          id: 'temp',
+          nomeCompleto: entrada.nomeCompleto,
+          profissao: entrada.profissao,
+          cpf: entrada.cpf,
+          igrejaId: entrada.igrejaId,
+          estado: 'RASCUNHO',
+          versao: 1,
+        ),
+      );
+}
+
+class _CatalogoMemoriaFallback implements CatalogoGateway {
+  const _CatalogoMemoriaFallback();
+
+  @override
+  Future<CatalogoResposta> consultar({String? termo}) async =>
+      const CatalogoResposta(igrejas: [], equipes: []);
 }
 
 class Inicio extends StatelessWidget {

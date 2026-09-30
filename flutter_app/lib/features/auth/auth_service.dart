@@ -170,6 +170,8 @@ class AuthService {
   Future<void> entrar(String email, String senha) =>
       _identidade.entrar(email.trim(), senha);
 
+  String? get emailAtual => _identidade.emailAtual;
+
   /// Renovar token evita que a UI mantenha uma concessão/revogação antiga.
   Future<bool> possuiAdministracao() => _identidade.possuiAdministracao();
 
