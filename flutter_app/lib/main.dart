@@ -16,6 +16,7 @@ import 'features/admin/vinculos_service.dart';
 import 'features/admin/admin_shell.dart';
 import 'features/voluntario/ficha_service.dart';
 import 'features/voluntario/minha_ficha_screen.dart';
+import 'features/voluntario/participacao_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,6 +105,7 @@ class MaanaimApp extends StatelessWidget {
     this.vinculos,
     this.termos,
     this.ficha,
+    this.participacao,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -112,6 +114,7 @@ class MaanaimApp extends StatelessWidget {
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
   final FichaGateway? ficha;
+  final ParticipacaoGateway? participacao;
   @override
   Widget build(BuildContext c) => MaterialApp(
     title: 'Maanaim',
@@ -124,6 +127,7 @@ class MaanaimApp extends StatelessWidget {
       vinculos: vinculos,
       termos: termos,
       ficha: ficha,
+      participacao: participacao,
     ),
   );
 }
@@ -140,6 +144,7 @@ class RaizSessao extends StatefulWidget {
     this.vinculos,
     this.termos,
     this.ficha,
+    this.participacao,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -148,6 +153,7 @@ class RaizSessao extends StatefulWidget {
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
   final FichaGateway? ficha;
+  final ParticipacaoGateway? participacao;
 
   @override
   State<RaizSessao> createState() => _RaizSessaoState();
@@ -220,6 +226,7 @@ class _RaizSessaoState extends State<RaizSessao> {
         vinculos: widget.vinculos,
         termos: widget.termos,
         ficha: widget.ficha,
+        participacao: widget.participacao,
       );
     },
   );
@@ -235,6 +242,7 @@ class AreaAutenticada extends StatefulWidget {
     this.vinculos,
     this.termos,
     this.ficha,
+    this.participacao,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -243,6 +251,7 @@ class AreaAutenticada extends StatefulWidget {
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
   final FichaGateway? ficha;
+  final ParticipacaoGateway? participacao;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -322,6 +331,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           : MinhaFichaScreen(
               fichaGateway: _obterFichaGateway(),
               catalogoGateway: _obterCatalogoGateway(),
+              participacaoGateway: _obterParticipacaoGateway(),
               onSair: _sair,
               userName: widget.auth.emailAtual,
             );
@@ -343,6 +353,15 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
       return FirebaseCatalogoGateway(FirebaseFunctions.instance);
     } catch (_) {
       return const _CatalogoMemoriaFallback();
+    }
+  }
+
+  ParticipacaoGateway _obterParticipacaoGateway() {
+    if (widget.participacao != null) return widget.participacao!;
+    try {
+      return FirebaseParticipacaoGateway(FirebaseFunctions.instance);
+    } catch (_) {
+      return MemoriaParticipacaoGateway();
     }
   }
 }

@@ -114,6 +114,14 @@ class StatusChip extends StatelessWidget {
           type: StatusType.inativa,
         );
 
+      case 'RASCUNHO':
+        return const StatusConfig(
+          label: 'RASCUNHO',
+          backgroundColor: Color(0xFFF0F2F5),
+          textColor: Color(0xFF475467),
+          type: StatusType.inativa,
+        );
+
       default:
         return StatusConfig(
           label: statusRaw.toUpperCase(),

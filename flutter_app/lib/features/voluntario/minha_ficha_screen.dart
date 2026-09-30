@@ -9,6 +9,7 @@ import '../../ui/tokens.dart';
 import '../admin/catalogo_service.dart';
 import '../auth/validadores.dart';
 import 'ficha_service.dart';
+import 'participacao_service.dart';
 
 /// Tela responsiva mobile-first para o voluntário preencher e manter sua ficha cadastral permanente.
 class MinhaFichaScreen extends StatefulWidget {
@@ -16,12 +17,14 @@ class MinhaFichaScreen extends StatefulWidget {
     super.key,
     required this.fichaGateway,
     required this.catalogoGateway,
+    this.participacaoGateway,
     this.onSair,
     this.userName,
   });
 
   final FichaGateway fichaGateway;
   final CatalogoGateway catalogoGateway;
+  final ParticipacaoGateway? participacaoGateway;
   final VoidCallback? onSair;
   final String? userName;
 
@@ -34,16 +37,23 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   final _nomeController = TextEditingController();
   final _profissaoController = TextEditingController();
   final _cpfController = TextEditingController();
+  final _buscaEquipeController = TextEditingController();
 
   String? _igrejaSelecionadaId;
   FichaModel? _ficha;
   List<IgrejaCatalogo> _igrejas = const [];
+  List<EquipeCatalogo> _equipes = const [];
+  List<ParticipacaoModel> _participacoes = const [];
+  Set<String> _equipesSelecionadasIds = {};
 
   bool _carregando = true;
   bool _salvando = false;
+  bool _salvandoEquipes = false;
   String? _erroCarregamento;
   String? _mensagemSucesso;
   String? _erroSalvar;
+  String? _mensagemSucessoEquipes;
+  String? _erroEquipes;
 
   @override
   void initState() {
@@ -51,6 +61,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     _nomeController.addListener(_aoMudarCampos);
     _profissaoController.addListener(_aoMudarCampos);
     _cpfController.addListener(_aoMudarCampos);
+    _buscaEquipeController.addListener(_aoMudarCampos);
     _carregarDados();
   }
 
@@ -59,9 +70,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     _nomeController.removeListener(_aoMudarCampos);
     _profissaoController.removeListener(_aoMudarCampos);
     _cpfController.removeListener(_aoMudarCampos);
+    _buscaEquipeController.removeListener(_aoMudarCampos);
     _nomeController.dispose();
     _profissaoController.dispose();
     _cpfController.dispose();
+    _buscaEquipeController.dispose();
     super.dispose();
   }
 
@@ -78,21 +91,36 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     });
 
     try {
+      final partGateway = widget.participacaoGateway;
       final resultados = await Future.wait([
         widget.fichaGateway.obterMinhaFicha(),
         widget.catalogoGateway.consultar(),
+        if (partGateway != null)
+          partGateway.obterMinhasParticipacoes()
+        else
+          Future.value(<ParticipacaoModel>[]),
       ]);
 
       final respostaFicha = resultados[0] as ObterFichaResposta;
       final respostaCatalogo = resultados[1] as CatalogoResposta;
+      final participacoes = resultados[2] as List<ParticipacaoModel>;
 
       final igrejasAtivas = respostaCatalogo.igrejas
           .where((i) => i.ativo)
+          .toList(growable: false);
+      final equipesAtivas = respostaCatalogo.equipes
+          .where((e) => e.ativo)
           .toList(growable: false);
 
       if (mounted) {
         setState(() {
           _igrejas = igrejasAtivas;
+          _equipes = equipesAtivas;
+          _participacoes = participacoes;
+          _equipesSelecionadasIds = participacoes
+              .where((p) => p.isRascunho)
+              .map((p) => p.equipeId)
+              .toSet();
           _ficha = respostaFicha.ficha;
 
           if (respostaFicha.ficha != null) {
@@ -117,6 +145,65 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           _erroCarregamento =
               'Não foi possível carregar os dados da ficha. Tente novamente.';
         });
+      }
+    }
+  }
+
+  Future<void> _salvarEquipes() async {
+    setState(() {
+      _salvandoEquipes = true;
+      _erroEquipes = null;
+      _mensagemSucessoEquipes = null;
+    });
+
+    try {
+      final gateway = widget.participacaoGateway;
+      if (gateway != null) {
+        final novas = await gateway.salvarParticipacoesRascunho(
+          _equipesSelecionadasIds.toList(),
+        );
+        if (mounted) {
+          setState(() {
+            _participacoes = novas;
+            _equipesSelecionadasIds = novas
+                .where((p) => p.isRascunho)
+                .map((p) => p.equipeId)
+                .toSet();
+            _salvandoEquipes = false;
+            _mensagemSucessoEquipes = 'Equipes de rascunho salvas com sucesso.';
+          });
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+            const SnackBar(
+              content: Text('Equipes de rascunho salvas com sucesso.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _salvandoEquipes = false;
+            _mensagemSucessoEquipes = 'Equipes salvas em rascunho.';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        final erroMsg = e.toString().contains('Ficha permanente não encontrada')
+            ? 'Preencha e salve a ficha antes de selecionar as equipes.'
+            : e.toString().contains('Equipe inválida')
+                ? 'Uma das equipes selecionadas é inválida ou está inativa.'
+                : 'Não foi possível salvar as equipes. Tente novamente.';
+        setState(() {
+          _salvandoEquipes = false;
+          _erroEquipes = erroMsg;
+        });
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text(erroMsg),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     }
   }
@@ -464,9 +551,272 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   ),
                 ),
               ],
+
+              const SizedBox(height: AppSpacing.s24),
+
+              // Seção de seleção de equipes e participações em rascunho
+              _buildSecaoEquipes(),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSecaoEquipes() {
+    final termo = normalizarBusca(_buscaEquipeController.text);
+    final equipesFiltradas = _equipes.where((e) {
+      if (termo.isEmpty) return true;
+      return normalizarBusca(e.nome).contains(termo);
+    }).toList();
+
+    return SectionCard(
+      title: 'Equipes de Interesse',
+      subtitle:
+          'Selecione as equipes em que deseja servir. Suas escolhas ficam salvas como rascunho.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_mensagemSucessoEquipes != null) ...[
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s12),
+              decoration: BoxDecoration(
+                color: AppColors.successBg,
+                borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                border: Border.all(color: AppColors.success),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      _mensagemSucessoEquipes!,
+                      style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+          ],
+          if (_erroEquipes != null) ...[
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s12),
+              decoration: BoxDecoration(
+                color: AppColors.dangerBg,
+                borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                border: Border.all(color: AppColors.danger),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      _erroEquipes!,
+                      style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+          ],
+          Text('Buscar Equipes', style: AppTypography.label),
+          const SizedBox(height: AppSpacing.s4),
+          TextField(
+            key: const Key('campo_busca_equipes'),
+            controller: _buscaEquipeController,
+            textInputAction: TextInputAction.search,
+            decoration: const InputDecoration(
+              hintText: 'Pesquise pelo nome da equipe...',
+              prefixIcon: Icon(Icons.search, size: 20),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          Text(
+            'Equipes Disponíveis',
+            style: AppTypography.label.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          if (equipesFiltradas.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
+              child: Text(
+                'Nenhuma equipe encontrada.',
+                style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+              ),
+            )
+          else
+            Wrap(
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
+              children: equipesFiltradas.map((equipe) {
+                final isSelecionada = _equipesSelecionadasIds.contains(equipe.id);
+                return FilterChip(
+                  key: Key('chip_equipe_${equipe.id}'),
+                  label: Text(equipe.nome),
+                  selected: isSelecionada,
+                  selectedColor: const Color(0xFFEFF6FF),
+                  checkmarkColor: AppColors.blue600,
+                  labelStyle: AppTypography.body.copyWith(
+                    color: isSelecionada ? AppColors.blue600 : AppColors.textPrimary,
+                    fontWeight: isSelecionada ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                    side: BorderSide(
+                      color: isSelecionada ? AppColors.blue600 : AppColors.border,
+                    ),
+                  ),
+                  onSelected: (selecionado) {
+                    setState(() {
+                      if (selecionado) {
+                        _equipesSelecionadasIds.add(equipe.id);
+                      } else {
+                        _equipesSelecionadasIds.remove(equipe.id);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+          const SizedBox(height: AppSpacing.s24),
+          const Divider(color: AppColors.border),
+          const SizedBox(height: AppSpacing.s16),
+          Text(
+            'Participações no Rascunho',
+            style: AppTypography.h3,
+          ),
+          const SizedBox(height: AppSpacing.s4),
+          Text(
+            'Cada equipe selecionada gera uma participação independente.',
+            style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          if (_equipesSelecionadasIds.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: AppColors.textSecondary, size: 20),
+                  const SizedBox(width: AppSpacing.s12),
+                  Expanded(
+                    child: Text(
+                      'Nenhuma equipe selecionada ainda. Marque uma ou mais equipes acima para adicionar ao seu rascunho.',
+                      style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
+              children: _equipesSelecionadasIds.map((eqId) {
+                final equipe = _equipes.cast<EquipeCatalogo?>().firstWhere(
+                      (e) => e?.id == eqId,
+                      orElse: () => null,
+                    );
+                final nomeEquipe = equipe?.nome ?? eqId;
+                return Container(
+                  key: Key('card_participacao_$eqId'),
+                  margin: const EdgeInsets.only(bottom: AppSpacing.s8),
+                  padding: const EdgeInsets.all(AppSpacing.s12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    nomeEquipe,
+                                    style: AppTypography.label.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.s8),
+                                const StatusChip(status: 'RASCUNHO'),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.s4),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF3F4F6),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Ciclo: INICIAL',
+                                    style: AppTypography.caption.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.s8),
+                                Expanded(
+                                  child: Text(
+                                    'Aguardando envio da ficha',
+                                    style: AppTypography.caption.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s8),
+                      IconButton(
+                        key: Key('botao_remover_equipe_$eqId'),
+                        icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
+                        tooltip: 'Remover $nomeEquipe',
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _equipesSelecionadasIds.remove(eqId);
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          const SizedBox(height: AppSpacing.s24),
+          Align(
+            alignment: Alignment.centerRight,
+            child: PrimaryButton(
+              key: const Key('botao_salvar_equipes'),
+              label: 'Salvar Equipes',
+              icon: Icons.save_outlined,
+              isLoading: _salvandoEquipes,
+              onPressed: _salvandoEquipes ? null : _salvarEquipes,
+            ),
+          ),
+        ],
       ),
     );
   }
