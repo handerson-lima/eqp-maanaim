@@ -11,6 +11,7 @@ import 'features/auth/auth_service.dart';
 import 'features/auth/validadores.dart';
 import 'features/admin/catalogo_service.dart';
 import 'features/admin/pessoas_service.dart';
+import 'features/admin/termos_service.dart';
 import 'features/admin/vinculos_service.dart';
 import 'features/admin/admin_shell.dart';
 
@@ -75,6 +76,7 @@ Future<void> main() async {
       seed: FirebaseSeedGateway(functions),
       pessoas: FirebasePessoasGateway(functions),
       vinculos: FirebaseVinculosGateway(functions),
+      termos: FirebaseTermosService(functions: functions),
     ),
   );
 }
@@ -97,12 +99,14 @@ class MaanaimApp extends StatelessWidget {
     this.seed,
     this.pessoas,
     this.vinculos,
+    this.termos,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
+  final TermosGateway? termos;
   @override
   Widget build(BuildContext c) => MaterialApp(
     title: 'Maanaim',
@@ -113,6 +117,7 @@ class MaanaimApp extends StatelessWidget {
       seed: seed,
       pessoas: pessoas,
       vinculos: vinculos,
+      termos: termos,
     ),
   );
 }
@@ -127,12 +132,14 @@ class RaizSessao extends StatefulWidget {
     this.seed,
     this.pessoas,
     this.vinculos,
+    this.termos,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
+  final TermosGateway? termos;
 
   @override
   State<RaizSessao> createState() => _RaizSessaoState();
@@ -203,6 +210,7 @@ class _RaizSessaoState extends State<RaizSessao> {
         seed: widget.seed,
         pessoas: widget.pessoas,
         vinculos: widget.vinculos,
+        termos: widget.termos,
       );
     },
   );
@@ -216,12 +224,14 @@ class AreaAutenticada extends StatefulWidget {
     this.seed,
     this.pessoas,
     this.vinculos,
+    this.termos,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
+  final TermosGateway? termos;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -296,6 +306,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
               seed: widget.seed,
               pessoas: widget.pessoas,
               vinculos: widget.vinculos,
+              termos: widget.termos,
             )
           : Scaffold(
               appBar: AppBar(
@@ -338,28 +349,33 @@ class Inicio extends StatelessWidget {
               header: true,
               child: Text(
                 'Bem-vindo',
-                style: Theme.of(c).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTypography.h2,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text('Acesse sua conta para continuar.'),
-            const SizedBox(height: 28),
-            ElevatedButton(
+            const SizedBox(height: AppSpacing.s4),
+            Text(
+              'Acesse sua conta para continuar.',
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s24),
+            PrimaryButton(
+              label: 'Entrar',
+              isFullWidth: true,
               onPressed: () => Navigator.push(
                 c,
                 MaterialPageRoute(builder: (_) => Login(auth)),
               ),
-              child: const Text('Entrar'),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton(
+            const SizedBox(height: AppSpacing.s12),
+            SecondaryButton(
+              label: 'Cadastre-se',
+              isFullWidth: true,
               onPressed: () => Navigator.push(
                 c,
                 MaterialPageRoute(builder: (_) => Cadastro(auth)),
               ),
-              child: const Text('Cadastre-se'),
             ),
           ],
         ),
@@ -635,59 +651,115 @@ class _LoginState extends State<Login> {
                 header: true,
                 child: Text(
                   'Bem-vindo',
-                  style: Theme.of(c).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTypography.h2,
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text('Acesse sua conta para continuar'),
-              const SizedBox(height: 28),
-              _campo(email, 'E-mail', emailValido),
-              _campo(senha, 'Senha', senhaValida, segredo: true),
+              const SizedBox(height: AppSpacing.s4),
+              Text(
+                'Acesse sua conta para continuar',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s24),
+              _campo(
+                email,
+                'E-mail',
+                emailValido,
+                tipo: TextInputType.emailAddress,
+              ),
+              _campo(
+                senha,
+                'Senha',
+                senhaValida,
+                segredo: true,
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: carregando ? null : recuperar,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.blue600,
+                    minimumSize: const Size(44, 36),
+                  ),
+                  child: const Text('Esqueci minha senha'),
+                ),
+              ),
               if (aviso != null)
                 Semantics(
                   liveRegion: true,
                   child: Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(aviso!),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+                    child: Text(
+                      aviso!,
+                      style: AppTypography.body.copyWith(color: AppColors.danger),
+                    ),
                   ),
                 ),
-              ElevatedButton(
+              const SizedBox(height: AppSpacing.s8),
+              PrimaryButton(
+                label: 'Entrar',
+                isFullWidth: true,
                 onPressed: carregando
                     ? null
                     : () async {
-                        if (!f.currentState!.validate()) {
-                          return;
-                        }
-                        setState(() => carregando = true);
-                        try {
-                          await widget.auth.entrar(email.text, senha.text);
-                          // O StreamBuilder em RaizSessao
-                          // reagirá ao login; basta voltar.
-                          if (mounted) {
-                            Navigator.of(
-                              context,
-                            ).popUntil((route) => route.isFirst);
-                          }
-                        } catch (_) {
-                          if (mounted) {
-                            setState(
-                              () => aviso =
-                                  'Não foi possível entrar. Verifique seus dados e tente novamente.',
-                            );
-                          }
-                        } finally {
-                          if (mounted) {
-                            setState(() => carregando = false);
-                          }
-                        }
-                      },
-                child: const Text('Entrar'),
+                  if (!f.currentState!.validate()) {
+                    return;
+                  }
+                  setState(() => carregando = true);
+                  try {
+                    await widget.auth.entrar(email.text, senha.text);
+                    if (mounted) {
+                      Navigator.of(
+                        context,
+                      ).popUntil((route) => route.isFirst);
+                    }
+                  } catch (_) {
+                    if (mounted) {
+                      setState(
+                        () => aviso =
+                            'Não foi possível entrar. Verifique seus dados e tente novamente.',
+                      );
+                    }
+                  } finally {
+                    if (mounted) {
+                      setState(() => carregando = false);
+                    }
+                  }
+                },
               ),
-              TextButton(
-                onPressed: carregando ? null : recuperar,
-                child: const Text('Esqueci minha senha'),
+              const SizedBox(height: AppSpacing.s16),
+              Row(
+                children: [
+                  const Expanded(child: Divider(color: AppColors.border, height: 1)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
+                    child: Text(
+                      'ou',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  const Expanded(child: Divider(color: AppColors.border, height: 1)),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s16),
+              SecondaryButton(
+                label: 'Entrar com Google',
+                icon: Icons.login,
+                isFullWidth: true,
+                onPressed: carregando
+                    ? null
+                    : () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Login com Google não configurado no momento.',
+                            ),
+                          ),
+                        );
+                      },
               ),
             ],
           ),
@@ -695,19 +767,38 @@ class _LoginState extends State<Login> {
       ),
     ),
   );
+
   Widget _campo(
     TextEditingController controller,
     String label,
     String? Function(String?) valida, {
     bool segredo = false,
+    TextInputType? tipo,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 14),
-    child: TextFormField(
-      controller: controller,
-      decoration: InputDecoration(labelText: label),
-      validator: valida,
-      keyboardType: segredo ? null : TextInputType.emailAddress,
-      obscureText: segredo,
+    padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: AppTypography.label.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s4),
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: 'Informe seu ${label.toLowerCase()}',
+          ),
+          validator: valida,
+          keyboardType: segredo ? null : tipo,
+          obscureText: segredo,
+        ),
+      ],
     ),
   );
 }

@@ -25,6 +25,12 @@ const gerenciarVinculo = readFileSync(join(raiz, 'functions', 'src', 'commands',
 const consultarVinculos = readFileSync(join(raiz, 'functions', 'src', 'commands', 'consultarVinculos.ts'), 'utf8');
 const repoVinculos = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'vinculos.ts'), 'utf8');
 const domainVinculos = readFileSync(join(raiz, 'functions', 'src', 'domain', 'vinculos.ts'), 'utf8');
+const publicarTermo = readFileSync(join(raiz, 'functions', 'src', 'commands', 'publicarTermo.ts'), 'utf8');
+const consultarTermos = readFileSync(join(raiz, 'functions', 'src', 'commands', 'consultarTermos.ts'), 'utf8');
+const obterTermoVigente = readFileSync(join(raiz, 'functions', 'src', 'commands', 'obterTermoVigente.ts'), 'utf8');
+const repoTermos = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'termos.ts'), 'utf8');
+const domainTermos = readFileSync(join(raiz, 'functions', 'src', 'domain', 'termos.ts'), 'utf8');
+const termosService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'admin', 'termos_service.dart'), 'utf8');
 
 describe('contratos de segurança executáveis', () => {
   it('nega escrita de domínio e leitura direta de ficha pelo cliente', () => {
@@ -149,13 +155,17 @@ describe('contratos de segurança executáveis', () => {
       'gerenciarPapeis',
       'consultarVinculos',
       'gerenciarVinculo',
+      'publicarTermo',
+      'consultarTermos',
+      'obterTermoVigente',
     ];
     for (const nome of nomesCliente) {
       const invocada =
         catalogoService.includes(`httpsCallable('${nome}')`) ||
         authService.includes(`httpsCallable('${nome}')`) ||
         pessoasService.includes(`httpsCallable('${nome}')`) ||
-        vinculosService.includes(`httpsCallable('${nome}')`);
+        vinculosService.includes(`httpsCallable('${nome}')`) ||
+        termosService.includes(`httpsCallable('${nome}')`);
       expect(invocada, `${nome} não é invocada pelo cliente`).toBe(true);
       expect(
         index.includes(`export { ${nome} }`),
@@ -216,5 +226,32 @@ describe('contratos de segurança executáveis', () => {
     expect(authService).toContain("claimAdministrativa = 'maanaimAdmin'");
     expect(pessoasService).toContain("'ADMINISTRADOR': 'Administrador'");
     expect(pessoasService).toContain("'COORDENADOR': 'Coordenador'");
+  });
+
+  it('protege a publicação e versionamento de termos com App Check, imutabilidade e sem PII', () => {
+    expect(publicarTermo).toContain('enforceAppCheck: true');
+    expect(publicarTermo).toContain('if (!request.auth)');
+    expect(publicarTermo).toContain('validarPublicarTermo');
+    expect(publicarTermo).not.toMatch(/console\.(log|error)/);
+    expect(consultarTermos).toContain('enforceAppCheck: true');
+    expect(consultarTermos).not.toMatch(/console\.(log|error)/);
+    expect(obterTermoVigente).toContain('enforceAppCheck: true');
+    expect(obterTermoVigente).not.toMatch(/console\.(log|error)/);
+    expect(repoTermos).toContain('podeAdministrar');
+    expect(repoTermos).toContain('runTransaction');
+    expect(repoTermos).toContain('reciboSnap.exists');
+    expect(repoTermos).toContain('payloadHash');
+    expect(repoTermos).toContain('tx.create(reciboRef');
+    expect(repoTermos).toContain('tx.create(auditoriaRef');
+    expect(repoTermos).toContain('imutavel: true');
+    expect(regras).toContain('match /termos/{termoId}');
+    expect(regras).toContain('match /versoes/{versaoId}');
+    expect(regras).toContain('allow write: if false;');
+    const recibo = repoTermos.match(/tx\.create\(reciboRef, \{([\s\S]*?)\n    \}\);/)?.[1];
+    const auditoria = repoTermos.match(/tx\.create\(auditoriaRef, \{([\s\S]*?)\n    \}\);/)?.[1];
+    expect(recibo).toBeDefined();
+    expect(auditoria).toBeDefined();
+    expect(recibo).not.toMatch(/cpf|nomeCompleto|email/);
+    expect(auditoria).not.toMatch(/cpf|nomeCompleto|email/);
   });
 });

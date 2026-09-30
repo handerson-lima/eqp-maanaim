@@ -29,18 +29,18 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-28-2026 22:53
-last_updated: 09-30-2026 11:12
+last_updated: 09-30-2026 17:50
 project: eqp_maanaim
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 development_status:
-  epic-1: in-progress
+  epic-1: done
   1-1-acesso-administrativo-seguro: done
   1-2-seed-idempotente-de-igrejas-e-equipes: done
   1-3-gestão-administrativa-de-pessoas-e-papéis: done
-  1-4-gestão-temporal-de-vínculos-de-responsabilidade: review
-  1-5-publicação-e-versionamento-do-primeiro-termo: backlog
+  1-4-gestão-temporal-de-vínculos-de-responsabilidade: done
+  1-5-publicação-e-versionamento-do-primeiro-termo: done
   epic-1-retrospective: optional
 
   epic-2: backlog

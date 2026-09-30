@@ -317,8 +317,9 @@ export function validarVinculo(value: unknown): EntradaVinculo {
 }
 
 /**
- * Liga o recibo ao conteúdo do comando sem persistir PII: apenas IDs opacos, a
- * ação e a data efetiva entram no hash.
+ * Liga o recibo ao conteúdo do comando sem persistir PII: IDs opacos, a ação, a
+ * data efetiva e a justificativa entram no hash. A justificativa é vinculada
+ * para que um replay divergente não devolva o recibo de outro payload.
  */
 export function hashVinculo(entrada: EntradaVinculo): string {
   return createHash('sha256')
@@ -329,6 +330,8 @@ export function hashVinculo(entrada: EntradaVinculo): string {
         acao: entrada.acao,
         pessoaId: entrada.pessoaId ?? '',
         dataEfetivaMs: entrada.dataEfetivaMs,
+        justificativa: entrada.justificativa ?? '',
+        correlationId: entrada.correlationId ?? '',
         expectedVersion: entrada.expectedVersion,
       }),
     )

@@ -20,6 +20,9 @@ void main() {
       versao: 3,
       justificativa: '  troca  ',
     );
+    expect(payload['commandId'], _id('a'));
+    expect(payload['tipoEntidade'], 'IGREJA');
+    expect(payload['entidadeId'], 'ig-1');
     expect(payload['dataEfetiva'], '2026-07-04');
     expect(payload['expectedVersion'], 3);
     expect(payload['acao'], 'SUBSTITUIR');
@@ -74,6 +77,13 @@ void main() {
     expect(item.responsavel?.pessoaId, 'p1');
     expect(item.responsavel?.nome, 'João Batista');
     expect(item.historico, hasLength(1));
+    final evento = item.historico.single;
+    expect(evento.acao, 'SUBSTITUIR');
+    expect(evento.papel, 'PASTOR_LOCAL');
+    expect(evento.estado, 'VIGENTE');
+    expect(evento.inicioVigencia, DateTime.utc(2026, 1, 5, 14, 30));
+    expect(evento.fimVigencia, isNull);
+    expect(evento.justificativa, 'troca pastoral');
   });
 
   test('mapearItemVinculo tolera ausência de responsável', () {

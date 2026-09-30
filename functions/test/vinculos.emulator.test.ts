@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { deleteApp, initializeApp, type App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import type { CallableRequest } from 'firebase-functions/v2/https';
 import {
@@ -140,11 +139,6 @@ describe.skipIf(!habilitado)('vínculos de responsabilidade no Emulator', () => 
 
   afterAll(async () => {
     if (!app) return;
-    const auth = getAuth(app);
-    const usuarios = await auth.listUsers();
-    if (usuarios.users.length > 0) {
-      await auth.deleteUsers(usuarios.users.map((u) => u.uid));
-    }
     const db = getFirestore(app);
     for (const colecao of COLECOES) {
       await db.recursiveDelete(db.collection(colecao));
@@ -178,8 +172,8 @@ describe.skipIf(!habilitado)('vínculos de responsabilidade no Emulator', () => 
     expect(recibo.estado).toBe('COMPLETO');
     const auditoria = (await db.collection('auditOutbox').doc(entrada.commandId).get()).data() ?? {};
     expect(auditoria.action).toBe('VINCULO_ATRIBUIDO');
-    expect(JSON.stringify(recibo)).not.toMatch(/nomeCompleto|email@|cpf/);
-    expect(JSON.stringify(auditoria)).not.toMatch(/nomeCompleto|email@|cpf/);
+    expect(JSON.stringify(recibo)).not.toMatch(/nomeCompleto|email|cpf/);
+    expect(JSON.stringify(auditoria)).not.toMatch(/nomeCompleto|email|cpf/);
 
     const replay = await gerenciarVinculo(db, contexto(entrada.commandId), entrada);
     expect(replay.repetido).toBe(true);
@@ -339,6 +333,7 @@ describe.skipIf(!habilitado)('vínculos de responsabilidade no Emulator', () => 
     expect(equipe.data()?.responsavelVigentePessoaId).toBe(PESSOA_B);
     const vigentes = await db
       .collection('vinculosPastorEquipe')
+      .where('entidadeId', '==', EQUIPE_ID)
       .where('estado', '==', 'VIGENTE')
       .get();
     expect(vigentes.size).toBe(1);
@@ -372,6 +367,13 @@ describe.skipIf(!habilitado)('vínculos de responsabilidade no Emulator', () => 
     const resumo = await lerVinculos(db);
     const igrejaResumo = resumo.igrejas.find((i) => i.id === IGREJA_ID);
     expect(igrejaResumo?.responsavel?.pessoaId).toBe(PESSOA_LEGADA);
+    const legadoNoHistorico = igrejaResumo?.historico.find(
+      (evento) =>
+        evento.atorUid === '' &&
+        evento.inicioVigencia === new Date(PASSADO_10_MS).toISOString(),
+    );
+    expect(legadoNoHistorico?.estado).toBe('VIGENTE');
+    expect(legadoNoHistorico?.acao).toBe('ATRIBUIR');
 
     const substituir = validarVinculo({
       commandId: 'j'.repeat(32),
@@ -478,6 +480,9 @@ describe.skipIf(!habilitado)('vínculos de responsabilidade no Emulator', () => 
     expect(primeiro?.acao).toBe('SUBSTITUIR');
     expect(primeiro?.papel).toBe('PASTOR_LOCAL');
     expect(primeiro?.atorNome).toContain('Administrador');
+    expect(primeiro?.inicioVigencia).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+    );
     expect(JSON.stringify(resumo)).not.toMatch(/exemplo\.com|cpf/i);
     expect(resumo.equipes.find((e) => e.id === EQUIPE_ID)?.responsavel?.pessoaId).toBe(
       PESSOA_B,
@@ -490,6 +495,17 @@ describe.skipIf(!habilitado)('vínculos de responsabilidade no Emulator', () => 
     ).rejects.toMatchObject({ code: 'permission-denied' });
     await expect(
       requisitar(consultarVinculos, {}),
+    ).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(
+      requisitar(gerenciarVinculoCommand, {
+        commandId: 'p2'.repeat(16),
+        tipoEntidade: 'IGREJA',
+        entidadeId: IGREJA_ID,
+        acao: 'ATRIBUIR',
+        pessoaId: PESSOA_B,
+        dataEfetiva: PASSADO_5,
+        expectedVersion: 1,
+      }),
     ).rejects.toMatchObject({ code: 'permission-denied' });
 
     const commandId = 'p'.repeat(32);
@@ -540,6 +556,12 @@ describe.skipIf(!habilitado)('vínculos de responsabilidade no Emulator', () => 
     const db = getFirestore(app);
     const auditoria = await db.collection('auditOutbox').doc(commandId).get();
     expect(auditoria.data()?.justificativa).toBe('troca de pastor');
+    const resumo = await lerVinculos(db);
+    const igrejaResumo = resumo.igrejas.find((i) => i.id === IGREJA_ID);
+    const comJustificativa = igrejaResumo?.historico.find(
+      (evento) => evento.justificativa === 'troca de pastor',
+    );
+    expect(comJustificativa?.acao).toBe('SUBSTITUIR');
   });
 
   it('mapeia os códigos de erro do callable conforme a matriz de I/O', async () => {
@@ -638,5 +660,117 @@ describe.skipIf(!habilitado)('vínculos de responsabilidade no Emulator', () => 
         { uid: ADMIN_UID },
       ),
     ).rejects.toMatchObject({ code: 'aborted' });
+  });
+
+  it('recusa vínculo para entidade inativa sem persistir mutação', async () => {
+    const db = getFirestore(app);
+    const inativaId = 'ig-vinculos-inativa';
+    await db.collection('igrejas').doc(inativaId).set({
+      codigo: '240098',
+      nome: 'Igreja Inativa',
+      ativo: false,
+    });
+
+    const comandoRepo = 'x'.repeat(32);
+    const entrada = validarVinculo({
+      commandId: comandoRepo,
+      tipoEntidade: 'IGREJA',
+      entidadeId: inativaId,
+      acao: 'ATRIBUIR',
+      pessoaId: PESSOA_A,
+      dataEfetiva: PASSADO_5,
+      expectedVersion: 0,
+    });
+    await expect(
+      gerenciarVinculo(db, contexto(entrada.commandId), entrada),
+    ).rejects.toBeInstanceOf(EntidadeInexistenteError);
+
+    const comandoCallable = 'y'.repeat(32);
+    await expect(
+      requisitar(
+        gerenciarVinculoCommand,
+        {
+          commandId: comandoCallable,
+          tipoEntidade: 'IGREJA',
+          entidadeId: inativaId,
+          acao: 'ATRIBUIR',
+          pessoaId: PESSOA_A,
+          dataEfetiva: PASSADO_5,
+          expectedVersion: 0,
+        },
+        { uid: ADMIN_UID },
+      ),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+
+    expect((await db.collection('commands').doc(comandoRepo).get()).exists).toBe(false);
+    expect((await db.collection('commands').doc(comandoCallable).get()).exists).toBe(false);
+    expect((await db.collection('auditOutbox').doc(comandoRepo).get()).exists).toBe(false);
+    expect((await db.collection('auditOutbox').doc(comandoCallable).get()).exists).toBe(false);
+    const vinculos = await db
+      .collection('vinculosPastorIgreja')
+      .where('entidadeId', '==', inativaId)
+      .get();
+    expect(vinculos.empty).toBe(true);
+  });
+
+  it('mapeia entidade/pessoa inexistente e data futura pelos códigos da matriz', async () => {
+    const db = getFirestore(app);
+
+    // Entidade inexistente → invalid-argument.
+    await expect(
+      requisitar(
+        gerenciarVinculoCommand,
+        {
+          commandId: 'z'.repeat(32),
+          tipoEntidade: 'IGREJA',
+          entidadeId: 'ig-callable-inexistente',
+          acao: 'ATRIBUIR',
+          pessoaId: PESSOA_A,
+          dataEfetiva: PASSADO_5,
+          expectedVersion: 0,
+        },
+        { uid: ADMIN_UID },
+      ),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+
+    const entidade = 'ig-callable-erros-2';
+    await db
+      .collection('igrejas')
+      .doc(entidade)
+      .set({ codigo: '240097', nome: 'Igreja Erros 2', ativo: true });
+
+    // Pessoa inexistente → invalid-argument.
+    await expect(
+      requisitar(
+        gerenciarVinculoCommand,
+        {
+          commandId: 'z1'.repeat(16),
+          tipoEntidade: 'IGREJA',
+          entidadeId: entidade,
+          acao: 'ATRIBUIR',
+          pessoaId: 'pessoa-inexistente',
+          dataEfetiva: PASSADO_5,
+          expectedVersion: 0,
+        },
+        { uid: ADMIN_UID },
+      ),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+
+    // Data futura → failed-precondition.
+    await expect(
+      requisitar(
+        gerenciarVinculoCommand,
+        {
+          commandId: 'z2'.repeat(16),
+          tipoEntidade: 'IGREJA',
+          entidadeId: entidade,
+          acao: 'ATRIBUIR',
+          pessoaId: PESSOA_A,
+          dataEfetiva: dataStr(1),
+          expectedVersion: 0,
+        },
+        { uid: ADMIN_UID },
+      ),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
   });
 });

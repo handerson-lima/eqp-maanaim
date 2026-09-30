@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../ui/identidade.dart';
 import 'catalogo_service.dart';
 
 /// Tela administrativa read-only do catálogo, mobile-first e acessível.
@@ -76,14 +77,28 @@ class _ConsultaCatalogoState extends State<ConsultaCatalogo> {
         return _mensagem('Nenhum resultado encontrado.', false);
       }
       return ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
           if (igrejas.isNotEmpty) ...[
-            _cabecalho('Igrejas'),
-            for (final igreja in igrejas) _itemIgreja(igreja),
+            SectionCard(
+              title: 'Igrejas',
+              child: Column(
+                children: [
+                  for (final igreja in igrejas) _itemIgreja(igreja),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
           if (equipes.isNotEmpty) ...[
-            _cabecalho('Equipes'),
-            for (final equipe in equipes) _itemEquipe(equipe),
+            SectionCard(
+              title: 'Equipes',
+              child: Column(
+                children: [
+                  for (final equipe in equipes) _itemEquipe(equipe),
+                ],
+              ),
+            ),
           ],
         ],
       );
@@ -99,9 +114,9 @@ class _ConsultaCatalogoState extends State<ConsultaCatalogo> {
           Semantics(liveRegion: true, child: Text(texto)),
           if (comRetentativa) ...[
             const SizedBox(height: 12),
-            ElevatedButton(
+            PrimaryButton(
               onPressed: _recarregar,
-              child: const Text('Tentar novamente'),
+              label: 'Tentar novamente',
             ),
           ],
         ],
@@ -109,25 +124,25 @@ class _ConsultaCatalogoState extends State<ConsultaCatalogo> {
     ),
   );
 
-  Widget _cabecalho(String titulo) => Semantics(
-    header: true,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(titulo, style: Theme.of(context).textTheme.titleMedium),
-    ),
-  );
-
   Widget _itemIgreja(IgrejaCatalogo igreja) => ListTile(
-    leading: const Icon(Icons.church_outlined),
-    title: Text(igreja.rotulo),
-    subtitle: igreja.ativo ? null : const Text('Inativa'),
-    trailing: igreja.ativo ? null : const Icon(Icons.block),
+    leading: const Icon(Icons.church_outlined, color: AppColors.blue600),
+    title: Text(
+      igreja.rotulo,
+      style: AppTypography.body.copyWith(fontWeight: FontWeight.w500),
+    ),
+    trailing: igreja.ativo
+        ? const StatusChip(status: 'ATIVA')
+        : const StatusChip(status: 'INATIVA', label: 'Inativa'),
   );
 
   Widget _itemEquipe(EquipeCatalogo equipe) => ListTile(
-    leading: const Icon(Icons.groups_outlined),
-    title: Text(equipe.nome),
-    subtitle: equipe.ativo ? null : const Text('Inativa'),
-    trailing: equipe.ativo ? null : const Icon(Icons.block),
+    leading: const Icon(Icons.groups_outlined, color: AppColors.blue600),
+    title: Text(
+      equipe.nome,
+      style: AppTypography.body.copyWith(fontWeight: FontWeight.w500),
+    ),
+    trailing: equipe.ativo
+        ? const StatusChip(status: 'ATIVA')
+        : const StatusChip(status: 'INATIVA', label: 'Inativa'),
   );
 }

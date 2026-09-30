@@ -9,12 +9,14 @@ Sistema Flutter Web/PWA mobile-first para gestão de voluntários do Maanaim, co
 
 - Planejamento e histórias: `_bmad-output/planning-artifacts/epics.md`; progresso: `_bmad-output/implementation-artifacts/sprint-status.yaml`.
 - Arquitetura e invariantes de domínio: `_bmad-output/planning-artifacts/architecture/architecture-eqp_maanaim-2026-09-28/ARCHITECTURE-SPINE.md`.
-- UX e acessibilidade: `_bmad-output/planning-artifacts/ux-designs/ux-eqp_maanaim-2026-09-28/`.
+- UX e acessibilidade: `_bmad-output/planning-artifacts/ux-designs/ux-eqp_maanaim-2026-09-28/` e pacote normativo em `_bmad-output/planning-artifacts/ux/`.
 - Antes de alterar requisitos, consulte o SPEC e seus companions.
+- Toda implementação de UI/UX deve consultar `_bmad-output/planning-artifacts/ux/DESIGN-RULES-FOR-AGENTS.md` e a referência visual em `_bmad-output/planning-artifacts/ux/references/maanaim-ui-reference.png`.
 
 ## Policy
 
 - Priorize mobile-first: projete e implemente primeiro para celular; expanda progressivamente para tablet e desktop.
+- Obedeça ao Design System (`_bmad-output/planning-artifacts/ux/`): use tokens canônicos (`navy-900`, `blue-600`, etc.), não invente gradientes/glassmorphism e reutilize o catálogo de componentes.
 - Trate responsividade como requisito central de toda interface: valide coluna única no celular, navegação lateral no desktop e tabelas em cartões no celular.
 - Realize mutações críticas exclusivamente em Cloud Functions autenticadas; Firestore e Storage devem negar escrita direta de domínio.
 - Nunca permita autoatribuição de papéis, nem autorize somente por papel: valide identidade, vínculo vigente, escopo, estado e tempo do servidor.

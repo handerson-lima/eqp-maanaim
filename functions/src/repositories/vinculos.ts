@@ -352,9 +352,7 @@ function resumir(
     id,
     tipoEntidade,
     rotulo:
-      tipoEntidade === 'IGREJA'
-        ? `${nome} - ${codigo ?? ''}`.trim()
-        : nome,
+      tipoEntidade === 'IGREJA' && codigo ? `${nome} - ${codigo}` : nome,
     codigo,
     ativo: dados.ativo === true,
     versaoVinculo: Number(dados.versaoVinculo ?? 0),

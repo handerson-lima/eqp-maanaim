@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:eqp_maanaim/features/admin/catalogo_service.dart';
 import 'package:eqp_maanaim/features/admin/pessoas_service.dart';
+import 'package:eqp_maanaim/features/admin/termos_service.dart';
 import 'package:eqp_maanaim/features/admin/vinculos_service.dart';
 import 'package:eqp_maanaim/features/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -228,6 +229,7 @@ class VinculosFake implements VinculosGateway {
   List<PessoaAdministrativa> pessoas;
   bool falhar = false;
   bool gerenciarFalhar = false;
+  bool buscarPessoasFalhar = false;
   int consultas = 0;
   int buscas = 0;
   int gerenciamentos = 0;
@@ -250,6 +252,7 @@ class VinculosFake implements VinculosGateway {
   @override
   Future<List<PessoaAdministrativa>> buscarPessoas({String? termo}) async {
     buscas++;
+    if (buscarPessoasFalhar) throw Exception('falha simulada');
     return pessoas;
   }
 
@@ -282,3 +285,93 @@ class VinculosFake implements VinculosGateway {
     );
   }
 }
+
+class TermosFake implements TermosGateway {
+  TermosFake({this.termo, this.falhar = false});
+
+  TermoVigente? termo;
+  bool falhar;
+  int consultas = 0;
+  int consultasVigente = 0;
+  int publicacoes = 0;
+  String? ultimoCommandId;
+  String? ultimoTitulo;
+  String? ultimoConteudo;
+  int? ultimaExpectedVersion;
+
+  @override
+  Future<TermoVigente?> consultarTermos({String? termoId}) async {
+    consultas++;
+    if (falhar) throw Exception('Falha simulada na consulta de termos');
+    return termo;
+  }
+
+  @override
+  Future<VersaoTermo?> obterTermoVigente({String? termoId}) async {
+    consultasVigente++;
+    if (falhar) throw Exception('Falha simulada na obtenção do termo vigente');
+    return termo?.versaoAtual;
+  }
+
+  @override
+  Future<ResultadoPublicarTermo> publicarTermo({
+    required String commandId,
+    String? correlationId,
+    String? termoId,
+    required String titulo,
+    required String conteudo,
+    required int expectedVersion,
+  }) async {
+    publicacoes++;
+    ultimoCommandId = commandId;
+    ultimoTitulo = titulo;
+    ultimoConteudo = conteudo;
+    ultimaExpectedVersion = expectedVersion;
+
+    if (falhar) throw Exception('Falha simulada na publicação do termo');
+
+    final proximaVersao = (termo?.totalVersoes ?? 0) + 1;
+    final versaoId = 'versao-fake-$proximaVersao';
+    const hash = 'a1b2c3d4e5f678901234567890abcdef1234567890abcdef1234567890abcdef';
+
+    final novaVersao = VersaoTermo(
+      id: versaoId,
+      termoId: termoId ?? 'termo-adesao-voluntariado',
+      numeroVersao: proximaVersao,
+      titulo: titulo,
+      conteudo: conteudo,
+      hashSha256: hash,
+      publicadoEm: DateTime.now().toUtc(),
+      publicadoPorUid: 'uid-admin-fake',
+      versaoAnteriorId: termo?.versaoVigenteId,
+      imutavel: true,
+    );
+
+    final listaVersoes = <VersaoTermo>[novaVersao, ...(termo?.versoes ?? const <VersaoTermo>[])];
+
+    termo = TermoVigente(
+      id: termoId ?? 'termo-adesao-voluntariado',
+      tipoTermo: 'ADESAO_VOLUNTARIADO',
+      titulo: titulo,
+      versaoVigenteId: versaoId,
+      versaoVigenteNumero: proximaVersao,
+      hashSha256: hash,
+      totalVersoes: proximaVersao,
+      publicadoEm: termo?.publicadoEm ?? DateTime.now().toUtc(),
+      atualizadoEm: DateTime.now().toUtc(),
+      ativo: true,
+      versoes: listaVersoes,
+    );
+
+    return ResultadoPublicarTermo(
+      concluido: true,
+      repetido: false,
+      termoId: termo!.id,
+      versaoId: versaoId,
+      numeroVersao: proximaVersao,
+      hashSha256: hash,
+      totalVoluntariosImpactados: 0,
+    );
+  }
+}
+

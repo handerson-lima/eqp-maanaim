@@ -65,3 +65,8 @@
 
 - `lerPessoas` carrega as coleções `pessoas`, `autoridadesAdministrativas` e `coordenadores` inteiras, sem paginação/limite; custo/latência crescem de forma ilimitada com o volume.
 - Nenhum teste assegura que os três callables novos enviam token de App Check a partir do cliente; depende de infraestrutura de Emulator/CI.
+
+## Deferred from: code review of spec-1-4-gestao-temporal-de-vinculos-de-responsabilidade (2026-09-30)
+
+- Suíte de Emulator dos vínculos não roda no caminho padrão: `npm test` a ignora via `skipIf` e `test:emulator` não usa `firebase emulators:exec` nem CI, então transação, recibo, auditoria e códigos de erro da 1.4 só são exercitados com o Emulator ativo (mesma lacuna registrada em `deferred-work.md:24`).
+- Rules de Firestore verificadas apenas por asserção textual de `firestore.rules` (sem `@firebase/rules-unit-testing`): uma regra permissiva em `vinculosPastorIgreja`/`vinculosPastorEquipe` passaria na suíte (mesma lacuna de `deferred-work.md:54`).

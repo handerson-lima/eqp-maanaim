@@ -9,3 +9,6 @@ export { gerenciarPapeis } from './commands/gerenciarPapeis.js';
 export { consultarPessoas } from './commands/consultarPessoas.js';
 export { gerenciarVinculo } from './commands/gerenciarVinculo.js';
 export { consultarVinculos } from './commands/consultarVinculos.js';
+export { publicarTermo } from './commands/publicarTermo.js';
+export { consultarTermos } from './commands/consultarTermos.js';
+export { obterTermoVigente } from './commands/obterTermoVigente.js';

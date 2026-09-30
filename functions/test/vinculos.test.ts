@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACOES_VINCULO,
   ConflitoVersaoError,
   DataInvalidaError,
   EntidadeInexistenteError,
@@ -136,8 +137,7 @@ describe('contrato do comando de vínculo', () => {
   it('liga o recibo ao conteúdo sem persistir PII', () => {
     const e = entrada();
     expect(hashVinculo(e)).toBe(e.payloadHash);
-    expect(e.payloadHash).not.toContain(e.pessoaId);
-    expect(e.payloadHash).not.toContain(e.entidadeId);
+    expect(e.payloadHash).toMatch(/^[0-9a-f]{64}$/);
     expect(
       hashVinculo(entrada({ acao: 'SUBSTITUIR' })),
     ).not.toBe(e.payloadHash);
@@ -145,6 +145,12 @@ describe('contrato do comando de vínculo', () => {
       e.payloadHash,
     );
     expect(hashVinculo(entrada({ expectedVersion: 1 }))).not.toBe(e.payloadHash);
+    expect(hashVinculo(entrada({ justificativa: 'motivo' }))).not.toBe(
+      e.payloadHash,
+    );
+    expect(
+      hashVinculo(entrada({ correlationId: 'c'.repeat(32) })),
+    ).not.toBe(e.payloadHash);
   });
 });
 
@@ -170,6 +176,13 @@ describe('planejamento temporal', () => {
     expect(() =>
       planejarVinculo(
         entrada(),
+        entidade({ vigente: { ...vigente, pessoaId: 'pessoa-opaca-1' } }),
+        AGORA,
+      ),
+    ).toThrow(OperacaoInvalidaError);
+    expect(() =>
+      planejarVinculo(
+        entrada({ acao: 'SUBSTITUIR' }),
         entidade({ vigente: { ...vigente, pessoaId: 'pessoa-opaca-1' } }),
         AGORA,
       ),
@@ -236,6 +249,13 @@ describe('planejamento temporal', () => {
         AGORA,
       ),
     ).toThrow(SobreposicaoError);
+    expect(() =>
+      planejarVinculo(
+        entrada({ acao: 'SUBSTITUIR', dataEfetiva: '2026-01-01' }),
+        entidade({ vigente }),
+        AGORA,
+      ),
+    ).toThrow(SobreposicaoError);
   });
 
   it('recusa versão divergente e entidade inativa', () => {
@@ -259,7 +279,7 @@ describe('planejamento temporal', () => {
   });
 
   it('cobre as três ações válidas', () => {
-    const acoes: AcaoVinculo[] = ['ATRIBUIR', 'SUBSTITUIR', 'ENCERRAR'];
-    expect(acoes).toHaveLength(3);
+    const acoes: readonly AcaoVinculo[] = ACOES_VINCULO;
+    expect(acoes).toEqual(['ATRIBUIR', 'SUBSTITUIR', 'ENCERRAR']);
   });
 });

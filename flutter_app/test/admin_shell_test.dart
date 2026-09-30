@@ -1,6 +1,7 @@
 import 'package:eqp_maanaim/features/admin/admin_shell.dart';
 import 'package:eqp_maanaim/features/admin/consulta_catalogo.dart';
 import 'package:eqp_maanaim/features/admin/seed_catalogo.dart';
+import 'package:eqp_maanaim/features/admin/termos_screen.dart';
 import 'package:eqp_maanaim/features/admin/catalogo_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,6 +30,7 @@ Widget _shell({required VoidCallback onSair, double escala = 1}) => MaterialApp(
       resposta: const CatalogoResposta(igrejas: _igrejas, equipes: _equipes),
     ),
     seed: SeedFake(),
+    termos: TermosFake(),
   ),
 );
 
@@ -39,7 +41,7 @@ void _definirTamanho(WidgetTester tester, Size tamanho) {
 }
 
 void main() {
-  for (final largura in [600.0, 1000.0]) {
+  for (final largura in [600.0, 1024.0]) {
     testWidgets('navegação responsiva em $largura com texto ampliado', (
       tester,
     ) async {
@@ -50,30 +52,32 @@ void main() {
       expect(find.byType(ConsultaCatalogo), findsOneWidget);
     });
   }
-  group('AdminShell desktop (≥600px)', () {
-    testWidgets('exibe NavigationRail com papel ativo e sign-out', (
+
+  group('AdminShell desktop (≥1024px)', () {
+    testWidgets('exibe AppShell com sidebar, papel ativo e sign-out', (
       tester,
     ) async {
-      _definirTamanho(tester, const Size(800, 600));
+      _definirTamanho(tester, const Size(1200, 800));
       bool saiu = false;
       await tester.pumpWidget(_shell(onSair: () => saiu = true));
       await tester.pumpAndSettle();
 
-      // NavigationRail presente
-      expect(find.byType(NavigationRail), findsOneWidget);
-      // Papel ativo visível
+      // AppSidebar presente
+      expect(find.byType(AppSidebar), findsOneWidget);
+      // Papel ativo e usuário visíveis
       expect(find.text('Administrador'), findsOneWidget);
+      expect(find.text('Administração'), findsOneWidget);
       // Catálogo carregado por padrão
       expect(find.byType(ConsultaCatalogo), findsOneWidget);
 
       // Clicar em sair
-      await tester.tap(find.byIcon(Icons.logout));
+      await tester.tap(find.byIcon(Icons.logout).first);
       await tester.pump();
       expect(saiu, isTrue);
     });
 
     testWidgets('navega para Seed ao clicar no destino', (tester) async {
-      _definirTamanho(tester, const Size(800, 600));
+      _definirTamanho(tester, const Size(1200, 800));
       await tester.pumpWidget(_shell(onSair: () {}));
       await tester.pumpAndSettle();
 
@@ -82,20 +86,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(SeedCatalogo), findsOneWidget);
     });
+
+    testWidgets('navega para Termos ao clicar no destino', (tester) async {
+      _definirTamanho(tester, const Size(1200, 800));
+      await tester.pumpWidget(_shell(onSair: () {}));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Termos'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TermosScreen), findsOneWidget);
+    });
   });
 
   group('AdminShell mobile (<600px)', () {
-    testWidgets('exibe AppBar com Drawer e papel ativo', (tester) async {
+    testWidgets('exibe TopBar com Drawer e papel ativo', (tester) async {
       _definirTamanho(tester, const Size(400, 700));
       bool saiu = false;
       await tester.pumpWidget(_shell(onSair: () => saiu = true));
       await tester.pumpAndSettle();
 
-      // Sem NavigationRail no mobile
-      expect(find.byType(NavigationRail), findsNothing);
-      // Papel ativo na AppBar
+      // Papel ativo e usuário na TopBar
       expect(find.text('Administrador'), findsOneWidget);
-      // AppBar com título
       expect(find.text('Administração'), findsOneWidget);
 
       // Abrir o drawer
@@ -105,12 +116,26 @@ void main() {
       expect(find.text('Maanaim'), findsOneWidget);
       expect(find.text('Catálogo'), findsOneWidget);
       expect(find.text('Seed'), findsOneWidget);
+      expect(find.text('Termos'), findsOneWidget);
       expect(find.text('Sair'), findsOneWidget);
 
       // Sair via drawer
       await tester.tap(find.text('Sair'));
       await tester.pump();
       expect(saiu, isTrue);
+    });
+
+    testWidgets('navega para Termos via drawer mobile', (tester) async {
+      _definirTamanho(tester, const Size(400, 700));
+      await tester.pumpWidget(_shell(onSair: () {}));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Termos'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TermosScreen), findsOneWidget);
     });
   });
 }

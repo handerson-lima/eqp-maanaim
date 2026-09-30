@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../comando.dart';
+import '../../ui/identidade.dart';
 import 'pessoas_service.dart';
 
 /// Superfície administrativa mobile-first de pessoas e papéis. Papéis efetivos
@@ -47,16 +48,19 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
     final resultado = await showDialog<bool>(
       context: context,
       builder: (dialogo) => AlertDialog(
-        title: Text(titulo),
-        content: Text(mensagem),
+        title: Text(titulo, style: AppTypography.h3),
+        content: Text(mensagem, style: AppTypography.body),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppGeometry.cardBorderRadius,
+        ),
         actions: [
-          TextButton(
+          SecondaryButton(
             onPressed: () => Navigator.pop(dialogo, false),
-            child: const Text('Cancelar'),
+            label: 'Cancelar',
           ),
-          ElevatedButton(
+          PrimaryButton(
             onPressed: () => Navigator.pop(dialogo, true),
-            child: const Text('Confirmar'),
+            label: 'Confirmar',
           ),
         ],
       ),
@@ -154,17 +158,16 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Semantics(
-              header: true,
-              child: Text(
-                'Pessoas e Papéis',
-                style: Theme.of(context).textTheme.titleLarge,
+            PageHeader(
+              title: 'Pessoas e Papéis',
+              subtitle:
+                  'Gerencie o perfil e os papéis de sistema. Identidade, perfil e '
+                  'papel são fontes separadas.',
+              action: PrimaryButton(
+                onPressed: _executando ? null : () => _abrirFormulario(),
+                icon: Icons.person_add_alt,
+                label: 'Cadastrar pessoa',
               ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Gerencie o perfil e os papéis de sistema. Identidade, perfil e '
-              'papel são fontes separadas.',
             ),
             const SizedBox(height: 12),
             TextField(
@@ -176,25 +179,16 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
                 prefixIcon: Icon(Icons.search),
               ),
             ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton.icon(
-                onPressed: _executando ? null : () => _abrirFormulario(),
-                icon: const Icon(Icons.person_add_alt),
-                label: const Text('Cadastrar pessoa'),
-              ),
-            ),
             if (_aviso != null)
               _faixa(
                 _aviso!,
-                Theme.of(context).colorScheme.primaryContainer,
+                AppColors.successBg,
                 Icons.check_circle_outline,
               ),
             if (_erroAcao != null)
               _faixa(
                 _erroAcao!,
-                Theme.of(context).colorScheme.errorContainer,
+                AppColors.dangerBg,
                 Icons.error_outline,
               ),
           ],
@@ -208,17 +202,22 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
     padding: const EdgeInsets.only(top: 12),
     child: Semantics(
       liveRegion: true,
-      child: Card(
-        color: cor,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(icone),
-              const SizedBox(width: 12),
-              Expanded(child: Text(texto)),
-            ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: cor,
+          borderRadius: AppGeometry.cardBorderRadius,
+          border: Border.all(
+            color: AppColors.border,
+            width: AppGeometry.borderWidth,
           ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icone),
+            const SizedBox(width: 12),
+            Expanded(child: Text(texto)),
+          ],
         ),
       ),
     ),
@@ -270,11 +269,33 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
     padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
     child: Semantics(
       label: 'Contexto ativo: ${dados.contextoRotulo}',
-      child: Card(
-        child: ListTile(
-          leading: const Icon(Icons.verified_user_outlined),
-          title: const Text('Contexto ativo (somente leitura)'),
-          subtitle: Text(dados.contextoRotulo),
+      child: SectionCard(
+        child: Row(
+          children: [
+            const Icon(Icons.verified_user_outlined, color: AppColors.blue600),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Contexto ativo (somente leitura)',
+                    style: AppTypography.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    dados.contextoRotulo,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     ),
@@ -289,9 +310,9 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
           Semantics(liveRegion: true, child: Text(texto)),
           if (comRetentativa) ...[
             const SizedBox(height: 12),
-            ElevatedButton(
+            PrimaryButton(
               onPressed: _recarregar,
-              child: const Text('Tentar novamente'),
+              label: 'Tentar novamente',
             ),
           ],
         ],
@@ -299,43 +320,52 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
     ),
   );
 
-  Widget _cartao(PessoaAdministrativa pessoa) => Card(
-    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
+  Widget _cartao(PessoaAdministrativa pessoa) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    child: SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.person_outline),
+              const Icon(Icons.person_outline, color: AppColors.blue600),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   pessoa.rotulo,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: AppTypography.h3,
                 ),
               ),
               if (pessoa.coordenador)
-                const Chip(
-                  avatar: Icon(Icons.badge_outlined, size: 18),
-                  label: Text('Coordenador do Maanaim'),
-                  visualDensity: VisualDensity.compact,
+                const StatusChip(
+                  status: 'ATIVA',
+                  label: 'Coordenador do Maanaim',
                 ),
             ],
           ),
-          if (pessoa.email.isNotEmpty) Text(pessoa.email),
+          if (pessoa.email.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              pessoa.email,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
           const SizedBox(height: 4),
           Semantics(
             label: 'Papéis de ${pessoa.rotulo}: ${pessoa.papeisRotulo}',
-            child: Text('Papéis: ${pessoa.papeisRotulo}'),
+            child: Text(
+              'Papéis: ${pessoa.papeisRotulo}',
+              style: AppTypography.body,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              OutlinedButton(
+              SecondaryButton(
                 onPressed: _executando
                     ? null
                     : () => _alterarPapel(
@@ -343,13 +373,11 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
                         'ADMINISTRADOR',
                         !pessoa.temAdministrador,
                       ),
-                child: Text(
-                  pessoa.temAdministrador
-                      ? 'Revogar Administrador'
-                      : 'Conceder Administrador',
-                ),
+                label: pessoa.temAdministrador
+                    ? 'Revogar Administrador'
+                    : 'Conceder Administrador',
               ),
-              OutlinedButton(
+              SecondaryButton(
                 onPressed: _executando
                     ? null
                     : () => _alterarPapel(
@@ -357,16 +385,14 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
                         'COORDENADOR',
                         !pessoa.temCoordenador,
                       ),
-                child: Text(
-                  pessoa.temCoordenador
-                      ? 'Revogar Coordenador'
-                      : 'Conceder Coordenador',
-                ),
+                label: pessoa.temCoordenador
+                    ? 'Revogar Coordenador'
+                    : 'Conceder Coordenador',
               ),
-              TextButton.icon(
+              SecondaryButton(
                 onPressed: _executando ? null : () => _abrirFormulario(pessoa),
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Editar'),
+                icon: Icons.edit_outlined,
+                label: 'Editar',
               ),
             ],
           ),
@@ -495,11 +521,11 @@ class _FormularioPessoaState extends State<_FormularioPessoa> {
       ),
     ),
     actions: [
-      TextButton(
+      SecondaryButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancelar'),
+        label: 'Cancelar',
       ),
-      ElevatedButton(onPressed: _salvar, child: const Text('Salvar')),
+      PrimaryButton(onPressed: _salvar, label: 'Salvar'),
     ],
   );
 }

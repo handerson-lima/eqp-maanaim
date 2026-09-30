@@ -23,6 +23,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Termos de adesão e suas versões imutáveis. O cliente nunca altera ou exclui
+    // termos ou versões publicadas (escrita estritamente negada).
+    match /termos/{termoId} {
+      allow get, list: if resource.data.ativo == true;
+      allow write: if false;
+
+      match /versoes/{versaoId} {
+        allow read, write: if false;
+      }
+    }
+
     // A ficha (com CPF e demais PII), recibos, auditoria e qualquer outro
     // agregado nunca são lidos ou gravados diretamente pelo cliente: o estado
     // permitido é devolvido exclusivamente por Cloud Function autenticada.

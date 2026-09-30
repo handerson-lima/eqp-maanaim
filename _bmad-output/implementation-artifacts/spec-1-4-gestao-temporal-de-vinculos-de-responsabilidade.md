@@ -124,4 +124,135 @@ O vínculo é o agregado temporal canônico: a igreja/equipe guarda apenas o par
 - `flutter analyze --fatal-infos` -- esperado: app e tela de vínculos sem diagnósticos (executar em `flutter_app`).
 - `flutter test` -- esperado: guarda administrativa, nova tela e estados acessíveis aprovados (executar em `flutter_app`).
 - `npm run test:emulator --prefix functions` -- esperado: transações de vínculo e recusa de sobreposição aprovadas com Emulators ativos.
+
+### Review Findings
+
+Revisão de código (2026-09-30) — Story 1.4, **Grupo 1 (backend produção)**. Diff `caeef56..HEAD` restrito a `functions/src/domain/vinculos.ts`, `functions/src/repositories/vinculos.ts`, `functions/src/commands/gerenciarVinculo.ts`, `functions/src/commands/consultarVinculos.ts`, `functions/src/index.ts`, `firestore.rules`, `functions/package.json`. Camadas: Blind Hunter, Edge Case Hunter, Verification Gap, Acceptance Auditor. Grupos 2–4 (testes backend, Flutter lib, Flutter testes+artefatos) permanecem para execuções seguintes.
+
+**decision-needed**
+
+_(nenhum — resolvido em 2026-09-30)_
+
+**decision resolvida**
+- [x] [Review][Reject] Campos de responsável legíveis pelo cliente em `igrejas`/`equipes` — decisão humana: aceitar a exposição; os IDs são opacos (sem nome/PII) e o catálogo `igrejas`/`equipes` já é legível por design desde a Story 1.2.
+
+**patch**
+- [x] [Review][Patch] `payloadHash` não vincula `justificativa`/`correlationId` — replay do mesmo `commandId` com justificativa divergente devolve o recibo antigo sem detectar a divergência, então o recibo deixa de provar o payload que o produziu. [functions/src/domain/vinculos.ts:323-336]
+- [x] [Review][Patch] Rótulo de igreja sem `codigo` gera `"Nome -"` com separador pendente. [functions/src/repositories/vinculos.ts:354-357]
+- [x] [Review][Patch] Sem teste de Emulator para entidade inativa no caminho de escrita: `repositories/vinculos.ts:135` nunca roda com `ativo: false` (o teste de domínio chama `planejarVinculo` sem passar pelo repositório). [functions/test/vinculos.emulator.test.ts]
+- [x] [Review][Patch] Vínculo legado (`igrejaId` sem `entidadeId`) não é assertado no `historico` de `lerVinculos`; remover o fallback de agrupamento em `agruparPorEntidade` manteria a suíte verde e o vínculo sumiria da linha do tempo. [functions/src/repositories/vinculos.ts:286-287]
+- [x] [Review][Patch] Callable `gerenciarVinculo` sem asserção dos códigos `invalid-argument` (entidade/pessoa inexistente) e `failed-precondition` (data futura), embora a matriz de I/O os exija. [functions/test/vinculos.emulator.test.ts:545-641]
+
+**Rejected**
+- `false` — Ponteiro `...VinculoId` pendurado levaria a `tx.update` em documento inexistente (BH1/ECH1/AA3): nenhum caminho de escrita produz ponteiro sem documento; a importação (`firestoreImportacao.ts:154-171`) e as novas mutações gravam ponteiro e vínculo atomicamente na mesma transação.
+- `false` — Vínculo apontado com `estado: ENCERRADO` tratado como vigente (ECH3/AA4): `encerrar` apaga o ponteiro e `atribuir`/`substituir` o reapontam para o novo `VIGENTE`; nenhum caminho cria o estado.
+- `false` — `resumir` reportaria responsável sem vínculo `VIGENTE` de apoio (BH2): depende do mesmo estado não produzido; com ponteiro válido o documento `VIGENTE` é encontrado.
+- `false` — `VinculoInvalidoError` de `planejarVinculo` escaparia sem mapeamento (BH8): `validarVinculo` garante `pessoaId` em ATRIBUIR/SUBSTITUIR, tornando o ramo inalcançável.
+- `false` — `ENCERRAR` registraria encerramento sem vínculo (BH10): exige ponteiro de pessoa sem ponteiro de vínculo, estado não produzido por nenhum caminho.
+- `low` — `ATRIBUIR` retroativo após `ENCERRAR` não compara com intervalos fechados (ECH2/AA1): gesto incomum (o seletor inicia em hoje) e a correção exigiria ler o histórico completo na transação — não vale o custo agora.
+- `low` — `atorNome` não é snapshot na linha do tempo (BH3): o papel é determinístico e correto; snapshot do nome exigiria novo campo/migração.
+- `low` — leituras de coleções completas sem paginação (BH5): limitação já documentada, escala administrativa igual à 1.2/1.3.
+- `low` — parâmetro `termo` server-side é caminho morto (BH6): a tela filtra no cliente; sem divergência de resultado.
+- `low` — `justificativa` não-string é silenciosamente reduzida a nulo (BH7/ECH5): só alcançável por chamada forjada; a UI envia string.
+- `low` — `consultarVinculos` aceita `request.data` não-objeto e devolve a listagem completa (ECH4): só alcançável por chamada forjada; resultado é a listagem já autorizada.
+
+### Review Findings — Grupo 2 (testes backend)
+
+Revisão de código (2026-09-30) — Story 1.4, **Grupo 2 (testes backend)**. Diff `caeef56..working tree` restrito a `functions/test/vinculos.test.ts`, `functions/test/vinculos.emulator.test.ts`, `functions/test/security-contract.test.ts`. Camadas: Blind Hunter, Edge Case Hunter, Verification Gap, Acceptance Auditor.
+
+**patch**
+- [x] [Review][Patch] Binding de `justificativa`/`correlationId` no `hashVinculo` não é pinado por teste; reverter o hash manteria a suíte verde, sem travar a proteção recém-corrigida. [functions/test/vinculos.test.ts:136-148]
+- [x] [Review][Patch] `SUBSTITUIR` com o responsável atual (`OperacaoInvalidaError`) não é coberto no domínio; remover o guard não quebraria teste. [functions/test/vinculos.test.ts:161]
+- [x] [Review][Patch] `SUBSTITUIR` retroativo (data anterior ao início do vigente → `SobreposicaoError`) não é coberto; só há caso de `ENCERRAR`. [functions/test/vinculos.test.ts:223]
+- [x] [Review][Patch] Detector de PII ineficaz para e-mail: `not.toMatch(/nomeCompleto|email@|cpf/)` nunca casa `"email":"a@exemplo.com"`, então vazamento de e-mail passaria. [functions/test/vinculos.emulator.test.ts:181-182]
+- [x] [Review][Patch] Asserções tautológicas: `cobre as três ações válidas` só mede o comprimento de um array literal, e `expect(payloadHash).not.toContain(pessoaId)` é sempre verdadeiro (hex não contém o ID). [functions/test/vinculos.test.ts:139-140,261-264]
+- [x] [Review][Patch] Linha do tempo da consulta não assere `justificativa` nem data/hora, exigidas pelo AC5/matriz. [functions/test/vinculos.emulator.test.ts:470-485]
+- [x] [Review][Patch] Testes de recusa não asseram `auditOutbox` intocado (AC4 "sem alterar ... auditoria de domínio"). [functions/test/vinculos.emulator.test.ts]
+- [x] [Review][Patch] `gerenciarVinculo` sem caso de sessão sem `auth` (matriz "Sem Auth → permission-denied"); só há `sem-autoridade`. [functions/test/vinculos.emulator.test.ts:495-510]
+- [x] [Review][Patch] Invariante "exatamente um vigente" da equipe consultado sem filtro por `entidadeId`; passaria com um segundo `VIGENTE` de outra equipe. [functions/test/vinculos.emulator.test.ts:340-344]
+- [x] [Review][Patch] `afterAll` apaga todos os usuários do Auth emulator (`listUsers` → `deleteUsers`), incluindo de outras suítes; a suíte de vínculos não cria usuários. [functions/test/vinculos.emulator.test.ts:141-147]
+
+**defer**
+- [x] [Review][Defer] Suíte de Emulator não roda no caminho padrão (`npm test` a ignora; `test:emulator` não usa `emulators:exec` nem CI). [functions/package.json:10-11] — deferred: lacuna de infraestrutura pré-existente, já registrada em `deferred-work.md:24`.
+- [x] [Review][Defer] Assertivas de Rules são texto-fonte (sem `@firebase/rules-unit-testing`); regra permissiva passaria. [functions/test/security-contract.test.ts:199-204] — deferred: sem harness de Rules no repo, já registrado em `deferred-work.md:54`.
+
+**Rejected**
+- `low` — Sobreposição histórica (`ATRIBUIR` retroativo após `ENCERRAR`) não impedida: mesmo item do Grupo 1 já rejeitado como `low` (gesto incomum, correção exige leitura do histórico).
+- `low` — `papel` da linha do tempo derivado em vez de lido do snapshot persistido (AA2): `papelDoTipo` é determinístico por tipo, então a saída é sempre correta; verificar o campo persistido não muda resultado.
+- `low` — Legado da importação aparece como `acao: 'ATRIBUIR'` (AA3): fallback documentado que torna o vínculo legado legível; não reescreve dado persistido.
+- `false` — "Nenhuma implementação no diff, nada prova que os testes compilam" (BH1): a suíte foi executada com sucesso (90 unit + 40 Emulator).
+- `low` — App Check verificado só por texto (`toContain('enforceAppCheck: true')`) (BH4/AA7): `.run()` não exercita App Check; abordagem de contrato estático pré-existente.
+- `low` — Regex de contrato acopladas a formatação (`not.toMatch(/allow\s+[^;]*request\.auth/)`) (BH6): frágil, mas funciona no formato atual.
+- `low` — Estado mutável compartilhado entre `it` sem `beforeEach` (BH7/ECH4): suíte roda em ordem e passa; reset por teste é refatoração além de correção direta.
+- `low` — `correlationId` opcional/regex sem teste; controle de caracteres e normalização de `justificativa` sem teste; limites de ano e bissexto de `dataEfetivaEmMs` sem teste (BH11-13): casos baixos, cobertura incremental.
+- `low` — `lerVinculos(db, termo)` sem teste (BH14): o parâmetro foi rejeitado como caminho morto no Grupo 1.
+- `low` — Ramos de ponteiro pendurado e agrupamento legado por `equipeId` sem teste (BH15): dependem de estados não produzidos.
+- `low` — Ordem de autoridade (alvo inexistente → `SemAutoridadeError`) e revogação em corrida sem teste (BH16): comportamento defensivo sem caminho demonstrado.
+- `low` — `OperacaoInvalidaError` no mapeamento do callable sem teste (BH17): o código é determinístico e o domínio cobre o erro.
+- `low` — `dataEfetivaEmMs(...) as number` admite `null` no fixture (BH18/ECH1): datas do fixture são fixas e válidas.
+- `low` — `historico[0]` não assere `estado` (BH19): coberto indiretamente por outras asserções.
+- `low` — Invariante exatamente-um-vigente sem teste concorrente (BH20): transação já garante; teste de contenção exige infraestrutura.
+- `low` — Rules não cobrem negativas dos campos de responsável no teste (AA6): decisão do Grupo 1 foi aceitar a exposição dos campos.
+
+### Review Findings — Grupo 3 (Flutter produção)
+
+Revisão de código (2026-09-30) — Story 1.4, **Grupo 3 (Flutter lib)**. Diff `caeef56..working tree` restrito a `flutter_app/lib/features/admin/vinculos_responsaveis.dart`, `flutter_app/lib/features/admin/vinculos_service.dart`, `flutter_app/lib/features/admin/admin_shell.dart`, `flutter_app/lib/main.dart`. Camadas: Blind Hunter, Edge Case Hunter, Verification Gap, Acceptance Auditor.
+
+**decision-needed**
+
+_(nenhum — resolvido em 2026-09-30)_
+
+**decision resolvida**
+- [x] [Review][Patch] Linha do tempo passa a exibir só a data efetiva (dia escolhido, calendário UTC), sem hora e sem `.toLocal()`, para não deslocar o dia nem fabricar horário. [flutter_app/lib/features/admin/vinculos_responsaveis.dart:644-650]
+
+**patch**
+- [x] [Review][Patch] Cartão não mostra a "data da troca" (Q3), só o responsável vigente; a data fica escondida na linha do tempo expandida. [flutter_app/lib/features/admin/vinculos_responsaveis.dart:341-363]
+- [x] [Review][Patch] Entidade inativa desabilita as ações sem explicação acessível vinculada aos botões ("manter a explicação acessível" do ajuste do review anterior). [flutter_app/lib/features/admin/vinculos_responsaveis.dart:365-394]
+- [x] [Review][Patch] Faixa de erro de mutação instrui "Recarregue e tente novamente" mas não oferece controle de recarregar; `_recarregar` só está no erro de carga. [flutter_app/lib/features/admin/vinculos_responsaveis.dart:138-146,219-224]
+- [x] [Review][Patch] Busca por nome/código (`filtrarVinculos`) não tem teste; trocá-la por `return true` manteria a suíte verde. [flutter_app/lib/features/admin/vinculos_service.dart:138-148]
+- [x] [Review][Patch] Limites do seletor de data efetiva (`_primeiraData`/`lastDate`) não têm teste; permitir data futura ou abaixo do início vigente passaria. [flutter_app/lib/features/admin/vinculos_responsaveis.dart:79-90,149-159,476-481]
+
+**Rejected**
+- `low` — Mapeamento do `FirebaseVinculosGateway` não exercitado (BH): o contrato de campos já é coberto pelos mappers puros exportados e o nome do callable pelo `security-contract.test.ts`; só a fiação fina `httpsCallable().call()` fica sem teste, e mocká-la exigiria harness da plataforma.
+
+**Rejected**
+- `low` — `commandId` novo a cada tentativa (BH): nova ação do usuário é legitimamente um novo comando; o servidor recusa a duplicata pelo estado (vigente existente), preservando a integridade.
+- `low` — `VinculoResultado` descartado e `repetido` não exibido (BH): a tela recarrega via `consultar`; nenhum resultado incorreto.
+- `low` — Seletor de pessoa inclui o responsável atual e falha genérico (AA4): falha limpa com `failed-precondition`; mesmo item já rejeitado no review anterior (#10).
+- `low` — Mapeamento lança em resposta nula/não-`Map` e omite defaults silenciosos (ECH/BH): o backend sempre devolve o shape; guards adicionariam complexidade.
+- `low` — `pessoa.uid` vazio no payload (ECH): `PessoaAdministrativa` sempre tem `uid`.
+- `low` — Segunda ação iniciada antes do refresh resolve usa `versaoVinculo` obsoleta (ECH): o servidor protege com `aborted`; janela rara.
+- `low` — `_evento` decide "(vigente)" por `fimVigencia == null` em vez do `estado` (BH): o backend sempre grava `fimVigencia` no encerrado.
+- `low` — Código morto (`rotulosTipoEntidade`, `VinculosResposta.vazio`, `termo` server-side não exercitado) (BH): inofensivo; `termo` já rejeitado como caminho morto no Grupo 1.
+- `low` — Sem spinner durante a mutação (BH): botões desabilitam; feedback suficiente.
+- `low` — `SegmentedButton` com ícones pode transbordar (BH): dois segmentos cabem em telas mobile.
+- `low` — Faixas de aviso/erro não são limpas ao trocar de aba (BH): cosmético.
+- `low` — Rótulo "Pesquisar por nome ou código" impreciso na aba Equipes (BH): equipes não têm código; wording.
+- `low` — Inconsistência "Responsável" vs "Responsável de Equipe" (BH): cosmético.
+- `low` — Limites de data caem em janela arbitrária de 5 anos sem vigente/legado (BH): servidor recusa com mensagem neutra; gesto incomum.
+
+### Review Findings — Grupo 4 (Flutter testes + artefatos)
+
+Revisão de código (2026-09-30) — Story 1.4, **Grupo 4 (Flutter testes + artefatos)**. Diff `caeef56..working tree` restrito a `flutter_app/test/vinculos_responsaveis_test.dart`, `flutter_app/test/vinculos_service_test.dart`, `flutter_app/test/fakes.dart`, `spec-1-4-…md`, `sprint-status.yaml`. Camadas: Blind Hunter, Edge Case Hunter, Verification Gap, Acceptance Auditor.
+
+**patch**
+- [x] [Review][Patch] A mudança da linha do tempo para data-only não está pinada: `textContaining('Início: 05/01/2020')` também casa `05/01/2020 HH:mm`, e o fixture é 14:30 UTC (não meia-noite), então reverter para o formato local passaria. Usar fixture meia-noite UTC e asserção exata. [flutter_app/test/vinculos_responsaveis_test.dart:48,102]
+- [x] [Review][Patch] Ramo de entidade inativa (botões desabilitados + explicação) sem teste; nenhum fixture usa `ativo: false`. [flutter_app/test/vinculos_responsaveis_test.dart]
+- [x] [Review][Patch] Linha "Data da troca" do cartão sem asserção. [flutter_app/test/vinculos_responsaveis_test.dart:85-104]
+- [x] [Review][Patch] Controle "Recarregar" da faixa de erro de mutação sem teste; o teste atual só confere `consultas == 1`. [flutter_app/test/vinculos_responsaveis_test.dart:209-228]
+- [x] [Review][Patch] Busca "sem acento" não exercitada: digita `goianinha` (já sem acento), nunca `mossoro` para casar `Mossoró`. [flutter_app/test/vinculos_responsaveis_test.dart]
+- [x] [Review][Patch] Teste dos limites do seletor de data é sensível à virada de meia-noite (`DateTime.now()` após o pump). [flutter_app/test/vinculos_responsaveis_test.dart]
+- [x] [Review][Patch] Mutação de EQUIPE (`tipoEntidade: 'EQUIPE'`, papel responsável) não exercitada; só há IGREJA. [flutter_app/test/vinculos_responsaveis_test.dart]
+- [x] [Review][Patch] Evento `ENCERRADO` (com `Fim:`) na linha do tempo sem teste; o único fixture é `VIGENTE`. [flutter_app/test/vinculos_responsaveis_test.dart]
+- [x] [Review][Patch] Ramos "Nenhum resultado encontrado." e "Nenhuma equipe cadastrada." sem teste. [flutter_app/test/vinculos_responsaveis_test.dart]
+- [x] [Review][Patch] Falha de `buscarPessoas` inalcançável no fake (`falhar` só afeta `consultar`) e sem teste do estado de erro do seletor de pessoa. [flutter_app/test/fakes.dart:251-254]
+- [x] [Review][Patch] Asserções de mapeamento incompletas: `montarPayloadVinculo` não confere `commandId`/`tipoEntidade`/`entidadeId` e o teste de `mapearItemVinculo` só verifica `historico` por tamanho. [flutter_app/test/vinculos_service_test.dart]
+
+**Rejected**
+- `false`/tratado — Frontmatter do spec `done` vs `sprint-status` `review` (BH4/AA7): reconciliado na atualização de status do workflow.
+- `low` — Mappers fabricam `acao: 'ATRIBUIR'` e `tipoEntidade: 'IGREJA'` para campos ausentes (BH11/BH12/AA3/AA4): defaults defensivos; o backend sempre envia os campos.
+- `low` — Sem asserções de `Semantics`/`liveRegion` (BH13/AA6): a UI já implementa a semântica; cobrir toda ela excede correção direta e o overflow/foco já é coberto em `layout_referencia_test`.
+- `low` — `FirebaseVinculosGateway` real sem teste (AA5): mesma rejeição do Grupo 3 (mappers puros cobrem o contrato; mock da plataforma seria necessário).
+- `false` — #14 sem patch correspondente (BH8): o comparador já retorna `0` em empate (`functions/src/repositories/vinculos.ts:325`), então o patch foi aplicado.
+- reject (correção seria editar o spec sob review) — AC5/Implementation Notes contradizem a decisão data-only (BH1/BH2/AA1), Spec Change Log vazio (BH3), preâmbulo do Grupo 1 desatualizado (BH5), contagens de teste divergentes (BH6), "toda linha tem teste" exagerado (BH7), `package.json` sem justificativa (BH9), `vinculos_service_test.dart` fora do Code Map (BH10), `**Rejected**` duplicado no Grupo 3 (BH19).
 </content>

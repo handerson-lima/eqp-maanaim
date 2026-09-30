@@ -45,7 +45,7 @@ final _igrejas = <ItemVinculo>[
         estado: 'VIGENTE',
         atorUid: 'admin1',
         atorNome: 'Administrador',
-        inicioVigencia: DateTime(2020, 1, 5, 14, 30),
+        inicioVigencia: DateTime.utc(2020, 1, 5),
         justificativa: 'troca pastoral',
       ),
     ],
@@ -92,6 +92,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Goianinha - 240008'), findsOneWidget);
     expect(find.text('Vigente: João Batista'), findsOneWidget);
+    expect(find.textContaining('Data da troca: 05/01/2020'), findsOneWidget);
     expect(find.text('Sem responsável vigente'), findsOneWidget);
     expect(find.text('Substituir responsável'), findsOneWidget);
 
@@ -99,7 +100,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Substituição · Pastor Local'), findsOneWidget);
     expect(find.textContaining('Ator: Administrador'), findsOneWidget);
-    expect(find.textContaining('Início: 05/01/2020 14:30'), findsOneWidget);
+    expect(find.textContaining('Início: 05/01/2020 (vigente)'), findsOneWidget);
     expect(find.textContaining('Justificativa: troca pastoral'), findsOneWidget);
   });
 
@@ -225,6 +226,242 @@ void main() {
       findsOneWidget,
     );
     expect(gateway.consultas, 1);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Recarregar'));
+    await tester.pumpAndSettle();
+    expect(gateway.consultas, 2);
+  });
+
+  testWidgets('pesquisa filtra por nome sem acento e por código', (tester) async {
+    await _abrir(
+      tester,
+      VinculosFake(resposta: _resposta, pessoas: _pessoas),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'goianinha');
+    await tester.pumpAndSettle();
+    expect(find.text('Goianinha - 240008'), findsOneWidget);
+    expect(find.text('Mossoró - 240006'), findsNothing);
+
+    await tester.enterText(find.byType(TextField).first, '240006');
+    await tester.pumpAndSettle();
+    expect(find.text('Mossoró - 240006'), findsOneWidget);
+    expect(find.text('Goianinha - 240008'), findsNothing);
+  });
+
+  testWidgets('seletor de data limita ao início vigente e a hoje', (tester) async {
+    final vigentes = <ItemVinculo>[
+      ItemVinculo(
+        id: 'ig9',
+        tipoEntidade: 'IGREJA',
+        rotulo: 'Recente - 240009',
+        codigo: '240009',
+        ativo: true,
+        versaoVinculo: 1,
+        responsavel: const ResponsavelVigente(
+          pessoaId: 'p1',
+          nome: 'João Batista',
+        ),
+        historico: [
+          EventoHistoricoVinculo(
+            acao: 'ATRIBUIR',
+            papel: 'PASTOR_LOCAL',
+            estado: 'VIGENTE',
+            atorUid: 'admin1',
+            atorNome: 'Administrador',
+            inicioVigencia: DateTime.utc(2025, 6, 1),
+          ),
+        ],
+      ),
+    ];
+    await _abrir(
+      tester,
+      VinculosFake(
+        resposta: VinculosResposta(igrejas: vigentes, equipes: const []),
+        pessoas: _pessoas,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Substituir responsável'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pedro Alves'));
+    await tester.pumpAndSettle();
+
+    final textoData = tester
+        .widget<Text>(find.textContaining('Data efetiva:'))
+        .data!;
+    final partes = textoData.replaceFirst('Data efetiva: ', '').split('/');
+    final ultimaEsperada = DateTime(
+      int.parse(partes[2]),
+      int.parse(partes[1]),
+      int.parse(partes[0]),
+    );
+    await tester.tap(find.textContaining('Data efetiva'));
+    await tester.pumpAndSettle();
+
+    final calendario = tester.widget<CalendarDatePicker>(
+      find.byType(CalendarDatePicker),
+    );
+    expect(calendario.firstDate, DateTime(2025, 6, 1));
+    expect(calendario.lastDate, ultimaEsperada);
+  });
+
+  testWidgets('entidade inativa desabilita ações e explica acessivelmente', (
+    tester,
+  ) async {
+    final inativa = <ItemVinculo>[
+      ItemVinculo(
+        id: 'ig3',
+        tipoEntidade: 'IGREJA',
+        rotulo: 'Inativa - 240003',
+        codigo: '240003',
+        ativo: false,
+        versaoVinculo: 1,
+        responsavel: const ResponsavelVigente(
+          pessoaId: 'p1',
+          nome: 'João Batista',
+        ),
+        historico: [
+          EventoHistoricoVinculo(
+            acao: 'ATRIBUIR',
+            papel: 'PASTOR_LOCAL',
+            estado: 'VIGENTE',
+            atorUid: 'admin1',
+            atorNome: 'Administrador',
+            inicioVigencia: DateTime.utc(2025, 6, 1),
+          ),
+        ],
+      ),
+    ];
+    await _abrir(
+      tester,
+      VinculosFake(
+        resposta: VinculosResposta(igrejas: inativa, equipes: const []),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Igreja/equipe inativa: as ações de vínculo estão indisponíveis.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<ElevatedButton>(
+            find.widgetWithText(ElevatedButton, 'Substituir responsável'),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, 'Encerrar vínculo'),
+          )
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets('atribuição em equipe usa o papel de responsável', (
+    tester,
+  ) async {
+    final gateway = VinculosFake(resposta: _resposta, pessoas: _pessoas);
+    await _abrir(tester, gateway);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Equipes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Atribuir responsável'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Maria Souza'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Continuar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Confirmar Responsável'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Confirmar'));
+    await tester.pumpAndSettle();
+
+    expect(gateway.ultimoTipoEntidade, 'EQUIPE');
+    expect(gateway.ultimoEntidadeId, 'eq1');
+    expect(gateway.ultimoAcao, 'ATRIBUIR');
+  });
+
+  testWidgets('linha do tempo mostra o fim de um vínculo encerrado', (
+    tester,
+  ) async {
+    final comEncerrado = <ItemVinculo>[
+      ItemVinculo(
+        id: 'ig4',
+        tipoEntidade: 'IGREJA',
+        rotulo: 'Com histórico - 240004',
+        codigo: '240004',
+        ativo: true,
+        versaoVinculo: 1,
+        responsavel: const ResponsavelVigente(
+          pessoaId: 'p1',
+          nome: 'João Batista',
+        ),
+        historico: [
+          EventoHistoricoVinculo(
+            acao: 'ENCERRAR',
+            papel: 'PASTOR_LOCAL',
+            estado: 'ENCERRADO',
+            atorUid: 'admin1',
+            atorNome: 'Administrador',
+            inicioVigencia: DateTime.utc(2024, 1, 1),
+            fimVigencia: DateTime.utc(2024, 6, 1),
+          ),
+        ],
+      ),
+    ];
+    await _abrir(
+      tester,
+      VinculosFake(
+        resposta: VinculosResposta(igrejas: comEncerrado, equipes: const []),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Linha do tempo (somente leitura)'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Fim: 01/06/2024'), findsOneWidget);
+  });
+
+  testWidgets('busca sem resultado é anunciada', (tester) async {
+    await _abrir(
+      tester,
+      VinculosFake(resposta: _resposta, pessoas: _pessoas),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'zzz-inexistente');
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhum resultado encontrado.'), findsOneWidget);
+  });
+
+  testWidgets('catálogo de equipes vazio é anunciado', (tester) async {
+    await _abrir(
+      tester,
+      VinculosFake(
+        resposta: VinculosResposta(igrejas: _igrejas, equipes: const []),
+        pessoas: _pessoas,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Equipes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhuma equipe cadastrada.'), findsOneWidget);
+  });
+
+  testWidgets('falha ao carregar pessoas é anunciada no seletor', (
+    tester,
+  ) async {
+    final gateway = VinculosFake(resposta: _resposta, pessoas: _pessoas)
+      ..buscarPessoasFalhar = true;
+    await _abrir(tester, gateway);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Atribuir responsável'));
+    await tester.pumpAndSettle();
+    expect(find.text('Não foi possível carregar as pessoas.'), findsOneWidget);
   });
 
   testWidgets('troca para a aba de equipes', (tester) async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../comando.dart';
+import '../../ui/identidade.dart';
 import 'pessoas_service.dart';
 import 'vinculos_service.dart';
 
@@ -47,16 +48,19 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
     final resultado = await showDialog<bool>(
       context: context,
       builder: (dialogo) => AlertDialog(
-        title: Text(titulo),
-        content: Text(mensagem),
+        title: Text(titulo, style: AppTypography.h3),
+        content: Text(mensagem, style: AppTypography.body),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppGeometry.cardBorderRadius,
+        ),
         actions: [
-          TextButton(
+          SecondaryButton(
+            label: 'Cancelar',
             onPressed: () => Navigator.pop(dialogo, false),
-            child: const Text('Cancelar'),
           ),
-          ElevatedButton(
+          PrimaryButton(
+            label: 'Confirmar',
             onPressed: () => Navigator.pop(dialogo, true),
-            child: const Text('Confirmar'),
           ),
         ],
       ),
@@ -158,6 +162,13 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
     return limite;
   }
 
+  String _dataDaTroca(ItemVinculo item) {
+    for (final evento in item.historico) {
+      if (evento.vigente) return _formatarDataEvento(evento.inicioVigencia);
+    }
+    return '—';
+  }
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -167,17 +178,11 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Semantics(
-              header: true,
-              child: Text(
-                'Vínculos e Responsáveis',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Mantenha exatamente um responsável vigente por igreja e equipe. '
-              'A troca encerra o vínculo anterior sem apagar o histórico.',
+            const PageHeader(
+              title: 'Vínculos e Responsáveis',
+              subtitle:
+                  'Mantenha exatamente um responsável vigente por igreja e equipe. '
+                  'A troca encerra o vínculo anterior sem apagar o histórico.',
             ),
             const SizedBox(height: 12),
             Semantics(
@@ -213,14 +218,18 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
             if (_aviso != null)
               _faixa(
                 _aviso!,
-                Theme.of(context).colorScheme.primaryContainer,
+                AppColors.successBg,
                 Icons.check_circle_outline,
               ),
             if (_erroAcao != null)
               _faixa(
                 _erroAcao!,
-                Theme.of(context).colorScheme.errorContainer,
+                AppColors.dangerBg,
                 Icons.error_outline,
+                trailing: TextButton(
+                  onPressed: _recarregar,
+                  child: const Text('Recarregar'),
+                ),
               ),
           ],
         ),
@@ -229,21 +238,32 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
     ],
   );
 
-  Widget _faixa(String texto, Color cor, IconData icone) => Padding(
+  Widget _faixa(
+    String texto,
+    Color cor,
+    IconData icone, {
+    Widget? trailing,
+  }) => Padding(
     padding: const EdgeInsets.only(top: 12),
     child: Semantics(
       liveRegion: true,
-      child: Card(
-        color: cor,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(icone),
-              const SizedBox(width: 12),
-              Expanded(child: Text(texto)),
-            ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: cor,
+          borderRadius: AppGeometry.cardBorderRadius,
+          border: Border.all(
+            color: AppColors.border,
+            width: AppGeometry.borderWidth,
           ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icone),
+            const SizedBox(width: 12),
+            Expanded(child: Text(texto)),
+            if (trailing != null) trailing,
+          ],
         ),
       ),
     ),
@@ -298,9 +318,9 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
           Semantics(liveRegion: true, child: Text(texto)),
           if (comRetentativa) ...[
             const SizedBox(height: 12),
-            ElevatedButton(
+            PrimaryButton(
               onPressed: _recarregar,
-              child: const Text('Tentar novamente'),
+              label: 'Tentar novamente',
             ),
           ],
         ],
@@ -308,10 +328,9 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
     ),
   );
 
-  Widget _cartao(ItemVinculo item) => Card(
-    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
+  Widget _cartao(ItemVinculo item) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    child: SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -321,19 +340,19 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
                 item.tipoEntidade == 'IGREJA'
                     ? Icons.church_outlined
                     : Icons.groups_outlined,
+                color: AppColors.blue600,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   item.rotulo,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: AppTypography.h3,
                 ),
               ),
               if (!item.ativo)
-                const Chip(
-                  avatar: Icon(Icons.block, size: 18),
-                  label: Text('Inativa'),
-                  visualDensity: VisualDensity.compact,
+                const StatusChip(
+                  status: 'INATIVA',
+                  label: 'Inativa',
                 ),
             ],
           ),
@@ -349,6 +368,9 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
                       ? Icons.verified_user_outlined
                       : Icons.person_off_outlined,
                   size: 20,
+                  color: item.temResponsavel
+                      ? AppColors.success
+                      : AppColors.textSecondary,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -356,43 +378,63 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
                     item.temResponsavel
                         ? 'Vigente: ${item.responsavel!.rotulo}'
                         : 'Sem responsável vigente',
+                    style: AppTypography.body,
                   ),
                 ),
               ],
             ),
           ),
+          if (item.temResponsavel)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Data da troca: ${_dataDaTroca(item)}',
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
           const SizedBox(height: 12),
+          if (!item.ativo)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Igreja/equipe inativa: as ações de vínculo estão indisponíveis.',
+                style: AppTypography.caption.copyWith(color: AppColors.danger),
+              ),
+            ),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
               if (!item.temResponsavel)
-                ElevatedButton.icon(
+                PrimaryButton(
                   onPressed: _executando || !item.ativo
                       ? null
                       : () => _abrirAcao(item, 'ATRIBUIR'),
-                  icon: const Icon(Icons.person_add_alt),
-                  label: const Text('Atribuir responsável'),
+                  icon: Icons.person_add_alt,
+                  label: 'Atribuir responsável',
                 )
               else ...[
-                ElevatedButton.icon(
+                PrimaryButton(
                   onPressed: _executando || !item.ativo
                       ? null
                       : () => _abrirAcao(item, 'SUBSTITUIR'),
-                  icon: const Icon(Icons.swap_horiz),
-                  label: const Text('Substituir responsável'),
+                  icon: Icons.swap_horiz,
+                  label: 'Substituir responsável',
                 ),
-                OutlinedButton.icon(
+                SecondaryButton(
                   onPressed: _executando || !item.ativo
                       ? null
                       : () => _abrirAcao(item, 'ENCERRAR'),
-                  icon: const Icon(Icons.link_off),
-                  label: const Text('Encerrar vínculo'),
+                  icon: Icons.link_off,
+                  label: 'Encerrar vínculo',
                 ),
               ],
             ],
           ),
-          if (item.historico.isNotEmpty)
+          if (item.historico.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Theme(
               data: Theme.of(
                 context,
@@ -400,13 +442,22 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
               child: ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 childrenPadding: const EdgeInsets.only(bottom: 8),
-                leading: const Icon(Icons.history),
-                title: const Text('Linha do tempo (somente leitura)'),
+                leading: const Icon(
+                  Icons.history,
+                  color: AppColors.textSecondary,
+                ),
+                title: Text(
+                  'Linha do tempo (somente leitura)',
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 children: [
                   for (final evento in item.historico) _evento(evento),
                 ],
               ),
             ),
+          ],
         ],
       ),
     ),
@@ -423,8 +474,8 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
     subtitle: Text(
       [
         'Ator: ${evento.atorRotulo}',
-        'Início: ${_formatarDataHora(evento.inicioVigencia)}'
-            '${evento.fimVigencia == null ? ' (vigente)' : ' · Fim: ${_formatarDataHora(evento.fimVigencia)}'}',
+        'Início: ${_formatarDataEvento(evento.inicioVigencia)}'
+            '${evento.fimVigencia == null ? ' (vigente)' : ' · Fim: ${_formatarDataEvento(evento.fimVigencia)}'}',
         if (evento.justificativa != null &&
             evento.justificativa!.isNotEmpty)
           'Justificativa: ${evento.justificativa}',
@@ -525,11 +576,11 @@ class _FormularioVinculoState extends State<_FormularioVinculo> {
       ),
     ),
     actions: [
-      TextButton(
+      SecondaryButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancelar'),
+        label: 'Cancelar',
       ),
-      ElevatedButton(
+      PrimaryButton(
         onPressed: () => Navigator.pop(
           context,
           _DadosVinculo(
@@ -539,7 +590,7 @@ class _FormularioVinculoState extends State<_FormularioVinculo> {
                 : _justificativa.text.trim(),
           ),
         ),
-        child: const Text('Continuar'),
+        label: 'Continuar',
       ),
     ],
   );
@@ -627,9 +678,9 @@ class _SelecionarPessoaState extends State<_SelecionarPessoa> {
       ),
     ),
     actions: [
-      TextButton(
+      SecondaryButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancelar'),
+        label: 'Cancelar',
       ),
     ],
   );
@@ -641,10 +692,7 @@ String _formatarData(DateTime data) {
   return '$dia/$mes/${data.year}';
 }
 
-String _formatarDataHora(DateTime? data) {
-  if (data == null) return '—';
-  final local = data.toLocal();
-  final hora = local.hour.toString().padLeft(2, '0');
-  final minuto = local.minute.toString().padLeft(2, '0');
-  return '${_formatarData(local)} $hora:$minuto';
-}
+/// Data efetiva (dia escolhido) em UTC, sem hora: o backend grava a data como
+/// meia-noite UTC, então converter para o fuso local deslocaria o dia.
+String _formatarDataEvento(DateTime? data) =>
+    data == null ? '—' : _formatarData(data.toUtc());

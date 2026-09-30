@@ -1,164 +1,259 @@
 import 'package:flutter/material.dart';
 
-const azulMaanaim = Color(0xFF005BD8);
-const marinhoMaanaim = Color(0xFF0C2940);
-const fundoMaanaim = Color(0xFFF3F7FB);
-const bordaMaanaim = Color(0xFFDCE5EF);
+import 'tokens.dart';
 
-ThemeData temaMaanaim() {
-  final esquema = ColorScheme.fromSeed(seedColor: azulMaanaim).copyWith(
-    primary: azulMaanaim,
-    onPrimary: Colors.white,
-    surface: Colors.white,
-    onSurface: const Color(0xFF13233D),
-    onSurfaceVariant: const Color(0xFF50627A),
-    outline: const Color(0xFF74849A),
-  );
-  final forma = RoundedRectangleBorder(borderRadius: BorderRadius.circular(8));
-  return ThemeData(
-    useMaterial3: true,
-    colorScheme: esquema,
-    scaffoldBackgroundColor: fundoMaanaim,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.white,
-      foregroundColor: Color(0xFF13233D),
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-    ),
-    dividerColor: bordaMaanaim,
-    cardTheme: CardThemeData(
-      color: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: bordaMaanaim),
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFF74849A)),
-      ),
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: azulMaanaim,
-        foregroundColor: Colors.white,
-        minimumSize: const Size(44, 48),
-        elevation: 0,
-        shape: forma,
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(44, 48),
-        shape: forma,
-      ),
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(minimumSize: const Size(44, 48)),
-    ),
-  );
-}
+export 'components/components.dart';
+export 'theme.dart';
+export 'tokens.dart';
 
-/// Moldura compartilhada: marca lateral em telas amplas e topo compacto no celular.
+// Constantes legadas preservadas para retrocompatibilidade
+const azulMaanaim = AppColors.blue600;
+const marinhoMaanaim = AppColors.navy900;
+const fundoMaanaim = AppColors.background;
+const bordaMaanaim = AppColors.border;
+
+/// Moldura de autenticação (S01): bipartida 50/50 no desktop (≥1024px) e
+/// topo compacto e responsivo no mobile (<600px) e tablet.
 class PainelAcesso extends StatelessWidget {
   const PainelAcesso({super.key, required this.child});
   final Widget child;
 
-  Widget _marca(bool ampla) => Container(
-    padding: EdgeInsets.all(ampla ? 48 : 24),
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF18486D), marinhoMaanaim],
-      ),
-    ),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Maanaim',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: ampla ? 40 : 28,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -1,
+  Widget _painelInstitucional({required double minHeight}) => Container(
+        constraints: BoxConstraints(minHeight: minHeight),
+        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 48),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.navy900,
+              Color(0xFF04192B),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        const Text(
-          'Gestão de Voluntários',
-          style: TextStyle(color: Colors.white),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.blue600,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.church_outlined,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s20),
+            const Text(
+              'Maanaim',
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontFamilyFallback: AppTypography.fontFallbacks,
+                color: Colors.white,
+                fontSize: 38,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s8),
+            const Text(
+              'Gestão de Voluntários',
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontFamilyFallback: AppTypography.fontFallbacks,
+                color: Color(0xFFD5E2EF),
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 64),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Column(
+                children: const [
+                  Text(
+                    'Servindo juntos no Reino de Deus',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontFamilyFallback: AppTypography.fontFallbacks,
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      height: 1.5,
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.s12),
+                  Text(
+                    '“Cada um exerça o dom que recebeu para servir aos outros”\n1 Pedro 4:10',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontFamilyFallback: AppTypography.fontFallbacks,
+                      color: Color(0xFFD8E7F5),
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                      height: 1.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        if (ampla) ...[
-          const SizedBox(height: 80),
-          const Text(
-            'Servindo juntos no Reino de Deus',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, height: 1.6),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '“Cada um exerça o dom que recebeu para servir aos outros”\n1 Pedro 4:10',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFFD8E7F5), height: 1.6),
-          ),
-        ],
-      ],
-    ),
-  );
+      );
+
+  Widget _headerCompacto() => Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.s16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.blue600,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.church_outlined,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s8),
+            const Text(
+              'Maanaim',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontFamilyFallback: AppTypography.fontFallbacks,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navy900,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s4),
+            const Text(
+              'Gestão de Voluntários',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontFamilyFallback: AppTypography.fontFallbacks,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, tamanho) {
-      final ampla = tamanho.maxWidth >= 900;
-      final formulario = Padding(
-        padding: EdgeInsets.all(ampla ? 40 : 20),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: EdgeInsets.all(ampla ? 32 : 24),
-                child: child,
-              ),
-            ),
-          ),
-        ),
-      );
-      return SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: tamanho.maxHeight),
-          child: ampla
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      flex: 4,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: tamanho.maxHeight,
-                        ),
-                        child: _marca(true),
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 1024;
+          final isMobile = constraints.maxWidth < 600;
+
+          if (isDesktop) {
+            return Container(
+              color: AppColors.background,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Painel esquerdo 50%
+                  Expanded(
+                    flex: 1,
+                    child: SingleChildScrollView(
+                      child: _painelInstitucional(
+                        minHeight: constraints.maxHeight,
                       ),
                     ),
-                    Expanded(flex: 5, child: formulario),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [_marca(false), formulario],
+                  ),
+                  // Painel direito 50% com card centralizado (~360–400px)
+                  Expanded(
+                    flex: 1,
+                    child: Container(
+                      color: AppColors.background,
+                      alignment: Alignment.center,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s24,
+                          vertical: AppSpacing.s32,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: 400,
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: AppGeometry.cardBorderRadius,
+                              border: Border.all(
+                                color: AppColors.border,
+                                width: AppGeometry.borderWidth,
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(AppSpacing.s32),
+                            child: child,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Mobile e Tablet: painel visual pesado oculto; logo compacto no topo
+          return Container(
+            color: AppColors.background,
+            alignment: Alignment.topCenter,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? AppSpacing.s20 : AppSpacing.s32,
+                vertical: AppSpacing.s20,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isMobile ? double.infinity : 440,
+                  minHeight: constraints.maxHeight - 40,
                 ),
-        ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _headerCompacto(),
+                    const SizedBox(height: AppSpacing.s8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: AppGeometry.cardBorderRadius,
+                        border: Border.all(
+                          color: AppColors.border,
+                          width: AppGeometry.borderWidth,
+                        ),
+                      ),
+                      padding: EdgeInsets.all(
+                        isMobile ? AppSpacing.s20 : AppSpacing.s24,
+                      ),
+                      child: child,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       );
-    },
-  );
 }
