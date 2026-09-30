@@ -104,19 +104,46 @@ export async function salvarPessoa(
     .get();
   if (!podeAdministrar(atorPrevio.data())) throw new SemAutoridadeError();
 
+  const reciboRef = db.collection('commands').doc(contexto.commandId);
+  const auditoriaRef = db.collection('auditOutbox').doc(contexto.commandId);
+
+  // Replay é resolvido antes de qualquer provisão de identidade: um retry de um
+  // comando já gravado não pode criar uma conta Auth órfã.
+  const reciboPrevio = await reciboRef.get();
+  if (reciboPrevio.exists) {
+    const recibo = reciboPrevio.data() ?? {};
+    if (
+      recibo.action !== ACAO_RECIBO_PESSOA ||
+      recibo.actorUid !== contexto.atorUid ||
+      recibo.payloadHash !== entrada.payloadHash
+    ) {
+      throw new ComandoDivergenteError();
+    }
+    const existente = entrada.uid
+      ? await auth.getUser(entrada.uid).catch(() => null)
+      : await buscarUsuario(auth, entrada.email);
+    if (!existente) throw new AlvoInexistenteError();
+    const pessoaSnap = await db.collection('pessoas').doc(existente.uid).get();
+    return {
+      uid: existente.uid,
+      repetido: true,
+      coordenador: recibo.coordenador === true,
+      versao: Number(pessoaSnap.data()?.versao ?? 0),
+    };
+  }
+
   let uid: string;
   if (entrada.uid) {
     try {
       uid = (await auth.getUser(entrada.uid)).uid;
-    } catch {
-      throw new AlvoInexistenteError();
+    } catch (erro) {
+      if (codigoDoErro(erro) === 'auth/user-not-found') throw new AlvoInexistenteError();
+      throw erro;
     }
   } else {
     uid = (await garantirUsuario(auth, entrada.email)).uid;
   }
 
-  const reciboRef = db.collection('commands').doc(contexto.commandId);
-  const auditoriaRef = db.collection('auditOutbox').doc(contexto.commandId);
   const pessoaRef = db.collection('pessoas').doc(uid);
   const coordenadorRef = db.collection('coordenadores').doc(uid);
 
@@ -150,13 +177,13 @@ export async function salvarPessoa(
 
     const existia = pessoaSnap.exists;
     const versao = Number((pessoaSnap.data() ?? {}).versao ?? 0);
+    if (versao !== entrada.expectedVersion) throw new ConflitoVersaoError();
     tx.set(
       pessoaRef,
       {
         uid,
         nomeCompleto: entrada.nomeCompleto,
         email: entrada.email,
-        emailNormalizado: entrada.emailNormalizado,
         // Sinaliza a designação vigente; o registro restrito com o CPF é
         // preservado para histórico e nunca apagado em un-designação.
         coordenador: entrada.coordenador,
@@ -170,18 +197,16 @@ export async function salvarPessoa(
 
     if (entrada.coordenador) {
       const versaoCoordenador = Number((coordenadorSnap.data() ?? {}).versao ?? 0);
-      tx.set(
-        coordenadorRef,
-        {
-          uid,
-          nomeCompleto: entrada.nomeCompleto,
-          cpf: entrada.cpf,
-          versao: versaoCoordenador + 1,
-          atualizadoEm: FieldValue.serverTimestamp(),
-          ...(coordenadorSnap.exists ? {} : { criadoEm: FieldValue.serverTimestamp() }),
-        },
-        { merge: true },
-      );
+      // CPF omitido na edição preserva o registro restrito vigente.
+      const dadosCoordenador: Record<string, unknown> = {
+        uid,
+        nomeCompleto: entrada.nomeCompleto,
+        versao: versaoCoordenador + 1,
+        atualizadoEm: FieldValue.serverTimestamp(),
+        ...(coordenadorSnap.exists ? {} : { criadoEm: FieldValue.serverTimestamp() }),
+      };
+      if (entrada.cpf !== null) dadosCoordenador.cpf = entrada.cpf;
+      tx.set(coordenadorRef, dadosCoordenador, { merge: true });
     }
 
     tx.create(reciboRef, {

@@ -2,6 +2,7 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { podeAdministrar } from '../domain/autoridadeAdministrativa.js';
 import {
   ComandoDivergenteError,
+  DatasetInvalidoError,
   SemAutoridadeError,
   chaveEquipe,
   equipesAusentes,
@@ -12,6 +13,7 @@ import {
   pesquisarEquipes,
   pesquisarIgrejas,
   rotuloIgreja,
+  validarDataset,
   type ContextoSeedCatalogo,
   type EquipeCatalogo,
   type IgrejaCatalogo,
@@ -28,12 +30,10 @@ function texto(valor: unknown): string {
 }
 
 function mapearIgreja(id: string, dados: Record<string, unknown>): IgrejaCatalogo {
-  const nome = texto(dados.nome);
   return {
     id,
     codigo: String(dados.codigo ?? ''),
-    nome,
-    nomeNormalizado: chaveEquipe(nome),
+    nome: texto(dados.nome),
     ativo: dados.ativo === true,
   };
 }
@@ -58,6 +58,10 @@ export async function semearCatalogo(
   contexto: ContextoSeedCatalogo,
 ): Promise<ResultadoSemeadura> {
   const dataset = DATASET_CATALOGO;
+  // Guarda de runtime: um dataset editado ou inválido falha antes de qualquer
+  // mutação em vez de semear silenciosamente zero registros.
+  const problemas = validarDataset(dataset);
+  if (problemas.length > 0) throw new DatasetInvalidoError(problemas);
   const payloadHash = hashDataset(dataset);
   const reciboRef = db.collection('commands').doc(contexto.commandId);
   const auditoriaRef = db.collection('auditOutbox').doc(contexto.commandId);
@@ -112,7 +116,6 @@ export async function semearCatalogo(
       tx.create(ref, {
         codigo: igreja.codigo,
         nome: igreja.nome,
-        nomeNormalizado: chaveEquipe(igreja.nome),
         ativo: true,
         origem: contexto.origem,
         datasetVersao: dataset.versao,

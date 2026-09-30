@@ -20,6 +20,7 @@ const CAMPOS_PESSOA = [
   'email',
   'coordenador',
   'cpf',
+  'expectedVersion',
 ] as const;
 
 /** Campos permitidos no comando de concessão/revogação de papel. */
@@ -42,6 +43,8 @@ export type EntradaPessoa = {
   coordenador: boolean;
   /** CPF normalizado; somente presente quando `coordenador` é verdadeiro. */
   cpf: string | null;
+  /** Versão esperada do perfil; edição concorrente é recusada. */
+  expectedVersion: number;
   payloadHash: string;
 };
 
@@ -182,12 +185,26 @@ export function validarPessoa(value: unknown): EntradaPessoa {
   if (typeof v.coordenador !== 'boolean') throw new PessoaInvalidaError();
   const coordenador = v.coordenador;
 
+  const expectedVersion = v.expectedVersion === undefined ? 0 : v.expectedVersion;
+  if (
+    typeof expectedVersion !== 'number' ||
+    !Number.isInteger(expectedVersion) ||
+    expectedVersion < 0
+  ) {
+    throw new PessoaInvalidaError();
+  }
+
   let cpf: string | null = null;
   if (coordenador) {
-    if (v.cpf === undefined) throw new PessoaInvalidaError();
-    const bruto = texto(v.cpf);
-    if (!cpfValido(bruto)) throw new PessoaInvalidaError();
-    cpf = normalizarCpf(bruto);
+    if (v.cpf === undefined) {
+      // Em edição (uid presente) o CPF pode ser omitido: o registro restrito
+      // vigente é preservado. Na criação, o CPF do Coordenador é obrigatório.
+      if (uid === null) throw new PessoaInvalidaError();
+    } else {
+      const bruto = texto(v.cpf);
+      if (!cpfValido(bruto)) throw new PessoaInvalidaError();
+      cpf = normalizarCpf(bruto);
+    }
   } else if (v.cpf !== undefined) {
     throw new PessoaInvalidaError();
   }
@@ -201,6 +218,7 @@ export function validarPessoa(value: unknown): EntradaPessoa {
     emailNormalizado: email.toLowerCase(),
     coordenador,
     cpf,
+    expectedVersion,
     payloadHash: '',
   };
   entrada.payloadHash = hashPessoa(entrada);
@@ -253,6 +271,7 @@ export function hashPessoa(entrada: EntradaPessoa): string {
         email: entrada.emailNormalizado,
         coordenador: entrada.coordenador,
         cpf: entrada.cpf ?? '',
+        expectedVersion: entrada.expectedVersion,
       }),
     )
     .digest('hex');

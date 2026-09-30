@@ -6,7 +6,7 @@
   "display": "standalone",
   "orientation": "any",
   "background_color": "#FFFFFF",
-  "theme_color": "#1B5E20",
+  "theme_color": "#005BD8",
   "description": "PWA administrativa para gestão de voluntários do Maanaim",
   "id": "/",
   "prefer_related_applications": false,

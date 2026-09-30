@@ -84,6 +84,7 @@ abstract interface class PessoasGateway {
   Future<PessoaSalva> salvarPessoa({
     required String commandId,
     String? uid,
+    required int versao,
     required String nomeCompleto,
     required String email,
     required bool coordenador,
@@ -143,6 +144,7 @@ class FirebasePessoasGateway implements PessoasGateway {
   Future<PessoaSalva> salvarPessoa({
     required String commandId,
     String? uid,
+    required int versao,
     required String nomeCompleto,
     required String email,
     required bool coordenador,
@@ -150,6 +152,7 @@ class FirebasePessoasGateway implements PessoasGateway {
   }) async {
     final payload = <String, dynamic>{
       'commandId': commandId,
+      'expectedVersion': versao,
       'nomeCompleto': nomeCompleto,
       'email': email,
       'coordenador': coordenador,

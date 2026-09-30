@@ -103,6 +103,8 @@ UID_ADMINISTRADOR=<uid> npm run semear-catalogo-inicial --prefix functions -- --
 
 O script valida `autoridadesAdministrativas/{uid}` antes de qualquer gravação, cria apenas o ausente e imprime o recibo em JSON. Reexecutar é idempotente.
 
+> **Break-glass.** O caminho preferido e canônico de mutação é a callable `semearCatalogoInicial` (Auth + App Check). O script acima é uma exceção operacional break-glass: roda via Admin SDK/ADC, fora da fronteira App Check, e exige que o operador já tenha autoridade administrativa vigente (`autoridadesAdministrativas/{uid}`). Use-o apenas quando a área administrativa/PWA não estiver disponível, nunca como fluxo rotineiro.
+
 ## Carga inicial de pastores e vínculos
 
 Carga administrativa, idempotente e transacional que associa um Pastor Local vigente a cada igreja a partir da planilha local `igreja,pastor,email`. A planilha nunca é versionada e o relatório nunca ecoa PII.

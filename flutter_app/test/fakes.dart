@@ -137,6 +137,7 @@ class PessoasFake implements PessoasGateway {
   String? ultimoPapel;
   bool? ultimoConceder;
   int? ultimaVersao;
+  int? ultimaVersaoPessoa;
   String? ultimoNome;
   String? ultimoCpf;
   bool? ultimoCoordenador;
@@ -156,6 +157,7 @@ class PessoasFake implements PessoasGateway {
   Future<PessoaSalva> salvarPessoa({
     required String commandId,
     String? uid,
+    required int versao,
     required String nomeCompleto,
     required String email,
     required bool coordenador,
@@ -163,6 +165,7 @@ class PessoasFake implements PessoasGateway {
   }) async {
     salvamentos++;
     ultimoCommandId = commandId;
+    ultimaVersaoPessoa = versao;
     ultimoNome = nomeCompleto;
     ultimoCpf = cpf;
     ultimoCoordenador = coordenador;

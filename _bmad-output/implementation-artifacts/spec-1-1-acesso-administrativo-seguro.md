@@ -143,3 +143,38 @@ O papel efetivo é um sinal de entrada, não uma autorização suficiente para m
 - `npm test --prefix functions` -- esperado: contratos de Function, autorização, idempotência e redaction aprovados.
 - `npm run build --prefix functions` -- esperado: TypeScript compila para deploy.
 - `firebase emulators:exec --only firestore,storage,functions "npm test --prefix functions"` -- esperado: Rules e callables recusam os caminhos não autorizados no Emulator.
+
+## Review Findings
+
+### Patches
+
+- [x] [Review][Patch] Replay idempotente pode reportar `concluido: true` sem reconciliar a claim pendente — se a reconciliação pós-commit falhar, o recibo fica `PENDENTE_CLAIM` e um retry com o mesmo `commandId` retorna `repetido: true` sem reprojetar a claim. [functions/src/commands/gerenciarAutoridadeAdministrativa.ts:53] — medium/high
+- [x] [Review][Patch] Bootstrap concede a primeira autoridade sem recibo `commands/{commandId}` nem `auditOutbox`, e conta qualquer documento `ativa == true` (não `podeAdministrar`) para o guarda de "já existe". [scripts/conceder-primeiro-administrador.mjs:26] — high
+- [x] [Review][Patch] Bootstrap grava `papel` singular e nunca `papeis`; com a precedência plural da 1.3, retomar um documento `papeis: []` deixa a conta sem administração efetiva e ainda imprime `CONCLUIDO`. [scripts/conceder-primeiro-administrador.mjs:33] — high
+- [x] [Review][Patch] Identidade-alvo desabilitada pode receber autoridade: só a existência em Auth é verificada, sem checar `disabled`. [functions/src/commands/gerenciarAutoridadeAdministrativa.ts:22] — medium
+- [x] [Review][Patch] A auditoria da alteração de autoridade não registra o alvo (`auditOutbox` só tem `antes`/`depois` booleanos), contrariando o contexto do épico (ator, alvo, antes/depois). [functions/src/commands/gerenciarAutoridadeAdministrativa.ts:50] — medium
+- [x] [Review][Patch] Callable administrativa, reconciliador e bootstrap sem teste executável: a suíte padrão só faz asserções textuais (`readFileSync`) e os testes de Emulator são pulados sem env. [functions/test/security-contract.test.ts:52] — medium
+- [x] [Review][Patch] Constantes de papel/claim duplicadas entre TypeScript e Dart (`'ADMINISTRADOR'`, `'maanaimAdmin'`) sem guarda de sincronia. [scripts/conceder-primeiro-administrador.mjs:33] — medium
+- [x] [Review][Patch] `hashAlteracao` não inclui `expectedVersion`, então replay com versão divergente é aceito como idempotente. [functions/src/domain/autoridadeAdministrativa.ts:108] — low
+
+### Deferred
+
+- [x] [Review][Defer] TOCTOU do alvo entre a validação e o commit (conta deletada na janela) deixa autoridade ativa para identidade inexistente — deferred: corrida inerente; sem caminho de retomada definido.
+- [x] [Review][Defer] Escrita de claim concorrente de outro domínio pode ser perdida entre `getUser` e `setCustomUserClaims` — deferred: o Admin SDK não oferece CAS de claims; mitigação exigiria serialização/coordenação externa.
+- [x] [Review][Defer] `storage.rules` verificado apenas por asserção textual, sem teste de Rules no Emulator — deferred: não há harness de Rules; Emulator indisponível no ambiente.
+- [x] [Review][Defer] A UI não revalida a autorização durante a sessão (só no erro/relogin); revogação mantém a tela até recarregar — deferred: o servidor continua autoritativo; atualização contínua é decisão de UX.
+- [x] [Review][Defer] `epic-1-context.md` sem proveniência/versão — deferred: edição de artefato de contexto de agente.
+
+### Rejected
+
+- `false` — metadata do spec (loop 2 vs "loop 3") e status `done` vs `review`: corrigir exige editar o próprio spec sob revisão.
+- `false` — "sem entrada de verificação para o bootstrap": edição de spec.
+- `low` — `AutoridadeAdministrativa` omite campos e máquina de estados documentada: cosmético/documental.
+- `low` — bootstrap sem `projectId`: o script já lê `GOOGLE_CLOUD_PROJECT`/`GCLOUD_PROJECT`.
+- `low` — `alvoUid` não valida formato OPACA: `getUser` rejeita UID inválido antes de qualquer grafo.
+- `low` — `expectedVersion` sem checagem de inteiro/negativo: o guarda de versão ainda aborta.
+- `low` — varredura do "último administrador" sem índice/limite: conjunto de admins é pequeno e o guarda funciona.
+- `low` — `principal().catch` genérico do bootstrap: intencional para não vazar o UID.
+- `false` — `ativa: true` com `papel` inválido mostraria a área admin: `podeAdministrar` é falso, o servidor nega.
+- `maybe-false` — UID de provisionamento em `auditoria` via `actorUid`: a intenção veda o UID de provisionamento (alvo), não o ator de comandos posteriores.
+- `false` — `AdministracaoInicial` sem responsividade: superada pelo `AdminShell` entregue nas Stories 1.2/1.3.

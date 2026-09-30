@@ -2,6 +2,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import {
   ComandoDivergenteError,
+  DatasetInvalidoError,
   SemAutoridadeError,
   validarCommandId,
 } from '../domain/catalogo.js';
@@ -13,8 +14,9 @@ type Entrada = {
   correlationId?: unknown;
 };
 
-const indisponivel = (code: 'permission-denied' | 'invalid-argument' | 'aborted') =>
-  new HttpsError(code, 'Operação administrativa indisponível.');
+const indisponivel = (
+  code: 'permission-denied' | 'invalid-argument' | 'aborted' | 'failed-precondition',
+) => new HttpsError(code, 'Operação administrativa indisponível.');
 
 function codigoDoErro(erro: unknown): string | number | null {
   if (erro && typeof erro === 'object' && 'code' in erro) {
@@ -51,11 +53,13 @@ export const semearCatalogoInicial = onCall(
         correlacaoId: correlationId,
         atorUid: request.auth.uid,
         origem: ORIGEM_SEED_INICIAL,
-        agora: new Date(),
       });
     } catch (erro) {
       if (erro instanceof SemAutoridadeError) {
         throw indisponivel('permission-denied');
+      }
+      if (erro instanceof DatasetInvalidoError) {
+        throw indisponivel('failed-precondition');
       }
       if (erro instanceof ComandoDivergenteError) {
         throw indisponivel('aborted');

@@ -35,4 +35,31 @@ describe('planejamento da migração de papéis', () => {
     });
     expect(porId.has('normalizado')).toBe(false);
   });
+
+  it('mescla o campo legado quando `papeis` e `papel` coexistem', () => {
+    const { planos, jaNormalizados } = planejarMigracao(
+      [
+        doc('coexistente', {
+          ativa: true,
+          papeis: ['COORDENADOR'],
+          papel: 'ADMINISTRADOR',
+        }),
+        doc('plural-vazio-legado', {
+          ativa: true,
+          papeis: [],
+          papel: 'ADMINISTRADOR',
+        }),
+      ],
+      papeisSistema,
+    );
+
+    expect(jaNormalizados).toBe(0);
+    const porId = new Map(planos.map((plano) => [plano.id, plano]));
+    expect(porId.get('coexistente').papeis).toEqual([
+      'COORDENADOR',
+      'ADMINISTRADOR',
+    ]);
+    expect(porId.get('plural-vazio-legado').papeis).toEqual(['ADMINISTRADOR']);
+    expect(porId.get('plural-vazio-legado').ativa).toBe(true);
+  });
 });

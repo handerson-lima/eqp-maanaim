@@ -31,7 +31,7 @@ void main() {
     expect(manifest['start_url'], isNotEmpty);
     expect(manifest['scope'], '/');
     expect(manifest['display'], 'standalone');
-    expect(manifest['theme_color'], '#1B5E20');
+    expect(manifest['theme_color'], '#005BD8');
     expect(manifest['prefer_related_applications'], false);
   });
 

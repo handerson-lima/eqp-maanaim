@@ -37,7 +37,9 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
 
   void _recarregar() {
     setState(() {
-      _futuro = widget.gateway.consultar(termo: _termo);
+      // Busca sempre o conjunto completo: a filtragem por termo é local, para
+      // que limpar/trocar a busca não esconda quem foi estreitado no servidor.
+      _futuro = widget.gateway.consultar();
     });
   }
 
@@ -90,14 +92,16 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
       if (!mounted) return;
       setState(() {
         _aviso = '${conceder ? 'Papel concedido' : 'Papel revogado'}: $rotulo.';
+        _erroAcao = null;
         _executando = false;
-        _futuro = widget.gateway.consultar(termo: _termo);
+        _futuro = widget.gateway.consultar();
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _erroAcao =
             'Não foi possível atualizar o papel. Recarregue a lista e tente novamente.';
+        _aviso = null;
         _executando = false;
       });
     }
@@ -117,6 +121,7 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
       await widget.gateway.salvarPessoa(
         commandId: comandoOpaco(),
         uid: pessoa?.uid,
+        versao: pessoa?.versao ?? 0,
         nomeCompleto: dados.nomeCompleto,
         email: dados.email,
         coordenador: dados.coordenador,
@@ -125,14 +130,16 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
       if (!mounted) return;
       setState(() {
         _aviso = pessoa == null ? 'Pessoa cadastrada.' : 'Cadastro atualizado.';
+        _erroAcao = null;
         _executando = false;
-        _futuro = widget.gateway.consultar(termo: _termo);
+        _futuro = widget.gateway.consultar();
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _erroAcao =
             'Não foi possível salvar o cadastro. Revise os campos e tente novamente.';
+        _aviso = null;
         _executando = false;
       });
     }
@@ -428,6 +435,8 @@ class _FormularioPessoaState extends State<_FormularioPessoa> {
   String? _validaCpf(String? valor) {
     if (!_coordenador) return null;
     final digitos = (valor ?? '').replaceAll(RegExp(r'\D'), '');
+    // Edição sem CPF preserva o registro restrito vigente; na criação é exigido.
+    if (digitos.isEmpty && widget.pessoa != null) return null;
     if (digitos.length != 11) return 'Informe o CPF com 11 dígitos.';
     return null;
   }

@@ -119,3 +119,34 @@ O PRD §51 nomeia a flag da igreja como `ativa`; o repositório já usa `ativo` 
 - `flutter analyze --fatal-infos` -- esperado: app e tela administrativa sem diagnósticos (executar em `flutter_app`).
 - `flutter test` -- esperado: guarda administrativa e consulta aprovadas (executar em `flutter_app`).
 - `firebase emulators:exec --only firestore "/usr/local/bin/node functions/node_modules/vitest/vitest.mjs run --root functions test/catalogo.emulator.test.ts"` -- esperado: 8 testes de seed/consulta aprovados no Emulator (o `emulators:exec ... "npm test"` documentado na Story 1.1 falha por bug do npm embarcado na CLI).
+
+## Review Findings
+
+### Patches
+
+- [x] [Review][Patch] Documentar `scripts/semear-catalogo-inicial.mjs` como caminho break-glass IAM/ADC — decidido manter a exceção operacional; registrar o limite (ADC, sem Auth/App Check), o uso e a preferência pela callable no README. [scripts/semear-catalogo-inicial.mjs] — low
+- [x] [Review][Patch] Tema PWA/instalação ainda verde (`#1B5E20`) enquanto a identidade mudou para azul (`#005BD8`); o teste trava o verde. [flutter_app/web/manifest.json:9, flutter_app/web/index.html:2, flutter_app/test/pwa_manifest_test.dart:34] — medium
+- [x] [Review][Patch] `RaizSessao` ignora erro do stream de auth e cai no login, ocultando sessão ativa; o ramo de erro de `AreaAutenticada` não oferece "Sair" e `_sair` não trata falha. [flutter_app/lib/main.dart:126] — medium
+- [x] [Review][Patch] `authStateChanges()` é chamado direto no `build`, criando nova assinatura a cada rebuild. [flutter_app/lib/main.dart:127] — medium
+- [x] [Review][Patch] `validarDataset` existe e é testado, mas nunca é chamado em runtime; dataset inválido/vazio semearia silenciosamente zero registros com recibo `COMPLETO`. [functions/src/repositories/catalogo.ts:60] — medium
+- [x] [Review][Patch] `firebase.json` substitui o `predeploy` por `tsc` direto (contorna o script `build`) e o bloco `hosting` não tem `predeploy`, permitindo publicar build web obsoleto. [firebase.json:7] — medium
+- [x] [Review][Patch] Contrato de nomes/resposta entre Flutter e backend não é verificado: `index.ts` sem teste de export e parsers do cliente (chaves `igrejas`/`equipes`/`repetido`/`igrejasCriadas`) não acoplados ao payload do backend. [functions/src/index.ts:5, flutter_app/lib/features/admin/catalogo_service.dart:100] — medium
+- [x] [Review][Patch] Superfície morta: `IgrejaCatalogoConsulta`, `ContextoSeedCatalogo.agora`, `nomeNormalizado` persistido sem leitor, `CatalogoResposta.vazio` e `IgrejaCatalogo.rotulo` sem consumidores. [functions/src/domain/catalogo.ts:36] — low
+- [x] [Review][Patch] Entrada de `deferred-work.md` afirma que nenhuma superfície invoca o seed, mas a aba Seed foi entregue neste mesmo diff. [_bmad-output/implementation-artifacts/deferred-work.md] — low
+
+### Deferred
+
+- [x] [Review][Defer] README afirma que o cliente lê `equipes` como dropdown, mas nenhum código consulta `equipes` — deferred: documentação.
+- [x] [Review][Defer] `consultarCatalogo` calcula `termo`/`rotulo` no servidor, mas `ConsultaCatalogo` sempre chama sem termo e filtra localmente (fonte de verdade duplicada, pode divergir) — deferred: refactor de contrato.
+- [x] [Review][Defer] README perdeu o parágrafo de configuração de domínios autorizados do Auth — deferred: documentação/operação.
+
+### Rejected
+
+- `false` — `SeedCatalogo` reutiliza `_commandId` após falha: o payload é o dataset constante, então um `aborted` divergente é impossível; retry é idempotente.
+- `low` — ícone maskable sem safe-zone e apple-touch 512 ausente: detalhe visual, sem defeito funcional.
+- `low` — comandos de verificação com caminho de `node` fixo: edição de spec.
+- `false` — troca de hierarquia dos CTAs na tela inicial: rebranding intencional coberto por `spec-layout-referencia-visual.md`.
+- `false` — 1.2 diz que o spec 1.3 foi removido: corrigir edita o spec sob revisão.
+- `low` — `consultarCatalogo` valida autoridade fora de transação: leitura read-only, sem dano persistente.
+- `low` — `igrejasAusentes` também checa o ID determinístico: evita recriar registro alterado; cenário obscuro.
+- `false` — escopo agrupa specs/redesign: edição de spec.

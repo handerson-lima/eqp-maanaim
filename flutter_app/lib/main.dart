@@ -109,7 +109,7 @@ class MaanaimApp extends StatelessWidget {
 
 /// Raiz da aplicação: ouve `authStateChanges` para restaurar sessão
 /// ao recarregar e rotear automaticamente entre login, rascunho e admin.
-class RaizSessao extends StatelessWidget {
+class RaizSessao extends StatefulWidget {
   const RaizSessao(
     this.auth, {
     super.key,
@@ -123,9 +123,52 @@ class RaizSessao extends StatelessWidget {
   final PessoasGateway? pessoas;
 
   @override
+  State<RaizSessao> createState() => _RaizSessaoState();
+}
+
+class _RaizSessaoState extends State<RaizSessao> {
+  /// Assinatura estável: criada uma vez, e recriada apenas numa retentativa,
+  /// para não perder/reordenar eventos de login/logout a cada rebuild.
+  late Stream<User?> _estadoSessao = widget.auth.authStateChanges();
+
+  void _retentar() =>
+      setState(() => _estadoSessao = widget.auth.authStateChanges());
+
+  Future<void> _sair() async {
+    try {
+      await widget.auth.sair();
+    } catch (_) {}
+  }
+
+  @override
   Widget build(BuildContext context) => StreamBuilder<User?>(
-    stream: auth.authStateChanges(),
+    stream: _estadoSessao,
     builder: (context, estado) {
+      if (estado.hasError) {
+        return Scaffold(
+          body: SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Semantics(
+                    liveRegion: true,
+                    child: const Text(
+                      'Não foi possível verificar sua sessão.',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: _retentar,
+                    child: const Text('Tentar novamente'),
+                  ),
+                  TextButton(onPressed: _sair, child: const Text('Sair')),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
       if (estado.connectionState == ConnectionState.waiting) {
         return Scaffold(
           body: SafeArea(
@@ -140,13 +183,13 @@ class RaizSessao extends StatelessWidget {
       }
       final usuario = estado.data;
       if (usuario == null) {
-        return Inicio(auth);
+        return Inicio(widget.auth);
       }
       return AreaAutenticada(
-        auth,
-        catalogo: catalogo,
-        seed: seed,
-        pessoas: pessoas,
+        widget.auth,
+        catalogo: widget.catalogo,
+        seed: widget.seed,
+        pessoas: widget.pessoas,
       );
     },
   );
@@ -176,8 +219,18 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
   });
 
   Future<void> _sair() async {
-    await widget.auth.sair();
-    // O StreamBuilder em RaizSessao reagirá ao logout.
+    try {
+      await widget.auth.sair();
+      // O StreamBuilder em RaizSessao reagirá ao logout.
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível sair. Tente novamente.'),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -202,6 +255,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
                     onPressed: _retentar,
                     child: const Text('Tentar novamente'),
                   ),
+                  TextButton(onPressed: _sair, child: const Text('Sair')),
                 ],
               ),
             ),

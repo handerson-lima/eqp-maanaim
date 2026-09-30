@@ -336,6 +336,7 @@ describe.skipIf(!habilitado)('pessoas e papéis no Emulator', () => {
       email: 'coord@exemplo.com',
       coordenador: true,
       cpf: '529.982.247-25',
+      expectedVersion: 0,
     });
     await salvarPessoa(db, getAuth(app), contexto(designar.commandId), designar);
     const designado = await lerPessoas(db, '', ADMIN_UID);
@@ -347,6 +348,7 @@ describe.skipIf(!habilitado)('pessoas e papéis no Emulator', () => {
       nomeCompleto: 'Coordenador Designado',
       email: 'coord@exemplo.com',
       coordenador: false,
+      expectedVersion: 1,
     });
     await salvarPessoa(db, getAuth(app), contexto(remover.commandId), remover);
     const removido = await lerPessoas(db, '', ADMIN_UID);
@@ -354,5 +356,83 @@ describe.skipIf(!habilitado)('pessoas e papéis no Emulator', () => {
     expect(
       (await db.collection('coordenadores').doc(coordUid).get()).exists,
     ).toBe(true);
+  });
+
+  it('preserva papel co-detido ao conceder/revogar ADMINISTRADOR pela 1.1', async () => {
+    const db = getFirestore(app);
+    const uid = 'coordenador-admin-teste';
+    await getAuth(app).createUser({ uid, email: 'coordadmin@exemplo.com' });
+    await db.collection('autoridadesAdministrativas').doc(uid).set({
+      ativa: true,
+      papeis: ['COORDENADOR'],
+      versao: 1,
+      revisao: 1,
+    });
+
+    await requisitar(
+      alterarAutoridadeAdministrativa,
+      { alvoUid: uid, commandId: 's'.repeat(32), expectedVersion: 1, conceder: true },
+      { uid: ADMIN_UID },
+    );
+    let doc = await db.collection('autoridadesAdministrativas').doc(uid).get();
+    expect(doc.data()?.papeis?.sort()).toEqual(['ADMINISTRADOR', 'COORDENADOR']);
+    expect(doc.data()?.ativa).toBe(true);
+
+    await requisitar(
+      alterarAutoridadeAdministrativa,
+      { alvoUid: uid, commandId: 't'.repeat(32), expectedVersion: 2, conceder: false },
+      { uid: ADMIN_UID },
+    );
+    doc = await db.collection('autoridadesAdministrativas').doc(uid).get();
+    expect(doc.data()?.papeis).toEqual(['COORDENADOR']);
+    expect(doc.data()?.ativa).toBe(true);
+  });
+
+  it('recusa identidade desabilitada como alvo', async () => {
+    const db = getFirestore(app);
+    const uid = 'identidade-desabilitada-teste';
+    await getAuth(app).createUser({
+      uid,
+      email: 'desabilitada@exemplo.com',
+      disabled: true,
+    });
+    await db.collection('autoridadesAdministrativas').doc(uid).set({
+      ativa: false,
+      papeis: [],
+      versao: 0,
+      revisao: 0,
+    });
+    await expect(
+      requisitar(
+        alterarAutoridadeAdministrativa,
+        { alvoUid: uid, commandId: 'u'.repeat(32), expectedVersion: 0, conceder: true },
+        { uid: ADMIN_UID },
+      ),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('retoma a conclusão do recibo pendente em replay', async () => {
+    const db = getFirestore(app);
+    const commandId = 'v'.repeat(32);
+    await db.collection('autoridadesAdministrativas').doc(ALVO_UID).set({
+      ativa: true,
+      papeis: ['COORDENADOR'],
+      versao: 2,
+      revisao: 2,
+    });
+    await requisitar(
+      alterarAutoridadeAdministrativa,
+      { alvoUid: ALVO_UID, commandId, expectedVersion: 2, conceder: true },
+      { uid: ADMIN_UID },
+    );
+    // Simula uma falha pós-commit na reconciliação da claim.
+    await db.collection('commands').doc(commandId).update({ estado: 'PENDENTE_CLAIM' });
+    await requisitar(
+      alterarAutoridadeAdministrativa,
+      { alvoUid: ALVO_UID, commandId, expectedVersion: 2, conceder: true },
+      { uid: ADMIN_UID },
+    );
+    const recibo = await db.collection('commands').doc(commandId).get();
+    expect(recibo.data()?.estado).toBe('COMPLETO');
   });
 });

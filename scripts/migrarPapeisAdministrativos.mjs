@@ -46,16 +46,20 @@ export function planejarMigracao(docs, papeisSistema) {
   let jaNormalizados = 0;
   for (const doc of docs) {
     const dados = doc.data() ?? {};
-    if (Array.isArray(dados.papeis)) {
+    // Um documento já plural e sem campo legado está normalizado; se ambos
+    // existem, o legado ainda precisa ser mesclado e removido.
+    if (Array.isArray(dados.papeis) && dados.papel === undefined) {
       jaNormalizados += 1;
       continue;
     }
-    const bruto =
+    const legado =
       typeof dados.papel === 'string'
         ? [dados.papel]
         : Array.isArray(dados.papel)
           ? dados.papel
           : [];
+    const base = Array.isArray(dados.papeis) ? dados.papeis : [];
+    const bruto = [...base, ...legado];
     const papeis = [...new Set(bruto.filter((papel) => permitidos.has(papel)))];
     // Preserva a revogação: um documento inativo não volta a vigorar só porque
     // ainda carrega o papel no formato antigo.
@@ -116,15 +120,17 @@ async function principal() {
     if (await reconciliarClaimAdministrativa(db, plano.id)) reconciliados += 1;
   }
 
+  const pendentes = planos.length - reconciliados;
   stdout.write(
     `${JSON.stringify(
       {
         modo,
-        status: 'CONCLUIDO',
+        status: pendentes > 0 ? 'CONCLUIDO_COM_PENDENCIAS' : 'CONCLUIDO',
         total: snapshot.size,
         normalizados: planos.length,
         jaNormalizados,
         reconciliados,
+        pendentes,
       },
       null,
       2,

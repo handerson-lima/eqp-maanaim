@@ -35,8 +35,6 @@ class CatalogoResposta {
 
   final List<IgrejaCatalogo> igrejas;
   final List<EquipeCatalogo> equipes;
-
-  bool get vazio => igrejas.isEmpty && equipes.isEmpty;
 }
 
 /// Consulta read-only autorizada do catálogo no backend.

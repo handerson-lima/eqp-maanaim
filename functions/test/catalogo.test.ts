@@ -22,7 +22,6 @@ const igreja = (codigo: string, extra: Partial<IgrejaCatalogo> = {}): IgrejaCata
   id: idIgrejaSeed(codigo),
   codigo,
   nome: `Igreja ${codigo}`,
-  nomeNormalizado: `IGREJA ${codigo}`,
   ativo: true,
   ...extra,
 });

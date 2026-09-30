@@ -4,6 +4,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import {
   AlvoInexistenteError,
   ComandoDivergenteError,
+  ConflitoVersaoError,
   SemAutoridadeError,
   validarPessoa,
 } from '../domain/pessoas.js';
@@ -51,7 +52,9 @@ export const salvarPessoa = onCall(
     } catch (falha) {
       if (falha instanceof SemAutoridadeError) throw erro('permission-denied');
       if (falha instanceof AlvoInexistenteError) throw erro('invalid-argument');
-      if (falha instanceof ComandoDivergenteError) throw erro('aborted');
+      if (falha instanceof ComandoDivergenteError || falha instanceof ConflitoVersaoError) {
+        throw erro('aborted');
+      }
       throw falha;
     }
   },

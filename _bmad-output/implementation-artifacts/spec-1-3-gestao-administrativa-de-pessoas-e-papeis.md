@@ -141,3 +141,33 @@ Decisões registradas: (Q1) o agregado canônico `autoridadesAdministrativas/{ui
 - `npm run build --prefix functions` -- esperado: TypeScript compila para deploy.
 - `flutter analyze --fatal-infos` -- esperado: app e tela administrativa sem diagnósticos (executar em `flutter_app`).
 - `flutter test` -- esperado: guarda administrativa, nova tela e estados acessíveis aprovados (executar em `flutter_app`).
+
+## Review Findings
+
+### Patches
+
+- [x] [Review][Patch] Aceitar CPF ausente na edição como "manter o atual": `validarPessoa` deve permitir `cpf` omitido quando `coordenador` e `uid` presentes, e o repositório preservar o CPF já persistido; o formulário deixa de exigir redigitação (sem expor o CPF ao cliente). [functions/src/domain/pessoas.ts:186, flutter_app/lib/features/admin/pessoas_papeis.dart:403] — medium
+- [x] [Review][Patch] `alterarAutoridadeAdministrativa` (1.1) sobrescreve o conjunto `papeis` inteiro: conceder vira `['ADMINISTRADOR']` e revogar vira `[]`, derrubando um `COORDENADOR` co-detido e desativando a autoridade. [functions/src/commands/gerenciarAutoridadeAdministrativa.ts:47] — high
+- [x] [Review][Patch] Bootstrap grava `papel` singular e nunca `papeis`; a precedência plural deixa um doc `papeis: []` sem administração efetiva após a retomada, reportando `CONCLUIDO`. [scripts/conceder-primeiro-administrador.mjs:33] — high
+- [x] [Review][Patch] Replay após reconciliação de claim falha retorna `concluido: true` sem reprojetar a claim (recibo fica `PENDENTE_CLAIM`) — mesmo padrão da 1.1. [functions/src/commands/gerenciarPapeis.ts:49] — medium
+- [x] [Review][Patch] `salvarPessoa` provisiona a identidade Auth (`garantirUsuario`) antes da transação; um aborto/`ComandoDivergenteError` deixa conta órfã sem perfil nem recibo. [functions/src/repositories/pessoas.ts:115] — medium
+- [x] [Review][Patch] `salvarPessoa` não recebe nem confere `expectedVersion` do perfil: edições concorrentes são last-write-wins silencioso, divergindo do padrão de comando (versão esperada). [functions/src/repositories/pessoas.ts:152] — medium
+- [x] [Review][Patch] `gerenciarPapeis` consulta a existência do alvo em Auth antes de validar a autoridade do chamador; um usuário comum distingue UID existente (`permission-denied`) de inexistente (`invalid-argument`). [functions/src/commands/gerenciarPapeis.ts:34] — medium
+- [x] [Review][Patch] `planejarMigracao` pula docs com `papeis` array mesmo com `papel` legado presente, e o `--executar` imprime `CONCLUIDO` mesmo quando a reconciliação fica pendente; o planner/caminho de execução não têm teste. [scripts/migrarPapeisAdministrativos.mjs:49] — medium
+- [x] [Review][Patch] Qualquer falha de `getUser` no `salvarPessoa` é mapeada para `AlvoInexistenteError` (`invalid-argument`), mascarando erros transitórios de Auth/infra. [functions/src/repositories/pessoas.ts:108] — medium
+- [x] [Review][Patch] Após mutação, a recarga usa `consultar(termo: _termo)`; limpar/trocar a busca depois passa a filtrar localmente um conjunto já estreitado pelo servidor, ocultando pessoas. [flutter_app/lib/features/admin/pessoas_papeis.dart:94] — medium
+- [x] [Review][Patch] Faixas `_aviso`/`_erroAcao` não são zeradas entre operações, permitindo banner de sucesso antigo junto de erro novo (e o inverso). [flutter_app/lib/features/admin/pessoas_papeis.dart:91] — low
+- [x] [Review][Patch] Superfície morta: `aplicarClaimAdministrativa` só usada por testes; `emailNormalizado` persistido sem leitor. [functions/src/domain/autoridadeAdministrativa.ts:92] — low
+
+### Deferred
+
+- [x] [Review][Defer] `lerPessoas` carrega `pessoas`/`autoridadesAdministrativas`/`coordenadores` inteiras, sem paginação/limite — deferred: escala atual pequena; evolução futura.
+- [x] [Review][Defer] Nenhum teste assegura que o cliente envia token de App Check — deferred: infraestrutura de Emulator/CI.
+
+### Rejected
+
+- `low` — linhas sintéticas de autoridade sem `pessoas` caem no `uid` como rótulo: fallback aceitável em borda rara.
+- `low` — `consultarPessoas` não rejeita chaves desconhecidas: entrada limitada por `termo` validado.
+- `low` — `_validaCpf` só confere contagem de dígitos: o servidor valida os dígitos verificadores e falha com erro genérico.
+- `low` — nenhuma função lê o CPF do Coordenador: persistir é o escopo da 1.3; a leitura pertence ao termo/PDF (1.5).
+- `false` — spec diz que a 1.1 não foi alterada e status `done`: corrigir exige editar o spec sob revisão.

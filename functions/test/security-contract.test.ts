@@ -15,6 +15,11 @@ const salvarPessoa = readFileSync(join(raiz, 'functions', 'src', 'commands', 'sa
 const gerenciarPapeis = readFileSync(join(raiz, 'functions', 'src', 'commands', 'gerenciarPapeis.ts'), 'utf8');
 const consultarPessoas = readFileSync(join(raiz, 'functions', 'src', 'commands', 'consultarPessoas.ts'), 'utf8');
 const repoPessoas = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'pessoas.ts'), 'utf8');
+const index = readFileSync(join(raiz, 'functions', 'src', 'index.ts'), 'utf8');
+const autoridadeDomain = readFileSync(join(raiz, 'functions', 'src', 'domain', 'autoridadeAdministrativa.ts'), 'utf8');
+const catalogoService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'admin', 'catalogo_service.dart'), 'utf8');
+const authService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'auth', 'auth_service.dart'), 'utf8');
+const pessoasService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'admin', 'pessoas_service.dart'), 'utf8');
 
 describe('contratos de segurança executáveis', () => {
   it('nega escrita de domínio e leitura direta de ficha pelo cliente', () => {
@@ -129,5 +134,31 @@ describe('contratos de segurança executáveis', () => {
   it('nega leitura e escrita de pessoa, papel e CPF pelos Rules', () => {
     expect(regras).toContain('match /{document=**} { allow read, write: if false; }');
     expect(regras).not.toMatch(/pessoas|coordenadores|autoridadesAdministrativas/);
+  });
+  it('exporta no entrypoint cada callable invocada pelo cliente', () => {
+    const nomesCliente = [
+      'consultarCatalogo',
+      'semearCatalogoInicial',
+      'consultarPessoas',
+      'salvarPessoa',
+      'gerenciarPapeis',
+    ];
+    for (const nome of nomesCliente) {
+      const invocada =
+        catalogoService.includes(`httpsCallable('${nome}')`) ||
+        authService.includes(`httpsCallable('${nome}')`) ||
+        pessoasService.includes(`httpsCallable('${nome}')`);
+      expect(invocada, `${nome} não é invocada pelo cliente`).toBe(true);
+      expect(
+        index.includes(`export { ${nome} }`),
+        `${nome} não é exportada em index.ts`,
+      ).toBe(true);
+    }
+  });
+  it('mantém o nome da claim e os papéis de sistema sincronizados entre Dart e TS', () => {
+    expect(autoridadeDomain).toContain("NOME_CLAIM_ADMINISTRATIVA = 'maanaimAdmin'");
+    expect(authService).toContain("claimAdministrativa = 'maanaimAdmin'");
+    expect(pessoasService).toContain("'ADMINISTRADOR': 'Administrador'");
+    expect(pessoasService).toContain("'COORDENADOR': 'Coordenador'");
   });
 });

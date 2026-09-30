@@ -162,6 +162,26 @@ void main() {
     expect(gateway.salvamentos, 1);
     expect(gateway.ultimoCoordenador, isTrue);
     expect(gateway.ultimoCpf, '52998224725');
+    expect(gateway.ultimaVersaoPessoa, 2);
+  });
+
+  testWidgets('edição de Coordenador existente salva sem redigitar o CPF', (
+    tester,
+  ) async {
+    final gateway = PessoasFake(resposta: _resposta);
+    await _abrir(tester, gateway);
+    await tester.pumpAndSettle();
+
+    // Terceiro cartão: Dora Reis, já Coordenadora (coordenador: true).
+    await tester.tap(find.text('Editar').at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Salvar'));
+    await tester.pumpAndSettle();
+
+    expect(gateway.salvamentos, 1);
+    expect(gateway.ultimoCoordenador, isTrue);
+    expect(gateway.ultimaVersaoPessoa, 1);
+    expect(gateway.ultimoCpf, isEmpty);
   });
 
   testWidgets('cadastro abre formulário e envia os dados mínimos', (

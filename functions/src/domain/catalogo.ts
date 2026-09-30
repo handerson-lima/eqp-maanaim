@@ -22,7 +22,6 @@ export type IgrejaCatalogo = {
   id: string;
   codigo: string;
   nome: string;
-  nomeNormalizado: string;
   ativo: boolean;
 };
 
@@ -45,7 +44,6 @@ export type ContextoSeedCatalogo = {
   correlacaoId: string;
   atorUid: string;
   origem: string;
-  agora: Date;
 };
 
 export type ResultadoSemeadura = {
@@ -68,6 +66,13 @@ export class SemAutoridadeError extends Error {
   constructor() {
     super('SEM_AUTORIDADE');
     this.name = 'SemAutoridadeError';
+  }
+}
+
+export class DatasetInvalidoError extends Error {
+  constructor(public readonly problemas: ProblemaDataset[]) {
+    super('DATASET_INVALIDO');
+    this.name = 'DatasetInvalidoError';
   }
 }
 

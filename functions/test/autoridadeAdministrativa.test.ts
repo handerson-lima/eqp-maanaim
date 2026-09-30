@@ -4,7 +4,6 @@ import {
   NOME_CLAIM_COORDENADOR,
   PAPEL_ADMINISTRADOR,
   PAPEL_COORDENADOR,
-  aplicarClaimAdministrativa,
   aplicarClaimsSistema,
   hashAlteracao,
   papeisEfetivos,
@@ -18,12 +17,12 @@ describe('autoridade administrativa canônica', () => {
     expect(podeAdministrar({ ativa: true, papel: 'ADMINISTRADOR_CLIENTE' })).toBe(false);
   });
 
-  it('preserva claims de outros domínios ao projetar a administração', () => {
+  it('preserva claims de outros domínios ao projetar as claims de sistema', () => {
     const existentes = { outroDominio: 'x', [NOME_CLAIM_ADMINISTRATIVA]: false };
-    const concedida = aplicarClaimAdministrativa(existentes, true);
+    const concedida = aplicarClaimsSistema(existentes, [PAPEL_ADMINISTRADOR]);
     expect(concedida.outroDominio).toBe('x');
     expect(concedida[NOME_CLAIM_ADMINISTRATIVA]).toBe(true);
-    const revogada = aplicarClaimAdministrativa(existentes, false);
+    const revogada = aplicarClaimsSistema(existentes, []);
     expect(revogada.outroDominio).toBe('x');
     expect(revogada).not.toHaveProperty(NOME_CLAIM_ADMINISTRATIVA);
   });
@@ -55,11 +54,20 @@ describe('autoridade administrativa canônica', () => {
     ).toEqual([PAPEL_COORDENADOR]);
   });
 
-  it('liga o recibo ao alvo e ao sentido sem persistir o UID', () => {
-    const base = hashAlteracao({ alvoUid: 'uid-a', conceder: true });
-    expect(base).toBe(hashAlteracao({ alvoUid: 'uid-a', conceder: true }));
-    expect(base).not.toBe(hashAlteracao({ alvoUid: 'uid-b', conceder: true }));
-    expect(base).not.toBe(hashAlteracao({ alvoUid: 'uid-a', conceder: false }));
+  it('liga o recibo ao alvo, ao sentido e à versão sem persistir o UID', () => {
+    const base = hashAlteracao({ alvoUid: 'uid-a', conceder: true, expectedVersion: 1 });
+    expect(base).toBe(
+      hashAlteracao({ alvoUid: 'uid-a', conceder: true, expectedVersion: 1 }),
+    );
+    expect(base).not.toBe(
+      hashAlteracao({ alvoUid: 'uid-b', conceder: true, expectedVersion: 1 }),
+    );
+    expect(base).not.toBe(
+      hashAlteracao({ alvoUid: 'uid-a', conceder: false, expectedVersion: 1 }),
+    );
+    expect(base).not.toBe(
+      hashAlteracao({ alvoUid: 'uid-a', conceder: true, expectedVersion: 2 }),
+    );
     expect(base).not.toContain('uid-a');
   });
 });

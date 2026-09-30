@@ -27,6 +27,7 @@ export type AutoridadeAdministrativa = {
 export type EntradaAlteracao = {
   alvoUid: string;
   conceder: boolean;
+  expectedVersion: number;
 };
 
 export function ehPapelSistema(valor: unknown): valor is PapelSistema {
@@ -87,26 +88,13 @@ export function aplicarClaimsSistema(
 }
 
 /**
- * Deriva apenas a claim de administração; mantido para o contrato da Story 1.1.
- */
-export function aplicarClaimAdministrativa(
-  claimsExistentes: unknown,
-  ativa: boolean,
-): Record<string, unknown> {
-  const claims = {
-    ...((claimsExistentes as Record<string, unknown> | null | undefined) ?? {}),
-  };
-  if (ativa) claims[NOME_CLAIM_ADMINISTRATIVA] = true;
-  else delete claims[NOME_CLAIM_ADMINISTRATIVA];
-  return claims;
-}
-
-/**
  * Vincula o recibo ao conteúdo do comando sem persistir o UID do alvo: o mesmo
  * `commandId` reutilizado com alvo ou sentido divergente é recusado.
  */
 export function hashAlteracao(entrada: EntradaAlteracao): string {
   return createHash('sha256')
-    .update(`${entrada.alvoUid}:${entrada.conceder ? 'CONCEDER' : 'REVOGAR'}`)
+    .update(
+      `${entrada.alvoUid}:${entrada.conceder ? 'CONCEDER' : 'REVOGAR'}:${entrada.expectedVersion}`,
+    )
     .digest('hex');
 }

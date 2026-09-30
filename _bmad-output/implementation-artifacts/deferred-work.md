@@ -41,8 +41,27 @@
   summary: Gestão administrativa de igrejas e equipes (edição e inativação sem exclusão física).
   evidence: O núcleo desta story ficou no seed idempotente e na consulta read-only; a inativação sem exclusão física (4º critério de aceite do épico) e a edição do catálogo foram diferidas para conter o escopo e o tamanho do spec, e serão retomadas em uma story de gestão administrativa.
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-seed-idempotente-de-igrejas-e-equipes.md`
-  summary: Expor o disparo do seed inicial do catálogo na área administrativa.
-  evidence: A callable `semearCatalogoInicial` existe e é testada, mas nenhuma superfície do produto a invoca; o administrador precisa de ferramenta externa com Auth/App Check e um `commandId` opaco. O escopo aprovado desta story cobria o comando de backend e a consulta read-only, deixando a ação de gestão para a story de gestão administrativa.
+  summary: (resolvido) Expor o disparo do seed inicial do catálogo na área administrativa.
+  evidence: A ação foi entregue no shell administrativo (`AdminShell` -> aba Seed -> `SeedCatalogo`), que invoca `semearCatalogoInicial` por Auth/App Check. Entrada mantida apenas como histórico de que a cobertura de UI deixou de estar diferida.
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-1-1-2-frontend-admin-pwa.md`
   summary: Tratar erro do stream `authStateChanges` em `RaizSessao` sem rebaixar uma sessão ativa para a tela de login.
   evidence: `RaizSessao.build` (`flutter_app/lib/main.dart:111-127`) trata apenas `waiting` e `data == null`; um snapshot com erro cai em `Inicio`, escondendo a sessão. Severidade não verificada (`medium` se verdadeiro): é preciso confirmar se o stream de `FirebaseAuth.authStateChanges()` pode emitir erro em algum caminho real; se não puder, o finding não procede.
+
+## Deferred from: code review of story 1.1 (2026-09-30)
+
+- TOCTOU do alvo entre a validação `getUser` e o commit: uma conta deletada na janela deixa autoridade ativa para identidade inexistente e recibo pendente. Corrida inerente; exige revalidação dentro da transação ou compensação.
+- Escrita de Custom Claims concorrente de outro domínio pode ser perdida entre a releitura e `setCustomUserClaims` (Auth não oferece CAS). Mitigação exigiria serialização/coordenação externa.
+- `storage.rules` verificado apenas por asserção textual; sem teste de Rules no Emulator (não há harness; Emulator indisponível no ambiente).
+- A UI não revalida a autorização durante a sessão (só no erro/relogin); uma revogação mantém a tela até recarregar. O servidor permanece autoritativo; atualização contínua é decisão de UX.
+- `_bmad-output/implementation-artifacts/epic-1-context.md` sem proveniência/versão de origem; sem data/fonte, não é possível detectar drift contra o SPEC/Architecture Spine.
+
+## Deferred from: code review of story 1.2 (2026-09-30)
+
+- README afirma que o cliente lê `equipes` ativas como dropdown, mas nenhum código cliente consulta `equipes`; a regra de leitura de `equipes` e a frase ficam sem consumidor.
+- `consultarCatalogo` calcula filtro/`rotulo` por termo no servidor, mas `ConsultaCatalogo` sempre chama sem termo e filtra localmente: fonte de verdade duplicada que pode divergir.
+- README perdeu o parágrafo sobre registrar os domínios autorizados no Firebase Authentication de cada ambiente (impacta redirecionamento de recuperação de senha).
+
+## Deferred from: code review of story 1.3 (2026-09-30)
+
+- `lerPessoas` carrega as coleções `pessoas`, `autoridadesAdministrativas` e `coordenadores` inteiras, sem paginação/limite; custo/latência crescem de forma ilimitada com o volume.
+- Nenhum teste assegura que os três callables novos enviam token de App Check a partir do cliente; depende de infraestrutura de Emulator/CI.
