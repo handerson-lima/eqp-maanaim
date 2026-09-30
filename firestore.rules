@@ -12,6 +12,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Vínculos temporais e seus ponteiros vigentes (campos de responsável nas
+    // igrejas/equipes) são geridos exclusivamente por Cloud Function: o cliente
+    // nunca lê nem escreve o histórico diretamente.
+    match /vinculosPastorIgreja/{vinculoId} {
+      allow read, write: if false;
+    }
+
+    match /vinculosPastorEquipe/{vinculoId} {
+      allow read, write: if false;
+    }
+
     // A ficha (com CPF e demais PII), recibos, auditoria e qualquer outro
     // agregado nunca são lidos ou gravados diretamente pelo cliente: o estado
     // permitido é devolvido exclusivamente por Cloud Function autenticada.

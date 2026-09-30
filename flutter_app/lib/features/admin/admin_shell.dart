@@ -7,6 +7,8 @@ import 'catalogo_service.dart';
 import 'pessoas_papeis.dart';
 import 'pessoas_service.dart';
 import 'seed_catalogo.dart';
+import 'vinculos_responsaveis.dart';
+import 'vinculos_service.dart';
 
 /// Shell administrativo responsivo: `NavigationRail` no desktop (≥600px)
 /// e `Drawer` no mobile, com papel ativo visível e sign-out.
@@ -17,12 +19,14 @@ class AdminShell extends StatefulWidget {
     this.catalogo,
     this.seed,
     this.pessoas,
+    this.vinculos,
   });
 
   final VoidCallback onSair;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
   final PessoasGateway? pessoas;
+  final VinculosGateway? vinculos;
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -46,6 +50,11 @@ class _AdminShellState extends State<AdminShell> {
       icone: Icons.manage_accounts_outlined,
       iconeAtivo: Icons.manage_accounts,
       rotulo: 'Pessoas e Papéis',
+    ),
+    _Destino(
+      icone: Icons.handshake_outlined,
+      iconeAtivo: Icons.handshake,
+      rotulo: 'Vínculos e Responsáveis',
     ),
   ];
 
@@ -79,6 +88,16 @@ class _AdminShellState extends State<AdminShell> {
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text('Serviço de pessoas e papéis indisponível.'),
+                ),
+              );
+      case 3:
+        final vinculos = widget.vinculos;
+        return vinculos != null
+            ? VinculosResponsaveis(vinculos)
+            : const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('Serviço de vínculos indisponível.'),
                 ),
               );
       default:
@@ -169,7 +188,19 @@ class _AdminShellState extends State<AdminShell> {
                       NavigationRailDestination(
                         icon: Icon(d.icone),
                         selectedIcon: Icon(d.iconeAtivo),
-                        label: Text(d.rotulo),
+                        // Em modo compacto o rótulo é limitado à largura do
+                        // rail para não transbordar com texto ampliado.
+                        label: constraints.maxWidth >= 1000
+                            ? Text(d.rotulo)
+                            : SizedBox(
+                                width: 152,
+                                child: Text(
+                                  d.rotulo,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                       ),
                   ],
                 ),

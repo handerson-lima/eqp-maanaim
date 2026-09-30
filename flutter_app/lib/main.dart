@@ -11,6 +11,7 @@ import 'features/auth/auth_service.dart';
 import 'features/auth/validadores.dart';
 import 'features/admin/catalogo_service.dart';
 import 'features/admin/pessoas_service.dart';
+import 'features/admin/vinculos_service.dart';
 import 'features/admin/admin_shell.dart';
 
 Future<void> main() async {
@@ -73,6 +74,7 @@ Future<void> main() async {
       catalogo: FirebaseCatalogoGateway(functions),
       seed: FirebaseSeedGateway(functions),
       pessoas: FirebasePessoasGateway(functions),
+      vinculos: FirebaseVinculosGateway(functions),
     ),
   );
 }
@@ -94,16 +96,24 @@ class MaanaimApp extends StatelessWidget {
     this.catalogo,
     this.seed,
     this.pessoas,
+    this.vinculos,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
   final PessoasGateway? pessoas;
+  final VinculosGateway? vinculos;
   @override
   Widget build(BuildContext c) => MaterialApp(
     title: 'Maanaim',
     theme: temaMaanaim(),
-    home: RaizSessao(auth, catalogo: catalogo, seed: seed, pessoas: pessoas),
+    home: RaizSessao(
+      auth,
+      catalogo: catalogo,
+      seed: seed,
+      pessoas: pessoas,
+      vinculos: vinculos,
+    ),
   );
 }
 
@@ -116,11 +126,13 @@ class RaizSessao extends StatefulWidget {
     this.catalogo,
     this.seed,
     this.pessoas,
+    this.vinculos,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
   final PessoasGateway? pessoas;
+  final VinculosGateway? vinculos;
 
   @override
   State<RaizSessao> createState() => _RaizSessaoState();
@@ -190,6 +202,7 @@ class _RaizSessaoState extends State<RaizSessao> {
         catalogo: widget.catalogo,
         seed: widget.seed,
         pessoas: widget.pessoas,
+        vinculos: widget.vinculos,
       );
     },
   );
@@ -202,11 +215,13 @@ class AreaAutenticada extends StatefulWidget {
     this.catalogo,
     this.seed,
     this.pessoas,
+    this.vinculos,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
   final PessoasGateway? pessoas;
+  final VinculosGateway? vinculos;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -280,6 +295,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
               catalogo: widget.catalogo,
               seed: widget.seed,
               pessoas: widget.pessoas,
+              vinculos: widget.vinculos,
             )
           : Scaffold(
               appBar: AppBar(

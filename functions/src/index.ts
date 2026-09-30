@@ -7,3 +7,5 @@ export { consultarCatalogo } from './commands/consultarCatalogo.js';
 export { salvarPessoa } from './commands/salvarPessoa.js';
 export { gerenciarPapeis } from './commands/gerenciarPapeis.js';
 export { consultarPessoas } from './commands/consultarPessoas.js';
+export { gerenciarVinculo } from './commands/gerenciarVinculo.js';
+export { consultarVinculos } from './commands/consultarVinculos.js';

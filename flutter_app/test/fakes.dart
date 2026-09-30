@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:eqp_maanaim/features/admin/catalogo_service.dart';
 import 'package:eqp_maanaim/features/admin/pessoas_service.dart';
+import 'package:eqp_maanaim/features/admin/vinculos_service.dart';
 import 'package:eqp_maanaim/features/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -217,6 +218,67 @@ class SeedFake implements SeedGateway {
         'igrejasCriadas': igrejasCriadas,
         'equipesCriadas': equipesCriadas,
       },
+    );
+  }
+}
+
+class VinculosFake implements VinculosGateway {
+  VinculosFake({this.resposta, this.pessoas = const []});
+  VinculosResposta? resposta;
+  List<PessoaAdministrativa> pessoas;
+  bool falhar = false;
+  bool gerenciarFalhar = false;
+  int consultas = 0;
+  int buscas = 0;
+  int gerenciamentos = 0;
+  String? ultimoCommandId;
+  String? ultimoTipoEntidade;
+  String? ultimoEntidadeId;
+  String? ultimoAcao;
+  String? ultimoPessoaId;
+  DateTime? ultimaData;
+  int? ultimaVersao;
+  String? ultimaJustificativa;
+
+  @override
+  Future<VinculosResposta> consultar({String? termo}) async {
+    consultas++;
+    if (falhar) throw Exception('falha simulada');
+    return resposta ?? const VinculosResposta(igrejas: [], equipes: []);
+  }
+
+  @override
+  Future<List<PessoaAdministrativa>> buscarPessoas({String? termo}) async {
+    buscas++;
+    return pessoas;
+  }
+
+  @override
+  Future<VinculoResultado> gerenciar({
+    required String commandId,
+    required String tipoEntidade,
+    required String entidadeId,
+    required String acao,
+    String? pessoaId,
+    required DateTime dataEfetiva,
+    required int versao,
+    String? justificativa,
+  }) async {
+    gerenciamentos++;
+    ultimoCommandId = commandId;
+    ultimoTipoEntidade = tipoEntidade;
+    ultimoEntidadeId = entidadeId;
+    ultimoAcao = acao;
+    ultimoPessoaId = pessoaId;
+    ultimaData = dataEfetiva;
+    ultimaVersao = versao;
+    ultimaJustificativa = justificativa;
+    if (gerenciarFalhar) throw Exception('falha simulada');
+    return const VinculoResultado(
+      vinculoId: 'vinculo-fake',
+      pessoaId: 'pessoa-fake',
+      versaoVinculo: 1,
+      repetido: false,
     );
   }
 }

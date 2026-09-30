@@ -20,6 +20,11 @@ const autoridadeDomain = readFileSync(join(raiz, 'functions', 'src', 'domain', '
 const catalogoService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'admin', 'catalogo_service.dart'), 'utf8');
 const authService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'auth', 'auth_service.dart'), 'utf8');
 const pessoasService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'admin', 'pessoas_service.dart'), 'utf8');
+const vinculosService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'admin', 'vinculos_service.dart'), 'utf8');
+const gerenciarVinculo = readFileSync(join(raiz, 'functions', 'src', 'commands', 'gerenciarVinculo.ts'), 'utf8');
+const consultarVinculos = readFileSync(join(raiz, 'functions', 'src', 'commands', 'consultarVinculos.ts'), 'utf8');
+const repoVinculos = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'vinculos.ts'), 'utf8');
+const domainVinculos = readFileSync(join(raiz, 'functions', 'src', 'domain', 'vinculos.ts'), 'utf8');
 
 describe('contratos de segurança executáveis', () => {
   it('nega escrita de domínio e leitura direta de ficha pelo cliente', () => {
@@ -142,12 +147,15 @@ describe('contratos de segurança executáveis', () => {
       'consultarPessoas',
       'salvarPessoa',
       'gerenciarPapeis',
+      'consultarVinculos',
+      'gerenciarVinculo',
     ];
     for (const nome of nomesCliente) {
       const invocada =
         catalogoService.includes(`httpsCallable('${nome}')`) ||
         authService.includes(`httpsCallable('${nome}')`) ||
-        pessoasService.includes(`httpsCallable('${nome}')`);
+        pessoasService.includes(`httpsCallable('${nome}')`) ||
+        vinculosService.includes(`httpsCallable('${nome}')`);
       expect(invocada, `${nome} não é invocada pelo cliente`).toBe(true);
       expect(
         index.includes(`export { ${nome} }`),
@@ -155,6 +163,54 @@ describe('contratos de segurança executáveis', () => {
       ).toBe(true);
     }
   });
+  it('protege os vínculos temporais com App Check, autoridade em transação e sem PII', () => {
+    expect(gerenciarVinculo).toContain('enforceAppCheck: true');
+    expect(gerenciarVinculo).toContain('if (!request.auth)');
+    expect(gerenciarVinculo).toContain('validarVinculo');
+    expect(gerenciarVinculo).not.toMatch(/console\.(log|error)/);
+    expect(repoVinculos).toContain('podeAdministrar');
+    expect(repoVinculos).toContain('runTransaction');
+    expect(repoVinculos).toContain('reciboSnap.exists');
+    expect(repoVinculos).toContain('payloadHash');
+    expect(repoVinculos).toContain('tx.create(reciboRef');
+    expect(repoVinculos).toContain('tx.create(auditoriaRef');
+    expect(repoVinculos).toContain('planejarVinculo');
+    const recibo = repoVinculos.match(/tx\.create\(reciboRef, \{([\s\S]*?)\n    \}\);/)?.[1];
+    const auditoria = repoVinculos.match(
+      /tx\.create\(auditoriaRef, \{([\s\S]*?)\n    \}\);/,
+    )?.[1];
+    expect(recibo).toBeDefined();
+    expect(auditoria).toBeDefined();
+    expect(recibo).not.toMatch(/cpf|nomeCompleto|email/);
+    expect(auditoria).not.toMatch(/cpf|nomeCompleto|email/);
+  });
+
+  it('mantém a consulta de vínculos autorizada e nunca devolve PII', () => {
+    expect(consultarVinculos).toContain('enforceAppCheck: true');
+    expect(consultarVinculos).toContain('podeAdministrar');
+    expect(consultarVinculos).not.toMatch(/console\.(log|error)/);
+    const blocoConsulta = repoVinculos.match(
+      /export async function lerVinculos[\s\S]*?\n\}/,
+    )?.[0];
+    expect(blocoConsulta).toBeDefined();
+    expect(blocoConsulta).not.toMatch(/cpf|email/i);
+  });
+
+  it('nega leitura e escrita dos vínculos e dos campos de responsável pelos Rules', () => {
+    expect(regras).toContain('match /vinculosPastorIgreja/{vinculoId}');
+    expect(regras).toContain('match /vinculosPastorEquipe/{vinculoId}');
+    expect(regras).toContain('match /{document=**} { allow read, write: if false; }');
+    expect(regras).not.toMatch(/allow\s+[^;]*request\.auth/);
+  });
+
+  it('impõe exatamente um vigente sem sobreposição e data não futura no domínio', () => {
+    expect(domainVinculos).toContain('planejarVinculo');
+    expect(domainVinculos).toContain('SobreposicaoError');
+    expect(domainVinculos).toContain('DataInvalidaError');
+    expect(domainVinculos).toContain('PASTOR_LOCAL');
+    expect(domainVinculos).toContain('PASTOR_EQUIPE');
+  });
+
   it('mantém o nome da claim e os papéis de sistema sincronizados entre Dart e TS', () => {
     expect(autoridadeDomain).toContain("NOME_CLAIM_ADMINISTRATIVA = 'maanaimAdmin'");
     expect(authService).toContain("claimAdministrativa = 'maanaimAdmin'");
