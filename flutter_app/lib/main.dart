@@ -19,6 +19,7 @@ import 'features/voluntario/minha_ficha_screen.dart';
 import 'features/voluntario/participacao_service.dart';
 import 'features/termo/termo_service.dart';
 import 'features/pastor/pastor_service.dart';
+import 'features/responsavel_equipe/responsavel_equipe_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,6 +84,8 @@ Future<void> main() async {
       vinculos: FirebaseVinculosGateway(functions),
       termos: FirebaseTermosService(functions: functions),
       ficha: FirebaseFichaGateway(functions),
+      pastor: FirebasePastorLocalGateway(functions),
+      responsavelEquipe: FirebaseResponsavelEquipeGateway(functions),
     ),
   );
 }
@@ -110,6 +113,7 @@ class MaanaimApp extends StatelessWidget {
     this.participacao,
     this.termoVoluntario,
     this.pastor,
+    this.responsavelEquipe,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -121,6 +125,7 @@ class MaanaimApp extends StatelessWidget {
   final ParticipacaoGateway? participacao;
   final TermoGateway? termoVoluntario;
   final PastorLocalGateway? pastor;
+  final ResponsavelEquipeGateway? responsavelEquipe;
   @override
   Widget build(BuildContext c) => MaterialApp(
     title: 'Maanaim',
@@ -136,6 +141,7 @@ class MaanaimApp extends StatelessWidget {
       participacao: participacao,
       termoVoluntario: termoVoluntario,
       pastor: pastor,
+      responsavelEquipe: responsavelEquipe,
     ),
   );
 }
@@ -155,6 +161,7 @@ class RaizSessao extends StatefulWidget {
     this.participacao,
     this.termoVoluntario,
     this.pastor,
+    this.responsavelEquipe,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -166,6 +173,7 @@ class RaizSessao extends StatefulWidget {
   final ParticipacaoGateway? participacao;
   final TermoGateway? termoVoluntario;
   final PastorLocalGateway? pastor;
+  final ResponsavelEquipeGateway? responsavelEquipe;
 
   @override
   State<RaizSessao> createState() => _RaizSessaoState();
@@ -241,6 +249,7 @@ class _RaizSessaoState extends State<RaizSessao> {
         participacao: widget.participacao,
         termoVoluntario: widget.termoVoluntario,
         pastor: widget.pastor,
+        responsavelEquipe: widget.responsavelEquipe,
       );
     },
   );
@@ -259,6 +268,7 @@ class AreaAutenticada extends StatefulWidget {
     this.participacao,
     this.termoVoluntario,
     this.pastor,
+    this.responsavelEquipe,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -270,6 +280,7 @@ class AreaAutenticada extends StatefulWidget {
   final ParticipacaoGateway? participacao;
   final TermoGateway? termoVoluntario;
   final PastorLocalGateway? pastor;
+  final ResponsavelEquipeGateway? responsavelEquipe;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -346,6 +357,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
               vinculos: widget.vinculos,
               termos: widget.termos,
               pastor: widget.pastor,
+              responsavelEquipe: widget.responsavelEquipe,
             )
           : MinhaFichaScreen(
               fichaGateway: _obterFichaGateway(),

@@ -13,6 +13,14 @@ import 'vinculos_responsaveis.dart';
 import 'vinculos_service.dart';
 import '../pastor/fila_pastor_screen.dart';
 import '../pastor/pastor_service.dart';
+import '../responsavel_equipe/fila_responsavel_equipe_screen.dart';
+import '../responsavel_equipe/responsavel_equipe_service.dart';
+
+class _AbaAdmin {
+  const _AbaAdmin({required this.item, required this.builder});
+  final AppNavItem item;
+  final Widget Function() builder;
+}
 
 /// Shell administrativo responsivo construído sobre o [AppShell] institucional:
 /// Sidebar no desktop (≥1024px), sidebar compacta no tablet (600–1023px) e
@@ -27,6 +35,7 @@ class AdminShell extends StatefulWidget {
     this.vinculos,
     this.termos,
     this.pastor,
+    this.responsavelEquipe,
   });
 
   final VoidCallback onSair;
@@ -36,6 +45,7 @@ class AdminShell extends StatefulWidget {
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
   final PastorLocalGateway? pastor;
+  final ResponsavelEquipeGateway? responsavelEquipe;
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -44,111 +54,117 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   int _indice = 0;
 
-  List<AppNavItem> get _itensNavegacao => [
-    const AppNavItem(
-      label: 'Catálogo',
-      icon: Icons.list_alt_outlined,
-      selectedIcon: Icons.list_alt,
+  List<_AbaAdmin> get _abas => [
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Catálogo',
+        icon: Icons.list_alt_outlined,
+        selectedIcon: Icons.list_alt,
+      ),
+      builder: () => widget.catalogo != null
+          ? ConsultaCatalogo(widget.catalogo!)
+          : const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.cardPadding),
+                child: Text('Serviço de catálogo indisponível.'),
+              ),
+            ),
     ),
-    const AppNavItem(
-      label: 'Seed',
-      icon: Icons.cloud_upload_outlined,
-      selectedIcon: Icons.cloud_upload,
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Seed',
+        icon: Icons.cloud_upload_outlined,
+        selectedIcon: Icons.cloud_upload,
+      ),
+      builder: () => widget.seed != null
+          ? SeedCatalogo(widget.seed!)
+          : const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.cardPadding),
+                child: Text('Serviço de seed indisponível.'),
+              ),
+            ),
     ),
-    const AppNavItem(
-      label: 'Pessoas e Papéis',
-      icon: Icons.manage_accounts_outlined,
-      selectedIcon: Icons.manage_accounts,
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Pessoas e Papéis',
+        icon: Icons.manage_accounts_outlined,
+        selectedIcon: Icons.manage_accounts,
+      ),
+      builder: () => widget.pessoas != null
+          ? PessoasPapeis(widget.pessoas!)
+          : const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.cardPadding),
+                child: Text('Serviço de pessoas e papéis indisponível.'),
+              ),
+            ),
     ),
-    const AppNavItem(
-      label: 'Vínculos e Responsáveis',
-      icon: Icons.handshake_outlined,
-      selectedIcon: Icons.handshake,
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Vínculos e Responsáveis',
+        icon: Icons.handshake_outlined,
+        selectedIcon: Icons.handshake,
+      ),
+      builder: () => widget.vinculos != null
+          ? VinculosResponsaveis(widget.vinculos!)
+          : const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.cardPadding),
+                child: Text('Serviço de vínculos indisponível.'),
+              ),
+            ),
     ),
-    const AppNavItem(
-      label: 'Termos',
-      icon: Icons.description_outlined,
-      selectedIcon: Icons.description,
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Termos',
+        icon: Icons.description_outlined,
+        selectedIcon: Icons.description,
+      ),
+      builder: () => widget.termos != null
+          ? TermosScreen(gateway: widget.termos!)
+          : const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.cardPadding),
+                child: Text('Serviço de termos indisponível.'),
+              ),
+            ),
     ),
     if (widget.pastor != null)
-      const AppNavItem(
-        label: 'Fila do Pastor',
-        icon: Icons.how_to_reg_outlined,
-        selectedIcon: Icons.how_to_reg,
+      _AbaAdmin(
+        item: const AppNavItem(
+          label: 'Fila do Pastor',
+          icon: Icons.how_to_reg_outlined,
+          selectedIcon: Icons.how_to_reg,
+        ),
+        builder: () => FilaPastorScreen(gateway: widget.pastor!, onSair: widget.onSair),
+      ),
+    if (widget.responsavelEquipe != null)
+      _AbaAdmin(
+        item: const AppNavItem(
+          label: 'Fila da Equipe',
+          icon: Icons.groups_outlined,
+          selectedIcon: Icons.groups,
+        ),
+        builder: () => FilaResponsavelEquipeScreen(
+          gateway: widget.responsavelEquipe!,
+          onSair: widget.onSair,
+        ),
       ),
   ];
 
   Widget _corpo() {
-    switch (_indice) {
-      case 0:
-        final catalogo = widget.catalogo;
-        return catalogo != null
-            ? ConsultaCatalogo(catalogo)
-            : const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.cardPadding),
-                  child: Text('Serviço de catálogo indisponível.'),
-                ),
-              );
-      case 1:
-        final seed = widget.seed;
-        return seed != null
-            ? SeedCatalogo(seed)
-            : const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.cardPadding),
-                  child: Text('Serviço de seed indisponível.'),
-                ),
-              );
-      case 2:
-        final pessoas = widget.pessoas;
-        return pessoas != null
-            ? PessoasPapeis(pessoas)
-            : const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.cardPadding),
-                  child: Text('Serviço de pessoas e papéis indisponível.'),
-                ),
-              );
-      case 3:
-        final vinculos = widget.vinculos;
-        return vinculos != null
-            ? VinculosResponsaveis(vinculos)
-            : const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.cardPadding),
-                  child: Text('Serviço de vínculos indisponível.'),
-                ),
-              );
-      case 4:
-        final termos = widget.termos;
-        return termos != null
-            ? TermosScreen(gateway: termos)
-            : const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.cardPadding),
-                  child: Text('Serviço de termos indisponível.'),
-                ),
-              );
-      case 5:
-        final pastor = widget.pastor;
-        return pastor != null
-            ? FilaPastorScreen(gateway: pastor, onSair: widget.onSair)
-            : const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.cardPadding),
-                  child: Text('Serviço pastoral indisponível.'),
-                ),
-              );
-      default:
-        return const SizedBox.shrink();
+    final abas = _abas;
+    if (_indice >= abas.length) {
+      return const SizedBox.shrink();
     }
+    return abas[_indice].builder();
   }
 
   @override
   Widget build(BuildContext context) {
     return AppShell(
-      items: _itensNavegacao,
+      items: _abas.map((a) => a.item).toList(),
       selectedIndex: _indice,
       onDestinationSelected: (i) => setState(() => _indice = i),
       userName: 'Administração',
