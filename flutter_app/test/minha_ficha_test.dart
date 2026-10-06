@@ -58,6 +58,27 @@ class FichaFake implements FichaGateway {
       ficha: novaFicha,
     );
   }
+
+  @override
+  Future<EnviarFichaResposta> enviarFichaAprovacao({
+    required String commandId,
+    int? expectedVersion,
+  }) async {
+    final novaVersao = (fichaInicial?.versao ?? 1) + 1;
+    fichaInicial = fichaInicial?.copyWith(
+      estado: 'AGUARDANDO_PASTOR_LOCAL',
+      versao: novaVersao,
+    );
+    return EnviarFichaResposta(
+      sucesso: true,
+      repetido: false,
+      estado: 'AGUARDANDO_PASTOR_LOCAL',
+      versao: novaVersao,
+      proximaAcao: 'Aguardando avaliação do Pastor Local',
+      igrejaId: fichaInicial?.igrejaId ?? '',
+      enviadoEm: '2026-10-06T12:00:00Z',
+    );
+  }
 }
 
 void main() {

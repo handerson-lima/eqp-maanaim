@@ -62,6 +62,13 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   String? _erroEquipes;
   String? _mensagemSucessoTermo;
   String? _erroTermo;
+  bool _enviando = false;
+  String? _mensagemSucessoEnvio;
+  String? _erroEnvio;
+
+  bool get _isRascunho => _ficha?.isRascunho ?? true;
+  bool get _isAguardandoPastor => _ficha?.estado == 'AGUARDANDO_PASTOR_LOCAL';
+  bool get _isBloqueadoParaEdicao => !_isRascunho;
 
   @override
   void initState() {
@@ -388,15 +395,21 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               // Cabeçalho da página
               PageHeader(
                 title: 'Minha Ficha',
-                subtitle:
-                    'Acesso realizado. Sua ficha pode continuar em rascunho.',
+                subtitle: _isAguardandoPastor
+                    ? 'Ficha enviada para avaliação do Pastor Local.'
+                    : 'Acesso realizado. Sua ficha pode continuar em rascunho.',
                 action: StatusChip(status: _ficha?.estado ?? 'RASCUNHO'),
               ),
               const SizedBox(height: AppSpacing.s20),
 
-              // Banner de pendências ou conclusão
-              _buildBannerPendencias(pendencias),
-              const SizedBox(height: AppSpacing.s20),
+              // Banner de pendências ou status de aprovação
+              if (_isAguardandoPastor) ...[
+                _buildBannerAguardandoPastor(),
+                const SizedBox(height: AppSpacing.s20),
+              ] else ...[
+                _buildBannerPendencias(pendencias),
+                const SizedBox(height: AppSpacing.s20),
+              ],
 
               // Mensagens de sucesso ou erro
               if (_mensagemSucesso != null) ...[
@@ -450,8 +463,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               // Card com formulário de dados cadastrais
               SectionCard(
                 title: 'Dados Cadastrais',
-                subtitle:
-                    'Campos marcados são obrigatórios para emissão do termo e aprovação.',
+                subtitle: _isBloqueadoParaEdicao
+                    ? 'Dados cadastrais bloqueados para edição durante o processo de avaliação.'
+                    : 'Campos marcados são obrigatórios para emissão do termo e aprovação.',
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -463,6 +477,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       TextFormField(
                         key: const Key('campo_nome_completo'),
                         controller: _nomeController,
+                        readOnly: _isBloqueadoParaEdicao,
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(
                           hintText: 'Seu nome completo',
@@ -477,6 +492,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       TextFormField(
                         key: const Key('campo_profissao'),
                         controller: _profissaoController,
+                        readOnly: _isBloqueadoParaEdicao,
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(
                           hintText: 'Sua ocupação principal (ex: Marceneiro, Advogado)',
@@ -491,6 +507,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       TextFormField(
                         key: const Key('campo_cpf'),
                         controller: _cpfController,
+                        readOnly: _isBloqueadoParaEdicao,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(
@@ -522,11 +539,13 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                               ),
                             )
                             .toList(),
-                        onChanged: (novoId) {
-                          setState(() {
-                            _igrejaSelecionadaId = novoId;
-                          });
-                        },
+                        onChanged: _isBloqueadoParaEdicao
+                            ? null
+                            : (novoId) {
+                                setState(() {
+                                  _igrejaSelecionadaId = novoId;
+                                });
+                              },
                       ),
                       const SizedBox(height: AppSpacing.s24),
 
@@ -538,7 +557,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           label: 'Salvar Ficha',
                           icon: Icons.save_outlined,
                           isLoading: _salvando,
-                          onPressed: _salvando ? null : _salvarFicha,
+                          onPressed: (_isBloqueadoParaEdicao || _salvando)
+                              ? null
+                              : _salvarFicha,
                         ),
                       ),
                     ],
@@ -576,6 +597,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
               // Seção do Termo de Adesão ao Serviço Voluntário (Story 2.3)
               _buildSecaoTermo(),
+
+              const SizedBox(height: AppSpacing.s24),
+
+              // Seção de Envio para Aprovação (Story 2.4)
+              _buildSecaoEnvioAprovacao(pendencias),
             ],
           ),
         ),
@@ -690,15 +716,17 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       color: isSelecionada ? AppColors.blue600 : AppColors.border,
                     ),
                   ),
-                  onSelected: (selecionado) {
-                    setState(() {
-                      if (selecionado) {
-                        _equipesSelecionadasIds.add(equipe.id);
-                      } else {
-                        _equipesSelecionadasIds.remove(equipe.id);
-                      }
-                    });
-                  },
+                  onSelected: _isBloqueadoParaEdicao
+                      ? null
+                      : (selecionado) {
+                          setState(() {
+                            if (selecionado) {
+                              _equipesSelecionadasIds.add(equipe.id);
+                            } else {
+                              _equipesSelecionadasIds.remove(equipe.id);
+                            }
+                          });
+                        },
                 );
               }).toList(),
             ),
@@ -706,7 +734,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           const Divider(color: AppColors.border),
           const SizedBox(height: AppSpacing.s16),
           Text(
-            'Participações no Rascunho',
+            _isAguardandoPastor ? 'Participações em Avaliação' : 'Participações no Rascunho',
             style: AppTypography.h3,
           ),
           const SizedBox(height: AppSpacing.s4),
@@ -744,6 +772,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       orElse: () => null,
                     );
                 final nomeEquipe = equipe?.nome ?? eqId;
+                final statusExibicao = _isAguardandoPastor ? 'AGUARDANDO_PASTOR_LOCAL' : 'RASCUNHO';
+                final proximaAcaoExibicao = _isAguardandoPastor
+                    ? 'Aguardando avaliação do Pastor Local'
+                    : 'Aguardando envio da ficha';
+
                 return Container(
                   key: Key('card_participacao_$eqId'),
                   margin: const EdgeInsets.only(bottom: AppSpacing.s8),
@@ -770,7 +803,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: AppSpacing.s8),
-                                const StatusChip(status: 'RASCUNHO'),
+                                StatusChip(status: statusExibicao),
                               ],
                             ),
                             const SizedBox(height: AppSpacing.s4),
@@ -793,7 +826,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                                 const SizedBox(width: AppSpacing.s8),
                                 Expanded(
                                   child: Text(
-                                    'Aguardando envio da ficha',
+                                    proximaAcaoExibicao,
                                     style: AppTypography.caption.copyWith(
                                       color: AppColors.textSecondary,
                                     ),
@@ -805,21 +838,23 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.s8),
-                      IconButton(
-                        key: Key('botao_remover_equipe_$eqId'),
-                        icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
-                        tooltip: 'Remover $nomeEquipe',
-                        constraints: const BoxConstraints(
-                          minWidth: 44,
-                          minHeight: 44,
+                      if (!_isBloqueadoParaEdicao) ...[
+                        const SizedBox(width: AppSpacing.s8),
+                        IconButton(
+                          key: Key('botao_remover_equipe_$eqId'),
+                          icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
+                          tooltip: 'Remover $nomeEquipe',
+                          constraints: const BoxConstraints(
+                            minWidth: 44,
+                            minHeight: 44,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _equipesSelecionadasIds.remove(eqId);
+                            });
+                          },
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _equipesSelecionadasIds.remove(eqId);
-                          });
-                        },
-                      ),
+                      ],
                     ],
                   ),
                 );
@@ -833,7 +868,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               label: 'Salvar Equipes',
               icon: Icons.save_outlined,
               isLoading: _salvandoEquipes,
-              onPressed: _salvandoEquipes ? null : _salvarEquipes,
+              onPressed: (_isBloqueadoParaEdicao || _salvandoEquipes) ? null : _salvarEquipes,
             ),
           ),
         ],
@@ -929,6 +964,63 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     color: AppColors.textSecondary,
                     fontStyle: FontStyle.italic,
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBannerAguardandoPastor() {
+    final nomeIgreja = _igrejas
+        .cast<IgrejaCatalogo?>()
+        .firstWhere((i) => i?.id == _igrejaSelecionadaId, orElse: () => null)
+        ?.rotulo ?? _igrejaSelecionadaId ?? 'sua igreja local';
+
+    return Container(
+      key: const Key('banner_status_aguardando_pastor'),
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      decoration: BoxDecoration(
+        color: AppColors.blue50,
+        borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+        border: Border.all(color: AppColors.blue600),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.hourglass_top_rounded, color: AppColors.blue600, size: 24),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Status: Aguardando avaliação do Pastor Local',
+                  style: AppTypography.label.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy900,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.s4),
+                Text(
+                  'Sua ficha foi enviada e está na fila de avaliação do Pastor Local de $nomeIgreja. Enquanto a solicitação estiver em avaliação, as informações cadastrais e equipes permanecem bloqueadas para edição.',
+                  style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                ),
+                const SizedBox(height: AppSpacing.s8),
+                Row(
+                  children: [
+                    const Icon(Icons.arrow_forward, size: 16, color: AppColors.blue600),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Próxima ação: Avaliação pelo Pastor Local',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.blue600,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1348,7 +1440,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     child: CheckboxListTile(
                       key: const Key('checkbox_declaracao_termo'),
                       value: _declaracaoConcordancia,
-                      onChanged: _salvandoTermo
+                      onChanged: (_salvandoTermo || _isBloqueadoParaEdicao)
                           ? null
                           : (val) {
                               setState(() {
@@ -1373,7 +1465,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     label: 'Registrar Aceite Eletrônico',
                     icon: Icons.check_circle_outline,
                     isLoading: _salvandoTermo,
-                    onPressed: (!_declaracaoConcordancia || _salvandoTermo)
+                    onPressed: (!_declaracaoConcordancia || _salvandoTermo || _isBloqueadoParaEdicao)
                         ? null
                         : _aceitarTermo,
                   ),
@@ -1582,4 +1674,393 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       ),
     );
   }
+
+  Widget _buildSecaoEnvioAprovacao(List<String> pendencias) {
+    final dadosCompletos = pendencias.isEmpty && _ficha != null;
+    final temEquipes = _participacoes.isNotEmpty;
+    final termoAceito = _ficha?.termoAceito != null &&
+        _termoVigente != null &&
+        _ficha?.termoAceito?.versaoId == _termoVigente?.id;
+    final aptoParaEnvio = dadosCompletos && temEquipes && termoAceito;
+
+    if (_isAguardandoPastor) {
+      return SectionCard(
+        title: 'Status da Solicitação',
+        subtitle: 'Sua ficha foi enviada e está sob análise institucional.',
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.s16),
+          decoration: BoxDecoration(
+            color: AppColors.blue50,
+            borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+            border: Border.all(color: AppColors.blue600),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.check_circle, color: AppColors.blue600, size: 24),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      'Ficha Enviada com Sucesso',
+                      style: AppTypography.h3.copyWith(
+                        fontSize: 16,
+                        color: AppColors.navy900,
+                      ),
+                    ),
+                  ),
+                  const StatusChip(status: 'AGUARDANDO_PASTOR_LOCAL'),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              Text(
+                'Sua solicitação está na fila de avaliação do Pastor Local. Enquanto estiver em avaliação, as informações cadastrais e equipes permanecem bloqueadas para edição.',
+                style: AppTypography.body,
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              const Divider(color: AppColors.border),
+              const SizedBox(height: AppSpacing.s8),
+              _buildLinhaComprovante('Próximo Responsável', 'Pastor da Igreja Local'),
+              _buildLinhaComprovante('Próxima Ação', 'Avaliação e manifestação pastoral'),
+              _buildLinhaComprovante(
+                'Equipes em Avaliação',
+                _participacoes.map((p) => p.nomeEquipe).join(', '),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SectionCard(
+      title: 'Enviar Ficha e Iniciar Aprovações',
+      subtitle:
+          'Após preencher os dados, selecionar equipes e aceitar o termo, envie sua ficha para homologação pastoral.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_mensagemSucessoEnvio != null) ...[
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s12),
+              decoration: BoxDecoration(
+                color: AppColors.successBg,
+                borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                border: Border.all(color: AppColors.success),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      _mensagemSucessoEnvio!,
+                      style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+          ],
+          if (_erroEnvio != null) ...[
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s12),
+              decoration: BoxDecoration(
+                color: AppColors.dangerBg,
+                borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                border: Border.all(color: AppColors.danger),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      _erroEnvio!,
+                      style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+          ],
+
+          // Checklist de pré-requisitos
+          Text('Pré-requisitos para envio:', style: AppTypography.label),
+          const SizedBox(height: AppSpacing.s8),
+
+          _buildItemChecklist(
+            titulo: 'Dados cadastrais obrigatórios preenchidos e salvos',
+            concluido: dadosCompletos,
+            detalhe: dadosCompletos
+                ? 'Nome, profissão, CPF válido e igreja vinculada.'
+                : 'Complete todos os campos obrigatórios acima e salve a ficha.',
+          ),
+          const SizedBox(height: AppSpacing.s8),
+
+          _buildItemChecklist(
+            titulo: 'Ao menos uma equipe de interesse salva no rascunho',
+            concluido: temEquipes,
+            detalhe: temEquipes
+                ? '${_participacoes.length} equipe(s) selecionada(s).'
+                : 'Selecione e salve ao menos uma equipe de trabalho acima.',
+          ),
+          const SizedBox(height: AppSpacing.s8),
+
+          _buildItemChecklist(
+            titulo: 'Termo de voluntariado vigente lido e aceito',
+            concluido: termoAceito,
+            detalhe: termoAceito
+                ? 'Aceite eletrônico registrado na Versão ${_ficha?.termoAceito?.numeroVersao}.'
+                : 'Leia e registre o aceite eletrônico na seção do termo acima.',
+          ),
+
+          const SizedBox(height: AppSpacing.s24),
+
+          Align(
+            alignment: Alignment.centerRight,
+            child: PrimaryButton(
+              key: const Key('botao_enviar_ficha_aprovacao'),
+              label: 'Enviar Ficha para Aprovação',
+              icon: Icons.send_rounded,
+              isLoading: _enviando,
+              onPressed: (aptoParaEnvio && !_enviando) ? _confirmarEnvio : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemChecklist({
+    required String titulo,
+    required bool concluido,
+    required String detalhe,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.s12),
+      decoration: BoxDecoration(
+        color: concluido ? AppColors.successBg : AppColors.background,
+        borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+        border: Border.all(
+          color: concluido
+              ? AppColors.success.withValues(alpha: 0.5)
+              : AppColors.border,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            concluido ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: concluido ? AppColors.success : AppColors.textSecondary,
+            size: 20,
+          ),
+          const SizedBox(width: AppSpacing.s8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: AppTypography.label.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: concluido ? AppColors.textPrimary : AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  detalhe,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLinhaResumo(String rotulo, String valor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              rotulo,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              valor,
+              style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmarEnvio() {
+    final nomeIgreja = _igrejas
+        .cast<IgrejaCatalogo?>()
+        .firstWhere((i) => i?.id == _igrejaSelecionadaId, orElse: () => null)
+        ?.rotulo ?? _igrejaSelecionadaId ?? 'Não informada';
+
+    final nomesEquipes = _participacoes.map((p) => p.nomeEquipe).join(', ');
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.send_rounded, color: AppColors.blue600),
+            const SizedBox(width: AppSpacing.s8),
+            const Expanded(child: Text('Confirmar Envio da Ficha', style: AppTypography.h3)),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Revise os dados da sua solicitação antes de enviar para aprovação:',
+                style: AppTypography.body,
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.s12),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLinhaResumo('Voluntário', _nomeController.text),
+                    _buildLinhaResumo('Igreja Local', nomeIgreja),
+                    _buildLinhaResumo('Equipes', nomesEquipes.isNotEmpty ? nomesEquipes : 'Nenhuma'),
+                    _buildLinhaResumo('Termo Aceito', 'Versão ${_ficha?.termoAceito?.numeroVersao ?? 1}'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s16),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.s12),
+                decoration: BoxDecoration(
+                  color: AppColors.warningBg,
+                  borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                  border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline, color: AppColors.warning, size: 20),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: Text(
+                        'Atenção: Ao enviar, sua ficha entrará em avaliação pelo Pastor Local e ficará bloqueada para alterações cadastrais e de equipes.',
+                        style: AppTypography.caption.copyWith(color: AppColors.textPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          SecondaryButton(
+            label: 'Cancelar',
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+          PrimaryButton(
+            key: const Key('botao_confirmar_envio_dialogo'),
+            label: 'Confirmar e Enviar',
+            icon: Icons.check,
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _executarEnvioFicha();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _executarEnvioFicha() async {
+    setState(() {
+      _enviando = true;
+      _erroEnvio = null;
+      _mensagemSucessoEnvio = null;
+    });
+
+    try {
+      final commandId = comandoOpaco();
+      final resposta = await widget.fichaGateway.enviarFichaAprovacao(
+        commandId: commandId,
+        expectedVersion: _ficha?.versao,
+      );
+
+      if (mounted) {
+        setState(() {
+          _ficha = _ficha?.copyWith(
+            estado: resposta.estado,
+            versao: resposta.versao,
+          );
+          _participacoes = _participacoes.map((p) {
+            if (p.isRascunho) {
+              return p.copyWith(
+                estado: 'AGUARDANDO_PASTOR_LOCAL',
+                proximaAcao: resposta.proximaAcao,
+              );
+            }
+            return p;
+          }).toList();
+          _enviando = false;
+          _mensagemSucessoEnvio = 'Ficha enviada com sucesso para aprovação do Pastor Local!';
+        });
+
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(
+            content: Text('Ficha enviada com sucesso para aprovação do Pastor Local!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final mensagem = e.toString().contains('termo de voluntariado')
+            ? 'O termo de voluntariado vigente precisa ser aceito antes do envio.'
+            : e.toString().contains('ao menos uma equipe')
+                ? 'Selecione e salve ao menos uma equipe antes do envio.'
+                : 'Não foi possível enviar a ficha para aprovação. Tente novamente.';
+        setState(() {
+          _enviando = false;
+          _erroEnvio = mensagem;
+        });
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text(mensagem),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
 }
+

@@ -18,4 +18,5 @@ export { obterMinhasParticipacoes } from './commands/obterMinhasParticipacoes.js
 export { salvarParticipacoesRascunho } from './commands/salvarParticipacoesRascunho.js';
 export { aceitarTermoVigente } from './commands/aceitarTermoVigente.js';
 export { obterHistoricoAceites } from './commands/obterHistoricoAceites.js';
+export { enviarFichaAprovacao } from './commands/enviarFichaAprovacao.js';
 

@@ -408,6 +408,21 @@ class _FichaMemoriaFallback implements FichaGateway {
           versao: 1,
         ),
       );
+
+  @override
+  Future<EnviarFichaResposta> enviarFichaAprovacao({
+    required String commandId,
+    int? expectedVersion,
+  }) async =>
+      const EnviarFichaResposta(
+        sucesso: true,
+        repetido: false,
+        estado: 'AGUARDANDO_PASTOR_LOCAL',
+        versao: 2,
+        proximaAcao: 'Aguardando avaliação do Pastor Local',
+        igrejaId: 'temp',
+        enviadoEm: '2026-10-06T12:00:00Z',
+      );
 }
 
 class _CatalogoMemoriaFallback implements CatalogoGateway {

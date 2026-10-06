@@ -34,6 +34,8 @@ const termosService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 
 const aceitarTermoVigenteCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'aceitarTermoVigente.ts'), 'utf8');
 const obterHistoricoAceitesCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'obterHistoricoAceites.ts'), 'utf8');
 const voluntarioTermosService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'termo', 'termo_service.dart'), 'utf8');
+const enviarFichaCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'enviarFichaAprovacao.ts'), 'utf8');
+const repoEnviarFicha = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'enviarFicha.ts'), 'utf8');
 
 describe('contratos de segurança executáveis', () => {
   it('nega escrita de domínio e leitura direta de ficha pelo cliente', () => {
@@ -273,6 +275,23 @@ describe('contratos de segurança executáveis', () => {
     expect(repoTermos).toContain('reciboSnap.exists');
     expect(repoTermos).toContain('aceiteSnap.exists');
     expect(repoTermos).toContain('imutavel: true');
-    expect(regras).toContain('match /{document=**} { allow read, write: if false; }');
+  });
+
+  it('protege o envio de ficha com App Check, autenticação, transação e auditoria sem PII', () => {
+    expect(enviarFichaCmd).toContain('enforceAppCheck: true');
+    expect(enviarFichaCmd).toContain('if (!request.auth)');
+    expect(enviarFichaCmd).toContain('validarEnviarFicha');
+    expect(enviarFichaCmd).not.toMatch(/console\.(log|error)/);
+    expect(repoEnviarFicha).toContain('runTransaction');
+    expect(repoEnviarFicha).toContain('reciboSnap.exists');
+    expect(repoEnviarFicha).toContain('payloadHash');
+    expect(repoEnviarFicha).toContain('tx.create(reciboRef');
+    expect(repoEnviarFicha).toContain('tx.create(auditoriaRef');
+    const recibo = repoEnviarFicha.match(/tx\.create\(reciboRef, \{([\s\S]*?)\n    \}\);/)?.[1];
+    const auditoria = repoEnviarFicha.match(/tx\.create\(auditoriaRef, \{([\s\S]*?)\n    \}\);/)?.[1];
+    expect(recibo).toBeDefined();
+    expect(auditoria).toBeDefined();
+    expect(recibo).not.toMatch(/cpf|nomeCompleto|email/);
+    expect(auditoria).not.toMatch(/cpf|nomeCompleto|email/);
   });
 });

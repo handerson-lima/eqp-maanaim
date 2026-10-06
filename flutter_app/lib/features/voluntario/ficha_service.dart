@@ -172,10 +172,34 @@ class SalvarFichaResposta {
   final FichaModel ficha;
 }
 
+class EnviarFichaResposta {
+  const EnviarFichaResposta({
+    required this.sucesso,
+    required this.repetido,
+    required this.estado,
+    required this.versao,
+    required this.proximaAcao,
+    required this.igrejaId,
+    required this.enviadoEm,
+  });
+
+  final bool sucesso;
+  final bool repetido;
+  final String estado;
+  final int versao;
+  final String proximaAcao;
+  final String igrejaId;
+  final String enviadoEm;
+}
+
 /// Contrato para comunicação com o backend de ficha permanente.
 abstract interface class FichaGateway {
   Future<ObterFichaResposta> obterMinhaFicha();
   Future<SalvarFichaResposta> salvarMinhaFicha(SalvarFichaEntrada entrada);
+  Future<EnviarFichaResposta> enviarFichaAprovacao({
+    required String commandId,
+    int? expectedVersion,
+  });
 }
 
 /// Implementação Firebase Cloud Functions do gateway da ficha.
@@ -208,6 +232,27 @@ class FirebaseFichaGateway implements FichaGateway {
       sucesso: dados['sucesso'] as bool? ?? true,
       repetido: dados['repetido'] as bool? ?? false,
       ficha: FichaModel.fromMap((dados['ficha'] as Map).cast<String, dynamic>()),
+    );
+  }
+
+  @override
+  Future<EnviarFichaResposta> enviarFichaAprovacao({
+    required String commandId,
+    int? expectedVersion,
+  }) async {
+    final resposta = await _functions.httpsCallable('enviarFichaAprovacao').call({
+      'commandId': commandId,
+      if (expectedVersion != null) 'expectedVersion': expectedVersion,
+    });
+    final dados = (resposta.data as Map).cast<String, dynamic>();
+    return EnviarFichaResposta(
+      sucesso: dados['sucesso'] as bool? ?? true,
+      repetido: dados['repetido'] as bool? ?? false,
+      estado: dados['estado'] as String? ?? 'AGUARDANDO_PASTOR_LOCAL',
+      versao: (dados['versao'] as num?)?.toInt() ?? 1,
+      proximaAcao: dados['proximaAcao'] as String? ?? 'Aguardando avaliação do Pastor Local',
+      igrejaId: dados['igrejaId'] as String? ?? '',
+      enviadoEm: dados['enviadoEm'] as String? ?? '',
     );
   }
 }
