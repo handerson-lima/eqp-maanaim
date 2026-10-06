@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-28-2026 22:53
-last_updated: 09-30-2026 19:50
+last_updated: 10-06-2026 16:36
 project: eqp_maanaim
 project_key: NOKEY
 tracking_system: file-system
@@ -46,7 +46,7 @@ development_status:
   epic-2: in-progress
   2-1-criar-e-manter-ficha-permanente: done
   2-2-selecionar-equipes-e-visualizar-participações-de-rascunho: review
-  2-3-ler-e-aceitar-o-termo-vigente: backlog
+  2-3-ler-e-aceitar-o-termo-vigente: done
   2-4-enviar-ficha-e-iniciar-aprovações: backlog
   epic-2-retrospective: optional
 

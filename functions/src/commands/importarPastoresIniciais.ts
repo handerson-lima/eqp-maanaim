@@ -38,7 +38,12 @@ export async function importarDeArquivo(
   const ler = opcoes.lerArquivo ?? ((caminho: string) => readFile(caminho, 'utf8'));
   const conteudo = await ler(opcoes.caminho);
   const entradas = prepararEntradas(conteudo);
-  const app = getApps().length > 0 ? getApp() : initializeApp();
+  const projeto =
+    process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCLOUD_PROJECT ?? undefined;
+  const app =
+    getApps().length > 0
+      ? getApp()
+      : initializeApp(projeto ? { projectId: projeto } : undefined);
   const portas = criarPortasFirestore(getFirestore(app), getAuth(app));
   return importarPastoresIniciais(
     {

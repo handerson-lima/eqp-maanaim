@@ -16,3 +16,6 @@ export { obterMinhaFicha } from './commands/obterMinhaFicha.js';
 export { salvarMinhaFicha } from './commands/salvarMinhaFicha.js';
 export { obterMinhasParticipacoes } from './commands/obterMinhasParticipacoes.js';
 export { salvarParticipacoesRascunho } from './commands/salvarParticipacoesRascunho.js';
+export { aceitarTermoVigente } from './commands/aceitarTermoVigente.js';
+export { obterHistoricoAceites } from './commands/obterHistoricoAceites.js';
+

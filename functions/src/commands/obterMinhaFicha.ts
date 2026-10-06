@@ -42,6 +42,7 @@ export const obterMinhaFicha = onCall(
         igrejaId: ficha.igrejaId,
         estado: ficha.estado,
         versao: ficha.versao,
+        termoAceito: ficha.termoAceito ?? null,
         atualizadoEm: ficha.atualizadoEm,
       },
     };

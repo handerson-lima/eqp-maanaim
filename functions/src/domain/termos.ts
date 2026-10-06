@@ -40,6 +40,58 @@ export class EdicaoImutavelError extends Error {
   }
 }
 
+export class TermoNaoVigenteError extends Error {
+  constructor(
+    mensagem = 'A versão do termo informada não corresponde à versão vigente.',
+  ) {
+    super(mensagem);
+    this.name = 'TermoNaoVigenteError';
+  }
+}
+
+export class EquipesNaoSelecionadasError extends Error {
+  constructor(
+    mensagem = 'É necessário selecionar ao menos uma equipe antes de aceitar o termo.',
+  ) {
+    super(mensagem);
+    this.name = 'EquipesNaoSelecionadasError';
+  }
+}
+
+export class DeclaracaoNaoInformadaError extends Error {
+  constructor(
+    mensagem = 'A declaração explícita de leitura e concordância é obrigatória.',
+  ) {
+    super(mensagem);
+    this.name = 'DeclaracaoNaoInformadaError';
+  }
+}
+
+export class FichaNaoEncontradaError extends Error {
+  constructor(mensagem = 'Ficha permanente não encontrada.') {
+    super(mensagem);
+    this.name = 'FichaNaoEncontradaError';
+  }
+}
+
+export class FichaNaoEditavelError extends Error {
+  constructor(
+    mensagem = 'Apenas fichas em rascunho podem ter o termo aceito.',
+  ) {
+    super(mensagem);
+    this.name = 'FichaNaoEditavelError';
+  }
+}
+
+export class PermissaoNegadaError extends Error {
+  constructor(
+    mensagem = 'Operação não autorizada para o usuário informado.',
+  ) {
+    super(mensagem);
+    this.name = 'PermissaoNegadaError';
+  }
+}
+
 export interface EntradaPublicarTermo {
   commandId: string;
   correlationId?: string;
@@ -170,3 +222,114 @@ export function validarPublicarTermo(raw: unknown): EntradaPublicarTermo {
     payloadHash: calcularPayloadHash(entradaParcial),
   };
 }
+
+export interface EntradaAceitarTermoVigente {
+  commandId: string;
+  correlationId?: string;
+  termoId: string;
+  versaoId: string;
+  hashSha256: string;
+  declaracaoLidoEConcordo: boolean;
+  payloadHash: string;
+}
+
+export interface ComprovanteAceiteTermo {
+  id: string;
+  uid: string;
+  fichaId: string;
+  termoId: string;
+  versaoId: string;
+  numeroVersao: number;
+  hashSha256: string;
+  titulo: string;
+  declaracaoLidoEConcordo: boolean;
+  aceitoEm: string;
+  commandId: string;
+  repetido?: boolean;
+}
+
+/**
+ * Calcula o hash determinístico do payload de aceite do termo.
+ */
+export function calcularPayloadHashAceite(dados: {
+  commandId: string;
+  correlationId?: string;
+  termoId?: string;
+  versaoId: string;
+  hashSha256: string;
+  declaracaoLidoEConcordo: boolean;
+}): string {
+  const termoId =
+    typeof dados.termoId === 'string' && dados.termoId.trim()
+      ? dados.termoId.trim()
+      : TERMO_ID_PADRAO;
+
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        commandId: dados.commandId.trim(),
+        correlationId: dados.correlationId?.trim() ?? '',
+        termoId,
+        versaoId: dados.versaoId.trim(),
+        hashSha256: dados.hashSha256.trim(),
+        declaracaoLidoEConcordo: dados.declaracaoLidoEConcordo,
+      }),
+      'utf8',
+    )
+    .digest('hex');
+}
+
+/**
+ * Valida a entrada da requisição de aceite do termo vigente.
+ */
+export function validarAceitarTermoVigente(raw: unknown): EntradaAceitarTermoVigente {
+  if (!raw || typeof raw !== 'object') {
+    throw new TermoInvalidoError('Entrada do comando deve ser um objeto.');
+  }
+
+  const obj = raw as Record<string, unknown>;
+
+  const commandId = typeof obj.commandId === 'string' ? obj.commandId.trim() : '';
+  if (!commandId || commandId.length < 16) {
+    throw new TermoInvalidoError('commandId ausente ou inválido (mínimo 16 caracteres).');
+  }
+
+  const correlationId =
+    typeof obj.correlationId === 'string' && obj.correlationId.trim()
+      ? obj.correlationId.trim()
+      : undefined;
+
+  const termoId =
+    typeof obj.termoId === 'string' && obj.termoId.trim()
+      ? obj.termoId.trim()
+      : TERMO_ID_PADRAO;
+
+  const versaoId = typeof obj.versaoId === 'string' ? obj.versaoId.trim() : '';
+  if (!versaoId) {
+    throw new TermoInvalidoError('Identificador da versão do termo ausente.');
+  }
+
+  const hashSha256 = typeof obj.hashSha256 === 'string' ? obj.hashSha256.trim() : '';
+  if (!hashSha256 || hashSha256.length < 32) {
+    throw new TermoInvalidoError('Hash do termo inválido ou ausente.');
+  }
+
+  if (obj.declaracaoLidoEConcordo !== true) {
+    throw new DeclaracaoNaoInformadaError();
+  }
+
+  const parcial: Omit<EntradaAceitarTermoVigente, 'payloadHash'> = {
+    commandId,
+    correlationId,
+    termoId,
+    versaoId,
+    hashSha256,
+    declaracaoLidoEConcordo: true,
+  };
+
+  return {
+    ...parcial,
+    payloadHash: calcularPayloadHashAceite(parcial),
+  };
+}
+

@@ -4,6 +4,8 @@ import '../../ui/components/buttons.dart';
 import '../../ui/components/layout_elements.dart';
 import '../../ui/components/status_chips.dart';
 import '../../ui/tokens.dart';
+import '../termo/termo_adesao_model.dart';
+import '../termo/termo_dialog.dart';
 import 'termos_service.dart';
 
 /// Tela administrativa para gestão, publicação e consulta histórica de termos de adesão.
@@ -232,6 +234,21 @@ class _TermosScreenState extends State<TermosScreen> {
     );
   }
 
+  void _abrirModeloOficial() {
+    const model = TermoAdesaoModel(
+      nomeVoluntario: 'NOME DO VOLUNTÁRIO',
+      profissaoVoluntario: 'PROFISSÃO DO VOLUNTÁRIO',
+      cpfVoluntario: '000.000.000-00',
+      nomeCoordenador: 'NOME DO COORDENADOR DO MAANAIM',
+      cpfCoordenador: '000.000.000-00',
+      nomeEquipe: 'NOME DA EQUIPE',
+      nomePastorVoluntario: 'NOME DO PASTOR DO VOLUNTÁRIO',
+      nomePastorEquipe: 'NOME DO PASTOR CHEFE DA EQUIPE',
+      dataTexto: 'DATA',
+    );
+    exibirTermoAdesaoDialog(context, model);
+  }
+
   @override
   Widget build(BuildContext context) {
     final versaoVigente = _termo?.versaoAtual;
@@ -248,16 +265,27 @@ class _TermosScreenState extends State<TermosScreen> {
                 title: 'Termos e Versões',
                 subtitle:
                     'Publicação e versionamento imutável dos termos de adesão do Maanaim com trilha de auditoria.',
-                action: PrimaryButton(
-                  label: _mostrarFormulario ? 'Cancelar' : 'Nova Versão',
-                  icon: _mostrarFormulario ? Icons.close : Icons.add,
-                  onPressed: () {
-                    setState(() {
-                      _mostrarFormulario = !_mostrarFormulario;
-                      _erro = null;
-                      _mensagemSucesso = null;
-                    });
-                  },
+                action: Wrap(
+                  spacing: AppSpacing.s8,
+                  runSpacing: AppSpacing.s8,
+                  children: [
+                    SecondaryButton(
+                      label: 'Modelo Oficial (PDF)',
+                      icon: Icons.description_outlined,
+                      onPressed: _abrirModeloOficial,
+                    ),
+                    PrimaryButton(
+                      label: _mostrarFormulario ? 'Cancelar' : 'Nova Versão',
+                      icon: _mostrarFormulario ? Icons.close : Icons.add,
+                      onPressed: () {
+                        setState(() {
+                          _mostrarFormulario = !_mostrarFormulario;
+                          _erro = null;
+                          _mensagemSucesso = null;
+                        });
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: AppSpacing.s16),
@@ -355,7 +383,35 @@ class _TermosScreenState extends State<TermosScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: AppSpacing.s16),
+                          const SizedBox(height: AppSpacing.s12),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              icon: const Icon(Icons.auto_fix_high, size: 16),
+                              label: const Text('Carregar texto oficial do modelo'),
+                              onPressed: () {
+                                setState(() {
+                                  if (_tituloController.text.isEmpty) {
+                                    _tituloController.text =
+                                        'TERMO DE ADESÃO DE VOLUNTÁRIO';
+                                  }
+                                  _conteudoController.text =
+                                      'Lei do Serviço Voluntário (LEI 9.608/1998)\n\n'
+                                      'NOME DO VOLUNTÁRIO, Brasileiro(a), Profissão PROFISSÃO DO VOLUNTÁRIO, '
+                                      'inscrito(a) no CPF/MF sob o nº CPF DO VOLUNTÁRIO, celebra com a IGREJA CRISTÃ MARANATA, '
+                                      'pessoa jurídica de direito privado, inscrito no CNPJ sob o nº 27.056.910/0001-42, com sede na '
+                                      'Rua Torquato Laranja, 90, Centro, Vila Velha – ES, CEP 29106-720, neste ato, representado pelo '
+                                      'Administrador Voluntário do Maanaim do RIO GRANDE DO NORTE, NOME DO COORDENADOR DO MAANAIM, '
+                                      'brasileiro, casado, inscrito no CPF/MF sob o nº CPF DO COORDENADOR DO MAANAIM, em conformidade aos '
+                                      'preceitos da Lei nº 9.608 de 18/02/1998, o presente TERMO DE ADESÃO AO SERVIÇO VOLUNTÁRIO '
+                                      'para prestação de serviço na equipe NOME DA EQUIPE.\n\n'
+                                      'Por ser verdade declaramos conhecer e aceitar todos os termos da Lei nr 9.608 de 18/02/1998, '
+                                      'que trata sobre o serviço voluntário.';
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.s12),
                           TextFormField(
                             controller: _conteudoController,
                             maxLines: 8,

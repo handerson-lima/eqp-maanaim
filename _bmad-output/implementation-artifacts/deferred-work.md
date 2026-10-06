@@ -70,3 +70,8 @@
 
 - Suíte de Emulator dos vínculos não roda no caminho padrão: `npm test` a ignora via `skipIf` e `test:emulator` não usa `firebase emulators:exec` nem CI, então transação, recibo, auditoria e códigos de erro da 1.4 só são exercitados com o Emulator ativo (mesma lacuna registrada em `deferred-work.md:24`).
 - Rules de Firestore verificadas apenas por asserção textual de `firestore.rules` (sem `@firebase/rules-unit-testing`): uma regra permissiva em `vinculosPastorIgreja`/`vinculosPastorEquipe` passaria na suíte (mesma lacuna de `deferred-work.md:54`).
+
+## Deferred from: code review of story-2.3 (2026-10-06)
+
+- Alterações fora do escopo declarado da story: `flutter_app/lib/features/admin/termos_screen.dart` (botões "Modelo Oficial (PDF)"/"Carregar texto oficial do modelo" com CNPJ/endereço no cliente) e `functions/src/commands/importarPastoresIniciais.ts` (bootstrap de `projectId`) não constam no Code Map/Tasks. Reavaliar em mudança separada.
+- Pré-condição "ao menos uma equipe" não filtra estado/ciclo da participação (`functions/src/repositories/termos.ts:365-376`): hoje não alcançável porque participações `CANCELADA`/`APROVADA` só surgem em epics posteriores; confirmar se estados não-rascunho podem coexistir com o aceite.

@@ -8,6 +8,7 @@ import '../../ui/components/status_chips.dart';
 import '../../ui/tokens.dart';
 import '../admin/catalogo_service.dart';
 import '../auth/validadores.dart';
+import '../termo/termo_service.dart';
 import 'ficha_service.dart';
 import 'participacao_service.dart';
 
@@ -18,6 +19,7 @@ class MinhaFichaScreen extends StatefulWidget {
     required this.fichaGateway,
     required this.catalogoGateway,
     this.participacaoGateway,
+    this.termoGateway,
     this.onSair,
     this.userName,
   });
@@ -25,6 +27,7 @@ class MinhaFichaScreen extends StatefulWidget {
   final FichaGateway fichaGateway;
   final CatalogoGateway catalogoGateway;
   final ParticipacaoGateway? participacaoGateway;
+  final TermoGateway? termoGateway;
   final VoidCallback? onSair;
   final String? userName;
 
@@ -49,11 +52,16 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   bool _carregando = true;
   bool _salvando = false;
   bool _salvandoEquipes = false;
+  bool _salvandoTermo = false;
+  bool _declaracaoConcordancia = false;
+  TermoVigenteModel? _termoVigente;
   String? _erroCarregamento;
   String? _mensagemSucesso;
   String? _erroSalvar;
   String? _mensagemSucessoEquipes;
   String? _erroEquipes;
+  String? _mensagemSucessoTermo;
+  String? _erroTermo;
 
   @override
   void initState() {
@@ -92,6 +100,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
     try {
       final partGateway = widget.participacaoGateway;
+      final termoGateway = widget.termoGateway;
       final resultados = await Future.wait([
         widget.fichaGateway.obterMinhaFicha(),
         widget.catalogoGateway.consultar(),
@@ -99,11 +108,16 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           partGateway.obterMinhasParticipacoes()
         else
           Future.value(<ParticipacaoModel>[]),
+        if (termoGateway != null)
+          termoGateway.obterTermoVigente().catchError((_) => null)
+        else
+          Future.value(null),
       ]);
 
       final respostaFicha = resultados[0] as ObterFichaResposta;
       final respostaCatalogo = resultados[1] as CatalogoResposta;
       final participacoes = resultados[2] as List<ParticipacaoModel>;
+      final termoVigente = resultados[3] as TermoVigenteModel?;
 
       final igrejasAtivas = respostaCatalogo.igrejas
           .where((i) => i.ativo)
@@ -122,6 +136,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               .map((p) => p.equipeId)
               .toSet();
           _ficha = respostaFicha.ficha;
+          _termoVigente = termoVigente;
 
           if (respostaFicha.ficha != null) {
             final f = respostaFicha.ficha!;
@@ -556,6 +571,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
               // Seção de seleção de equipes e participações em rascunho
               _buildSecaoEquipes(),
+
+              const SizedBox(height: AppSpacing.s24),
+
+              // Seção do Termo de Adesão ao Serviço Voluntário (Story 2.3)
+              _buildSecaoTermo(),
             ],
           ),
         ),
@@ -930,5 +950,636 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     } catch (_) {
       return iso;
     }
+  }
+
+  Future<void> _aceitarTermo() async {
+    final gateway = widget.termoGateway;
+    if (gateway == null) {
+      setState(() {
+        _erroTermo = 'Serviço de termos indisponível.';
+      });
+      return;
+    }
+
+    if (_termoVigente == null) {
+      setState(() {
+        _erroTermo = 'Nenhum termo vigente carregado para aceite.';
+      });
+      return;
+    }
+
+    if (!_declaracaoConcordancia) {
+      setState(() {
+        _erroTermo =
+            'É obrigatório declarar leitura e concordância antes de registrar o aceite.';
+      });
+      return;
+    }
+
+    setState(() {
+      _salvandoTermo = true;
+      _erroTermo = null;
+      _mensagemSucessoTermo = null;
+    });
+
+    try {
+      final commandId = comandoOpaco();
+      final comprovante = await gateway.aceitarTermoVigente(
+        commandId: commandId,
+        versaoId: _termoVigente!.id,
+        hashSha256: _termoVigente!.hashSha256,
+        declaracaoLidoEConcordo: true,
+      );
+
+      if (mounted) {
+        setState(() {
+          _mensagemSucessoTermo =
+              'Aceite eletrônico registrado com sucesso na versão ${_termoVigente!.numeroVersao}!';
+          if (_ficha != null) {
+            _ficha = _ficha!.copyWith(
+              termoAceito: TermoAceitoModel(
+                termoId: comprovante.termoId,
+                versaoId: comprovante.versaoId,
+                numeroVersao: comprovante.numeroVersao,
+                hashSha256: comprovante.hashSha256,
+                titulo: comprovante.titulo,
+                aceitoEm: comprovante.aceitoEm,
+                commandId: comprovante.commandId,
+              ),
+            );
+          }
+          _declaracaoConcordancia = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _erroTermo = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _salvandoTermo = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildSecaoTermo() {
+    final fichaSalva = _ficha != null;
+    final temEquipes = _participacoes.isNotEmpty;
+    final aptoParaTermo = fichaSalva && temEquipes;
+
+    return SectionCard(
+      title: 'Termo de Adesão ao Serviço Voluntário',
+      subtitle:
+          'Leitura obrigatória e aceite eletrônico auditável antes do envio da solicitação.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!aptoParaTermo)
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s16),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lock_outline, color: AppColors.navy800, size: 22),
+                  const SizedBox(width: AppSpacing.s12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Etapa bloqueada',
+                          style: AppTypography.label.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.navy900,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s4),
+                        Text(
+                          !fichaSalva
+                              ? 'Complete e salve sua ficha permanente para habilitar o Termo de Adesão.'
+                              : 'Selecione e salve ao menos uma equipe de interesse acima para habilitar o aceite do termo.',
+                          style: AppTypography.caption.copyWith(color: AppColors.textPrimary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            if (_mensagemSucessoTermo != null) ...[
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.s12),
+                decoration: BoxDecoration(
+                  color: AppColors.successBg,
+                  borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                  border: Border.all(color: AppColors.success),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: Text(
+                        _mensagemSucessoTermo!,
+                        style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s16),
+            ],
+
+            if (_erroTermo != null) ...[
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.s12),
+                decoration: BoxDecoration(
+                  color: AppColors.dangerBg,
+                  borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                  border: Border.all(color: AppColors.danger),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: Text(
+                        _erroTermo!,
+                        style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s16),
+            ],
+
+            _buildEstadoTermo(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstadoTermo() {
+    final aceite = _ficha?.termoAceito;
+    final versaoVigente = _termoVigente;
+    final temAceiteVigente =
+        aceite != null && versaoVigente != null && aceite.versaoId == versaoVigente.id;
+    final temAceiteDesatualizado =
+        aceite != null && versaoVigente != null && aceite.versaoId != versaoVigente.id;
+
+    if (temAceiteVigente) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: AppColors.successBg,
+          borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.6)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.verified, color: AppColors.success, size: 24),
+                const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: Text(
+                    'Termo Aceito e Válido',
+                    style: AppTypography.h3.copyWith(
+                      fontSize: 16,
+                      color: AppColors.success,
+                    ),
+                  ),
+                ),
+                StatusChip(
+                  status: 'APROVADO',
+                  label: 'Versão ${aceite.numeroVersao}',
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s12),
+            Text(
+              'Você aceitou eletronicamente a versão vigente do Termo de Adesão ao Serviço Voluntário.',
+              style: AppTypography.body,
+            ),
+            const SizedBox(height: AppSpacing.s12),
+            const Divider(color: AppColors.border),
+            const SizedBox(height: AppSpacing.s8),
+            _buildLinhaComprovante('Data do Aceite', _formatarData(aceite.aceitoEm)),
+            _buildLinhaComprovante('Versão do Termo', 'Versão ${aceite.numeroVersao}'),
+            _buildLinhaComprovante(
+              'Hash SHA-256',
+              aceite.hashSha256.length >= 16
+                  ? '${aceite.hashSha256.substring(0, 8)}...${aceite.hashSha256.substring(aceite.hashSha256.length - 8)}'
+                  : aceite.hashSha256,
+              tooltip: aceite.hashSha256,
+            ),
+            _buildLinhaComprovante('Recibo / Comando', aceite.commandId),
+            const SizedBox(height: AppSpacing.s16),
+            Wrap(
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
+              children: [
+                SecondaryButton(
+                  key: const Key('botao_visualizar_termo_aceito'),
+                  label: 'Visualizar Termo Completo',
+                  icon: Icons.description_outlined,
+                  onPressed: _abrirTermo,
+                ),
+                SecondaryButton(
+                  key: const Key('botao_historico_aceites'),
+                  label: 'Histórico de Aceites',
+                  icon: Icons.history_outlined,
+                  onPressed: _abrirHistoricoAceites,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (temAceiteDesatualizado) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.s16),
+            decoration: BoxDecoration(
+              color: AppColors.warningBg,
+              borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.6)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 24),
+                const SizedBox(width: AppSpacing.s12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nova versão do termo publicada',
+                        style: AppTypography.label.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFB45309),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s4),
+                      Text(
+                        'Você aceitou anteriormente a Versão ${aceite.numeroVersao}. Uma nova versão (Versão ${versaoVigente.numeroVersao}) foi publicada e requer sua leitura e novo aceite para prosseguir com o envio.',
+                        style: AppTypography.caption.copyWith(color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s16),
+        ],
+
+        if (versaoVigente == null)
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.s16),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.warning, size: 24),
+                const SizedBox(width: AppSpacing.s12),
+                Expanded(
+                  child: Text(
+                    'Nenhum termo de adesão vigente publicado no momento. Entre em contato com a administração.',
+                    style: AppTypography.body,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          // Card com resumo e leitura do termo
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.s16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.description_outlined, color: AppColors.navy900, size: 24),
+                    const SizedBox(width: AppSpacing.s12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            versaoVigente.titulo,
+                            style: AppTypography.label.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.s4),
+                          Text(
+                            'Versão ${versaoVigente.numeroVersao} (Vigente)',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.blue600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SecondaryButton(
+                      key: const Key('botao_ler_termo_completo'),
+                      label: 'Ler Termo',
+                      icon: Icons.menu_book_outlined,
+                      onPressed: _abrirTermo,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.s12),
+                Text(
+                  versaoVigente.conteudo.length > 200
+                      ? '${versaoVigente.conteudo.substring(0, 200)}...'
+                      : versaoVigente.conteudo,
+                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: AppSpacing.s16),
+                const Divider(color: AppColors.border),
+                const SizedBox(height: AppSpacing.s8),
+
+                // Checkbox explícito de leitura e concordância (WCAG 2.2 AA touch target >= 44px)
+                Material(
+                  type: MaterialType.transparency,
+                  child: Theme(
+                    data: Theme.of(context).copyWith(
+                      checkboxTheme: CheckboxThemeData(
+                        fillColor: WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return AppColors.navy900;
+                          }
+                          return Colors.transparent;
+                        }),
+                      ),
+                    ),
+                    child: CheckboxListTile(
+                      key: const Key('checkbox_declaracao_termo'),
+                      value: _declaracaoConcordancia,
+                      onChanged: _salvandoTermo
+                          ? null
+                          : (val) {
+                              setState(() {
+                                _declaracaoConcordancia = val ?? false;
+                              });
+                            },
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(
+                        'Declaro expressamente que li na íntegra e concordo com todas as condições do Termo de Adesão ao Serviço Voluntário (Versão ${versaoVigente.numeroVersao}).',
+                        style: AppTypography.body.copyWith(fontSize: 14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.s16),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: PrimaryButton(
+                    key: const Key('botao_aceitar_termo'),
+                    label: 'Registrar Aceite Eletrônico',
+                    icon: Icons.check_circle_outline,
+                    isLoading: _salvandoTermo,
+                    onPressed: (!_declaracaoConcordancia || _salvandoTermo)
+                        ? null
+                        : _aceitarTermo,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLinhaComprovante(String rotulo, String valor, {String? tooltip}) {
+    final textWidget = Text(
+      valor,
+      style: AppTypography.body.copyWith(
+        fontWeight: FontWeight.w600,
+        fontFamily: rotulo.contains('Hash') ? 'monospace' : null,
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(rotulo, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+          const SizedBox(width: AppSpacing.s8),
+          Flexible(
+            child: tooltip != null
+                ? Tooltip(message: tooltip, child: textWidget)
+                : textWidget,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _abrirTermo() {
+    final termo = _termoVigente;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.description_outlined, color: AppColors.navy900),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Termo de Adesão de Voluntário',
+                style: AppTypography.h3,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: 'Fechar',
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 600,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (termo != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.s12),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          termo.titulo,
+                          style: AppTypography.label.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Versão: ${termo.numeroVersao} (Vigente)',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.blue600,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (termo.publicadoEm.isNotEmpty)
+                          Text(
+                            'Publicado em: ${_formatarData(termo.publicadoEm)}',
+                            style: AppTypography.caption,
+                          ),
+                        if (termo.hashSha256.isNotEmpty)
+                          Text(
+                            'Hash SHA-256: ${termo.hashSha256}',
+                            style: AppTypography.caption.copyWith(
+                              fontFamily: 'monospace',
+                              fontSize: 10,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s16),
+                  Text(
+                    termo.conteudo,
+                    style: AppTypography.body,
+                  ),
+                ] else ...[
+                  const Text('Nenhum termo vigente carregado no momento.'),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          SecondaryButton(
+            key: const Key('botao_fechar_dialogo_termo'),
+            label: 'Fechar',
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _abrirHistoricoAceites() async {
+    final gateway = widget.termoGateway;
+    if (gateway == null) return;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => FutureBuilder<List<ComprovanteAceiteModel>>(
+        future: gateway.obterHistoricoAceites(),
+        builder: (context, snapshot) {
+          Widget corpo;
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            corpo = const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(),
+              ),
+            );
+          } else if (snapshot.hasError) {
+            corpo = Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Não foi possível carregar o histórico de aceites.',
+                style: AppTypography.body.copyWith(color: AppColors.danger),
+              ),
+            );
+          } else {
+            final lista = snapshot.data ?? [];
+            if (lista.isEmpty) {
+              corpo = const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Nenhum registro de aceite anterior encontrado.'),
+              );
+            } else {
+              corpo = SizedBox(
+                width: 500,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: lista.length,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (_, idx) {
+                    final item = lista[idx];
+                    final hashCurto = item.hashSha256.length >= 16
+                        ? '${item.hashSha256.substring(0, 16)}...'
+                        : item.hashSha256;
+                    return ListTile(
+                      dense: true,
+                      title: Text(
+                        'Versão ${item.numeroVersao} - ${item.titulo.isNotEmpty ? item.titulo : 'Termo de Adesão'}',
+                        style: AppTypography.label.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Aceito em: ${_formatarData(item.aceitoEm)}'),
+                          Text(
+                            'Hash: $hashCurto',
+                            style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              );
+            }
+          }
+          return AlertDialog(
+            title: const Text('Histórico de Aceites Eletrônicos'),
+            content: corpo,
+            actions: [
+              SecondaryButton(
+                label: 'Fechar',
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }

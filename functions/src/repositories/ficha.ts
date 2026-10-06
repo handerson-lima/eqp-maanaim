@@ -34,6 +34,23 @@ function serializarTimestamp(valor: unknown): string | null {
 }
 
 function montarFicha(id: string, dados: Record<string, unknown>): FichaPermanente {
+  const termoAceitoRaw =
+    dados.termoAceito && typeof dados.termoAceito === 'object'
+      ? (dados.termoAceito as Record<string, unknown>)
+      : null;
+
+  const termoAceito = termoAceitoRaw
+    ? {
+        termoId: String(termoAceitoRaw.termoId ?? ''),
+        versaoId: String(termoAceitoRaw.versaoId ?? ''),
+        numeroVersao: Number(termoAceitoRaw.numeroVersao ?? 0),
+        hashSha256: String(termoAceitoRaw.hashSha256 ?? ''),
+        titulo: termoAceitoRaw.titulo ? String(termoAceitoRaw.titulo) : undefined,
+        aceitoEm: serializarTimestamp(termoAceitoRaw.aceitoEm) ?? new Date().toISOString(),
+        commandId: String(termoAceitoRaw.commandId ?? ''),
+      }
+    : null;
+
   return {
     id,
     ownerUid: String(dados.ownerUid ?? id),
@@ -43,6 +60,7 @@ function montarFicha(id: string, dados: Record<string, unknown>): FichaPermanent
     igrejaId: String(dados.igrejaId ?? ''),
     estado: String(dados.estado ?? 'RASCUNHO'),
     versao: Number(dados.versao ?? 1),
+    termoAceito,
     criadoEm: serializarTimestamp(dados.criadoEm),
     atualizadoEm: serializarTimestamp(dados.atualizadoEm),
   };
@@ -189,6 +207,7 @@ export async function salvarMinhaFichaRepo(
         igrejaId: entrada.igrejaId,
         estado: estadoFicha,
         versao: novaVersao,
+        termoAceito: dadosAtuais?.termoAceito ?? null,
         criadoEm: serializarTimestamp(dadosAtuais?.criadoEm) ?? new Date().toISOString(),
         atualizadoEm: new Date().toISOString(),
       },

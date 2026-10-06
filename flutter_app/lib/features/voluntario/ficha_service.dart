@@ -1,6 +1,49 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import '../auth/validadores.dart';
 
+/// Modelo representativo do aceite eletrônico registrado para a ficha.
+class TermoAceitoModel {
+  const TermoAceitoModel({
+    required this.termoId,
+    required this.versaoId,
+    required this.numeroVersao,
+    required this.hashSha256,
+    this.titulo,
+    required this.aceitoEm,
+    required this.commandId,
+  });
+
+  final String termoId;
+  final String versaoId;
+  final int numeroVersao;
+  final String hashSha256;
+  final String? titulo;
+  final String aceitoEm;
+  final String commandId;
+
+  factory TermoAceitoModel.fromMap(Map<String, dynamic> map) {
+    return TermoAceitoModel(
+      termoId: map['termoId'] as String? ?? '',
+      versaoId: map['versaoId'] as String? ?? '',
+      numeroVersao: (map['numeroVersao'] as num?)?.toInt() ?? 1,
+      hashSha256: map['hashSha256'] as String? ?? '',
+      titulo: map['titulo'] as String?,
+      aceitoEm: map['aceitoEm'] as String? ?? '',
+      commandId: map['commandId'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'termoId': termoId,
+        'versaoId': versaoId,
+        'numeroVersao': numeroVersao,
+        'hashSha256': hashSha256,
+        if (titulo != null) 'titulo': titulo,
+        'aceitoEm': aceitoEm,
+        'commandId': commandId,
+      };
+}
+
 /// Modelo de dados da ficha permanente do voluntário.
 class FichaModel {
   const FichaModel({
@@ -11,6 +54,7 @@ class FichaModel {
     required this.igrejaId,
     required this.estado,
     required this.versao,
+    this.termoAceito,
     this.atualizadoEm,
   });
 
@@ -21,11 +65,17 @@ class FichaModel {
   final String igrejaId;
   final String estado;
   final int versao;
+  final TermoAceitoModel? termoAceito;
   final String? atualizadoEm;
 
   bool get isRascunho => estado == 'RASCUNHO';
 
   factory FichaModel.fromMap(Map<String, dynamic> map) {
+    final termoAceitoRaw = map['termoAceito'];
+    final termoAceito = termoAceitoRaw is Map
+        ? TermoAceitoModel.fromMap(Map<String, dynamic>.from(termoAceitoRaw))
+        : null;
+
     return FichaModel(
       id: map['id'] as String? ?? '',
       nomeCompleto: map['nomeCompleto'] as String? ?? '',
@@ -34,6 +84,7 @@ class FichaModel {
       igrejaId: map['igrejaId'] as String? ?? '',
       estado: map['estado'] as String? ?? 'RASCUNHO',
       versao: (map['versao'] as num?)?.toInt() ?? 1,
+      termoAceito: termoAceito,
       atualizadoEm: map['atualizadoEm'] as String?,
     );
   }
@@ -46,6 +97,7 @@ class FichaModel {
         'igrejaId': igrejaId,
         'estado': estado,
         'versao': versao,
+        if (termoAceito != null) 'termoAceito': termoAceito!.toMap(),
         if (atualizadoEm != null) 'atualizadoEm': atualizadoEm,
       };
 
@@ -57,6 +109,7 @@ class FichaModel {
     String? igrejaId,
     String? estado,
     int? versao,
+    TermoAceitoModel? termoAceito,
     String? atualizadoEm,
   }) {
     return FichaModel(
@@ -67,6 +120,7 @@ class FichaModel {
       igrejaId: igrejaId ?? this.igrejaId,
       estado: estado ?? this.estado,
       versao: versao ?? this.versao,
+      termoAceito: termoAceito ?? this.termoAceito,
       atualizadoEm: atualizadoEm ?? this.atualizadoEm,
     );
   }

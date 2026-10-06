@@ -36,6 +36,16 @@ export class FichaInvalidaError extends Error {
   }
 }
 
+export interface TermoAceitoResumo {
+  termoId: string;
+  versaoId: string;
+  numeroVersao: number;
+  hashSha256: string;
+  titulo?: string;
+  aceitoEm: string;
+  commandId: string;
+}
+
 export interface FichaPermanente {
   id: string; // uid do voluntário
   ownerUid: string;
@@ -45,6 +55,7 @@ export interface FichaPermanente {
   igrejaId: string;
   estado: string; // 'RASCUNHO', etc.
   versao: number;
+  termoAceito?: TermoAceitoResumo | null;
   criadoEm?: string | null;
   atualizadoEm?: string | null;
 }

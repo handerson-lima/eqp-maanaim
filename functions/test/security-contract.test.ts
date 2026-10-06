@@ -31,6 +31,9 @@ const obterTermoVigente = readFileSync(join(raiz, 'functions', 'src', 'commands'
 const repoTermos = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'termos.ts'), 'utf8');
 const domainTermos = readFileSync(join(raiz, 'functions', 'src', 'domain', 'termos.ts'), 'utf8');
 const termosService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'admin', 'termos_service.dart'), 'utf8');
+const aceitarTermoVigenteCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'aceitarTermoVigente.ts'), 'utf8');
+const obterHistoricoAceitesCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'obterHistoricoAceites.ts'), 'utf8');
+const voluntarioTermosService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'termo', 'termo_service.dart'), 'utf8');
 
 describe('contratos de segurança executáveis', () => {
   it('nega escrita de domínio e leitura direta de ficha pelo cliente', () => {
@@ -158,6 +161,8 @@ describe('contratos de segurança executáveis', () => {
       'publicarTermo',
       'consultarTermos',
       'obterTermoVigente',
+      'aceitarTermoVigente',
+      'obterHistoricoAceites',
     ];
     for (const nome of nomesCliente) {
       const invocada =
@@ -165,7 +170,8 @@ describe('contratos de segurança executáveis', () => {
         authService.includes(`httpsCallable('${nome}')`) ||
         pessoasService.includes(`httpsCallable('${nome}')`) ||
         vinculosService.includes(`httpsCallable('${nome}')`) ||
-        termosService.includes(`httpsCallable('${nome}')`);
+        termosService.includes(`httpsCallable('${nome}')`) ||
+        voluntarioTermosService.includes(`httpsCallable('${nome}')`);
       expect(invocada, `${nome} não é invocada pelo cliente`).toBe(true);
       expect(
         index.includes(`export { ${nome} }`),
@@ -253,5 +259,20 @@ describe('contratos de segurança executáveis', () => {
     expect(auditoria).toBeDefined();
     expect(recibo).not.toMatch(/cpf|nomeCompleto|email/);
     expect(auditoria).not.toMatch(/cpf|nomeCompleto|email/);
+  });
+
+  it('protege o aceite de termos com App Check, transação, imutabilidade e sem PII em auditoria', () => {
+    expect(aceitarTermoVigenteCmd).toContain('enforceAppCheck: true');
+    expect(aceitarTermoVigenteCmd).toContain('if (!request.auth)');
+    expect(aceitarTermoVigenteCmd).toContain('validarAceitarTermoVigente');
+    expect(aceitarTermoVigenteCmd).not.toMatch(/console\.(log|error)/);
+    expect(obterHistoricoAceitesCmd).toContain('enforceAppCheck: true');
+    expect(obterHistoricoAceitesCmd).toContain('if (!request.auth)');
+    expect(obterHistoricoAceitesCmd).not.toMatch(/console\.(log|error)/);
+    expect(repoTermos).toContain('runTransaction');
+    expect(repoTermos).toContain('reciboSnap.exists');
+    expect(repoTermos).toContain('aceiteSnap.exists');
+    expect(repoTermos).toContain('imutavel: true');
+    expect(regras).toContain('match /{document=**} { allow read, write: if false; }');
   });
 });
