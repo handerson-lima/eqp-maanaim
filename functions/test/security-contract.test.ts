@@ -36,6 +36,9 @@ const obterHistoricoAceitesCmd = readFileSync(join(raiz, 'functions', 'src', 'co
 const voluntarioTermosService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'termo', 'termo_service.dart'), 'utf8');
 const enviarFichaCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'enviarFichaAprovacao.ts'), 'utf8');
 const repoEnviarFicha = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'enviarFicha.ts'), 'utf8');
+const obterFilaPastorCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'obterFilaPastorLocal.ts'), 'utf8');
+const decidirFichaPastorCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'decidirFichaPastorLocal.ts'), 'utf8');
+const repoDecisaoPastor = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'decisaoPastor.ts'), 'utf8');
 
 describe('contratos de segurança executáveis', () => {
   it('nega escrita de domínio e leitura direta de ficha pelo cliente', () => {
@@ -293,5 +296,26 @@ describe('contratos de segurança executáveis', () => {
     expect(auditoria).toBeDefined();
     expect(recibo).not.toMatch(/cpf|nomeCompleto|email/);
     expect(auditoria).not.toMatch(/cpf|nomeCompleto|email/);
+  });
+
+  it('protege a fila e a decisão do pastor com App Check, autenticação, transação e auditoria sem PII', () => {
+    expect(obterFilaPastorCmd).toContain('enforceAppCheck: true');
+    expect(obterFilaPastorCmd).toContain('if (!request.auth)');
+    expect(obterFilaPastorCmd).not.toMatch(/console\.(log|error)/);
+
+    expect(decidirFichaPastorCmd).toContain('enforceAppCheck: true');
+    expect(decidirFichaPastorCmd).toContain('if (!request.auth)');
+    expect(decidirFichaPastorCmd).toContain('validarDecidirFichaPastor');
+    expect(decidirFichaPastorCmd).not.toMatch(/console\.(log|error)/);
+
+    expect(repoDecisaoPastor).toContain('runTransaction');
+    expect(repoDecisaoPastor).toContain('reciboSnap.exists');
+    expect(repoDecisaoPastor).toContain('payloadHash');
+    expect(repoDecisaoPastor).toContain('pastorLocalVigentePessoaId');
+    expect(repoDecisaoPastor).toContain('SemVinculoPastoralError');
+
+    const auditoria = repoDecisaoPastor.match(/tx\.set\(auditoriaRef, \{([\s\S]*?)\n    \}\);/)?.[1];
+    expect(auditoria).toBeDefined();
+    expect(auditoria).not.toMatch(/cpf|nomeCompleto|email|justificativa/);
   });
 });

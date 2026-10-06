@@ -11,6 +11,8 @@ import 'termos_screen.dart';
 import 'termos_service.dart';
 import 'vinculos_responsaveis.dart';
 import 'vinculos_service.dart';
+import '../pastor/fila_pastor_screen.dart';
+import '../pastor/pastor_service.dart';
 
 /// Shell administrativo responsivo construído sobre o [AppShell] institucional:
 /// Sidebar no desktop (≥1024px), sidebar compacta no tablet (600–1023px) e
@@ -24,6 +26,7 @@ class AdminShell extends StatefulWidget {
     this.pessoas,
     this.vinculos,
     this.termos,
+    this.pastor,
   });
 
   final VoidCallback onSair;
@@ -32,6 +35,7 @@ class AdminShell extends StatefulWidget {
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
+  final PastorLocalGateway? pastor;
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -40,32 +44,38 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   int _indice = 0;
 
-  static const _itensNavegacao = <AppNavItem>[
-    AppNavItem(
+  List<AppNavItem> get _itensNavegacao => [
+    const AppNavItem(
       label: 'Catálogo',
       icon: Icons.list_alt_outlined,
       selectedIcon: Icons.list_alt,
     ),
-    AppNavItem(
+    const AppNavItem(
       label: 'Seed',
       icon: Icons.cloud_upload_outlined,
       selectedIcon: Icons.cloud_upload,
     ),
-    AppNavItem(
+    const AppNavItem(
       label: 'Pessoas e Papéis',
       icon: Icons.manage_accounts_outlined,
       selectedIcon: Icons.manage_accounts,
     ),
-    AppNavItem(
+    const AppNavItem(
       label: 'Vínculos e Responsáveis',
       icon: Icons.handshake_outlined,
       selectedIcon: Icons.handshake,
     ),
-    AppNavItem(
+    const AppNavItem(
       label: 'Termos',
       icon: Icons.description_outlined,
       selectedIcon: Icons.description,
     ),
+    if (widget.pastor != null)
+      const AppNavItem(
+        label: 'Fila do Pastor',
+        icon: Icons.how_to_reg_outlined,
+        selectedIcon: Icons.how_to_reg,
+      ),
   ];
 
   Widget _corpo() {
@@ -118,6 +128,16 @@ class _AdminShellState extends State<AdminShell> {
                 child: Padding(
                   padding: EdgeInsets.all(AppSpacing.cardPadding),
                   child: Text('Serviço de termos indisponível.'),
+                ),
+              );
+      case 5:
+        final pastor = widget.pastor;
+        return pastor != null
+            ? FilaPastorScreen(gateway: pastor, onSair: widget.onSair)
+            : const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.cardPadding),
+                  child: Text('Serviço pastoral indisponível.'),
                 ),
               );
       default:

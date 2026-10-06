@@ -19,4 +19,5 @@ export { salvarParticipacoesRascunho } from './commands/salvarParticipacoesRascu
 export { aceitarTermoVigente } from './commands/aceitarTermoVigente.js';
 export { obterHistoricoAceites } from './commands/obterHistoricoAceites.js';
 export { enviarFichaAprovacao } from './commands/enviarFichaAprovacao.js';
-
+export { obterFilaPastorLocal } from './commands/obterFilaPastorLocal.js';
+export { decidirFichaPastorLocal } from './commands/decidirFichaPastorLocal.js';

@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-28-2026 22:53
-last_updated: 10-06-2026 17:55
+last_updated: 10-06-2026 18:28
 project: eqp_maanaim
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
@@ -49,8 +49,8 @@ development_status:
   2-4-enviar-ficha-e-iniciar-aprovações: done
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-fila-e-decisão-do-pastor-local: backlog
+  epic-3: in-progress
+  3-1-fila-e-decisão-do-pastor-local: done
   3-2-aprovações-paralelas-por-responsável-de-equipe: backlog
   3-3-conclusão-pelo-coordenador-e-ativação: backlog
   3-4-comunicação-de-decisões-e-acompanhamento-por-público: backlog
