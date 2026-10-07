@@ -45,3 +45,5 @@ export { processarAuditOutbox, reconciliarAuditoriaScheduled } from './triggers/
 export { reconciliarAuditoria } from './commands/reconciliarAuditoria.js';
 export { consultarAuditoriaAutorizada } from './commands/consultarAuditoriaAutorizada.js';
 export { consultarRelatorioOperacional } from './commands/consultarRelatorioOperacional.js';
+export { gerarPdfParticipacao } from './commands/gerarPdfParticipacao.js';
+export { obterUrlDownloadPdf } from './commands/obterUrlDownloadPdf.js';

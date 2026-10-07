@@ -6,6 +6,8 @@ import '../../ui/components/layout_elements.dart';
 import '../../ui/components/status_chips.dart';
 import '../../ui/components/vigencia_badge.dart';
 import '../../ui/tokens.dart';
+import '../termo/pdf_termo_service.dart';
+import '../termo/termo_pdf_launcher.dart';
 import 'historico_service.dart';
 import 'linha_tempo_widget.dart';
 
@@ -16,6 +18,7 @@ class ConsultaFichaAutorizadaScreen extends StatefulWidget {
     super.key,
     this.fichaId,
     this.historicoService,
+    this.pdfTermoGateway,
     this.onVoltar,
     this.onSair,
     this.userName,
@@ -24,6 +27,7 @@ class ConsultaFichaAutorizadaScreen extends StatefulWidget {
 
   final String? fichaId;
   final HistoricoService? historicoService;
+  final PdfTermoGateway? pdfTermoGateway;
   final VoidCallback? onVoltar;
   final VoidCallback? onSair;
   final String? userName;
@@ -43,6 +47,7 @@ class _ConsultaFichaAutorizadaScreenState
   String? _erroEventos;
   ResultadoConsultaFichaModel? _resultadoFicha;
   List<EventoLinhaDoTempoModel> _eventos = [];
+  String? _baixandoPdfParticipacaoId;
 
   @override
   void initState() {
@@ -379,6 +384,47 @@ class _ConsultaFichaAutorizadaScreenState
                                     compact: true,
                                   ),
                                 ],
+                                if (part.estado == 'ATIVA') ...[
+                                  const SizedBox(height: AppSpacing.s8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: OutlinedButton.icon(
+                                      key: Key('btn_baixar_pdf_consulta_${part.id}'),
+                                      onPressed: _baixandoPdfParticipacaoId == part.id
+                                          ? null
+                                          : () => _baixarPdfConsulta(part.id, part.nomeEquipe),
+                                      icon: _baixandoPdfParticipacaoId == part.id
+                                          ? const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: AppColors.blue600,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.picture_as_pdf_outlined,
+                                              size: 14,
+                                              color: AppColors.blue600,
+                                            ),
+                                      label: Text(
+                                        _baixandoPdfParticipacaoId == part.id
+                                            ? 'Gerando...'
+                                            : 'Baixar Termo em PDF',
+                                        style: const TextStyle(
+                                          color: AppColors.blue600,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        minimumSize: const Size(44, 44),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                                        side: const BorderSide(color: AppColors.blue600),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           );
@@ -451,6 +497,50 @@ class _ConsultaFichaAutorizadaScreenState
       return '$dia/$mes/$ano';
     } catch (_) {
       return iso;
+    }
+  }
+
+  Future<void> _baixarPdfConsulta(String participacaoId, String nomeEquipe) async {
+    final fId = widget.fichaId ?? _resultadoFicha?.ficha?.id;
+    if (fId == null || fId.isEmpty) return;
+
+    setState(() {
+      _baixandoPdfParticipacaoId = participacaoId;
+    });
+
+    try {
+      final gateway = widget.pdfTermoGateway ?? FirebasePdfTermoGateway();
+      final res = await gateway.obterUrlDownloadPdf(
+        fichaId: fId,
+        participacaoId: participacaoId,
+      );
+      if (!mounted) return;
+      baixarOuAbrirPdf(res.urlDownload);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Termo da equipe $nomeEquipe pronto para download!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.danger,
+          action: SnackBarAction(
+            label: 'Tentar novamente',
+            textColor: Colors.white,
+            onPressed: () => _baixarPdfConsulta(participacaoId, nomeEquipe),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _baixandoPdfParticipacaoId = null;
+        });
+      }
     }
   }
 }

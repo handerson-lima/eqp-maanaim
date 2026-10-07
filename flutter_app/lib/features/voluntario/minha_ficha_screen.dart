@@ -10,6 +10,8 @@ import '../../ui/tokens.dart';
 import '../admin/catalogo_service.dart';
 import '../auth/validadores.dart';
 import '../termo/termo_service.dart';
+import '../termo/pdf_termo_service.dart';
+import '../termo/termo_pdf_launcher.dart';
 import 'ficha_service.dart';
 import 'consulta_ficha_screen.dart';
 import 'historico_service.dart';
@@ -29,6 +31,7 @@ class MinhaFichaScreen extends StatefulWidget {
     required this.catalogoGateway,
     this.participacaoGateway,
     this.termoGateway,
+    this.pdfTermoGateway,
     this.historicoService,
     this.onSair,
     this.userName,
@@ -38,6 +41,7 @@ class MinhaFichaScreen extends StatefulWidget {
   final CatalogoGateway catalogoGateway;
   final ParticipacaoGateway? participacaoGateway;
   final TermoGateway? termoGateway;
+  final PdfTermoGateway? pdfTermoGateway;
   final HistoricoService? historicoService;
   final VoidCallback? onSair;
   final String? userName;
@@ -80,6 +84,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   late final HistoricoService _historicoService;
   List<EventoLinhaDoTempoModel> _eventosHistorico = [];
   bool _carregandoEventos = false;
+  String? _baixandoPdfParticipacaoId;
 
   bool get _isRascunho => _ficha?.isRascunho ?? true;
   bool get _isAguardandoPastor => _ficha?.estado == 'AGUARDANDO_PASTOR_LOCAL';
@@ -669,9 +674,13 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                         style: AppTypography.caption,
                       ),
                       if (_ficha!.atualizadoEm != null)
-                        Text(
-                          'Última alteração: ${_formatarData(_ficha!.atualizadoEm!)}',
-                          style: AppTypography.caption,
+                        Flexible(
+                          child: Text(
+                            'Última alteração: ${_formatarData(_ficha!.atualizadoEm!)}',
+                            style: AppTypography.caption,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
+                          ),
                         ),
                     ],
                   ),
@@ -1046,6 +1055,41 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           spacing: AppSpacing.s8,
                           runSpacing: AppSpacing.s4,
                           children: [
+                            OutlinedButton.icon(
+                              key: Key('btn_baixar_termo_pdf_${p.id}'),
+                              onPressed: _baixandoPdfParticipacaoId == p.id
+                                  ? null
+                                  : () => _baixarTermoPdf(p),
+                              icon: _baixandoPdfParticipacaoId == p.id
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.blue600,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.picture_as_pdf_outlined,
+                                      size: 16,
+                                      color: AppColors.blue600,
+                                    ),
+                              label: Text(
+                                _baixandoPdfParticipacaoId == p.id
+                                    ? 'Gerando documento...'
+                                    : 'Baixar Termo em PDF',
+                                style: const TextStyle(
+                                  color: AppColors.blue600,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(44, 44),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                side: const BorderSide(color: AppColors.blue600),
+                              ),
+                            ),
                             if (p.isEmJanelaRenovacao)
                               TextButton.icon(
                                 key: Key('btn_renovar_participacao_${p.id}'),
@@ -2112,6 +2156,49 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         await _carregarDados();
       },
     );
+  }
+
+  Future<void> _baixarTermoPdf(ParticipacaoModel p) async {
+    if (_ficha == null) return;
+    setState(() {
+      _baixandoPdfParticipacaoId = p.id;
+    });
+    try {
+      final gateway = widget.pdfTermoGateway ?? FirebasePdfTermoGateway();
+      final res = await gateway.obterUrlDownloadPdf(
+        fichaId: _ficha!.id,
+        participacaoId: p.id,
+      );
+      if (!mounted) return;
+      baixarOuAbrirPdf(res.urlDownload);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Termo da equipe ${p.nomeEquipe.isNotEmpty ? p.nomeEquipe : p.equipeId} pronto para download!',
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.danger,
+          action: SnackBarAction(
+            label: 'Tentar novamente',
+            textColor: Colors.white,
+            onPressed: () => _baixarTermoPdf(p),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _baixandoPdfParticipacaoId = null;
+        });
+      }
+    }
   }
 
   void _abrirModalSolicitarReativacao(ParticipacaoModel participacao) {
