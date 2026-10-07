@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+
+import '../../ui/components/buttons.dart';
+import '../../ui/tokens.dart';
+import 'cancelar_participacao_dialog.dart';
 import 'participacao_service.dart';
 
 /// Diálogo acessível para cancelamento integral do voluntariado (toda a ficha).
@@ -82,32 +86,47 @@ class _CancelarVoluntariadoDialogState extends State<CancelarVoluntariadoDialog>
       if (mounted) {
         setState(() {
           _enviando = false;
-          _erroMensagem = 'Falha ao encerrar voluntariado: ${e.toString().replaceAll('Exception: ', '')}';
+          _erroMensagem = mapearErroCancelamento(e);
         });
       }
     }
   }
 
+  /// Rótulo legível e não-sensível do estado da participação, sem expor o enum
+  /// interno bruto (AD-12).
   static String _rotuloEstado(String estado) {
-    final s = estado.trim().toUpperCase();
-    if (s.startsWith('AGUARDANDO')) return 'AGUARDANDO';
-    if (s == 'EM_APROVACAO') return 'EM APROVAÇÃO';
-    return estado;
+    switch (estado.trim().toUpperCase()) {
+      case 'RASCUNHO':
+        return 'Rascunho';
+      case 'ATIVA':
+        return 'Ativa';
+      case 'AGUARDANDO_PASTOR_LOCAL':
+        return 'Aguardando Pastor';
+      case 'AGUARDANDO_RESPONSAVEL_EQUIPE':
+        return 'Aguardando Responsável';
+      case 'AGUARDANDO_COORDENADOR':
+        return 'Aguardando Coordenador';
+      case 'EM_APROVACAO':
+        return 'Em aprovação';
+      default:
+        return 'Em análise';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    const corPerigo = Color(0xFFEF4444);
-    const corPerigoBg = Color(0xFFFDECEC);
-    const corNavy900 = Color(0xFF0F172A);
-    const corGray600 = Color(0xFF475569);
-    const corGray100 = Color(0xFFF1F5F9);
+    const corPerigo = AppColors.danger;
+    const corPerigoBg = AppColors.dangerBg;
+    const corNavy900 = AppColors.navy900;
+    const corGray600 = AppColors.textSecondary;
+    const corGray100 = AppColors.neutral100;
+    const corPerigoEscuro = Color(0xFF991B1B);
 
     final width = MediaQuery.of(context).size.width;
     final isMobile = width < 600;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: AppGeometry.cardBorderRadius),
       backgroundColor: Colors.white,
       insetPadding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 40, vertical: 24),
       child: ConstrainedBox(
@@ -169,14 +188,14 @@ class _CancelarVoluntariadoDialogState extends State<CancelarVoluntariadoDialog>
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: corPerigoBg,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: AppGeometry.buttonBorderRadius,
                     border: Border.all(color: corPerigo.withValues(alpha: 0.3)),
                   ),
                   child: const Text(
                     'Atenção: Esta ação encerrará definitivamente todo o seu voluntariado no Maanaim e todas as suas participações ativas e em andamento. O histórico será preservado para auditoria.',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF991B1B),
+                      color: corPerigoEscuro,
                       height: 1.4,
                     ),
                   ),
@@ -197,14 +216,14 @@ class _CancelarVoluntariadoDialogState extends State<CancelarVoluntariadoDialog>
                   Container(
                     decoration: BoxDecoration(
                       color: corGray100,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      borderRadius: AppGeometry.buttonBorderRadius,
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: widget.participacoesAfetadas.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
                       itemBuilder: (ctx, i) {
                         final p = widget.participacoesAfetadas[i];
                         return Padding(
@@ -231,7 +250,7 @@ class _CancelarVoluntariadoDialogState extends State<CancelarVoluntariadoDialog>
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    border: Border.all(color: AppColors.border),
                                   ),
                                   child: Text(
                                     _rotuloEstado(p.estado),
@@ -271,8 +290,8 @@ class _CancelarVoluntariadoDialogState extends State<CancelarVoluntariadoDialog>
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'Informe o motivo detalhado para fins de registro eclesiástico...',
-                      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      hintStyle: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      border: OutlineInputBorder(borderRadius: AppGeometry.inputBorderRadius),
                       contentPadding: const EdgeInsets.all(12),
                     ),
                     validator: (val) {
@@ -291,7 +310,7 @@ class _CancelarVoluntariadoDialogState extends State<CancelarVoluntariadoDialog>
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
                       color: corPerigoBg,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: AppGeometry.buttonBorderRadius,
                     ),
                     child: Text(
                       _erroMensagem!,
@@ -307,8 +326,9 @@ class _CancelarVoluntariadoDialogState extends State<CancelarVoluntariadoDialog>
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    TextButton(
+                    SecondaryButton(
                       key: const Key('btn_cancelar_modal_voluntariado'),
+                      label: 'Desistir',
                       onPressed: _enviando
                           ? null
                           : () {
@@ -316,38 +336,12 @@ class _CancelarVoluntariadoDialogState extends State<CancelarVoluntariadoDialog>
                                 Navigator.of(context).pop(false);
                               }
                             },
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(100, 44),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                      child: const Text(
-                        'Desistir',
-                        style: TextStyle(color: corGray600, fontWeight: FontWeight.w600),
-                      ),
                     ),
-                    ElevatedButton(
+                    DangerButton(
                       key: const Key('btn_confirmar_cancelamento_voluntariado'),
-                      onPressed: _enviando ? null : _submeter,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: corPerigo,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(160, 44),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: _enviando
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Text(
-                              'Confirmar Cancelamento Total',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
+                      label: 'Confirmar Cancelamento Total',
+                      isLoading: _enviando,
+                      onPressed: _submeter,
                     ),
                   ],
                 ),

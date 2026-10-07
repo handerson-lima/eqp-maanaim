@@ -17,6 +17,7 @@ import 'participacao_service.dart';
 import 'solicitar_equipe_modal.dart';
 import 'cancelar_participacao_dialog.dart';
 import 'cancelar_voluntariado_dialog.dart';
+import 'solicitar_reativacao_dialog.dart';
 
 /// Tela responsiva mobile-first para o voluntário preencher e manter sua ficha cadastral permanente.
 class MinhaFichaScreen extends StatefulWidget {
@@ -123,8 +124,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   /// Mensagem neutra canônica do voluntário. Prefere o valor projetado pelo
   /// servidor (`mensagemVoluntario`) e só recorre ao literal como fallback.
   String get _mensagemNegativaVoluntario =>
-      _ficha?.mensagemVoluntario ??
-      'Procure o Pastor da igreja local para mais informações';
+      _ficha?.mensagemVoluntario ?? mensagemNeutraCanonica;
 
   @override
   void initState() {
@@ -1029,6 +1029,28 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: AppSpacing.s8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: OutlinedButton.icon(
+                            key: Key('btn_solicitar_reativacao_${p.id}'),
+                            onPressed: () => _abrirModalSolicitarReativacao(p),
+                            icon: const Icon(Icons.replay_rounded, size: 16, color: AppColors.blue600),
+                            label: const Text(
+                              'Solicitar Reativação',
+                              style: TextStyle(
+                                color: AppColors.blue600,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(44, 44),
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              side: const BorderSide(color: AppColors.blue600),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -1102,7 +1124,31 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           ),
                         ],
                       ),
-                      if (p.estado != 'CANCELADA' && p.estado != 'REJEITADA') ...[
+                      if (p.isCancelada || p.isExpirada || p.isInativa) ...[
+                        const SizedBox(height: AppSpacing.s8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: OutlinedButton.icon(
+                            key: Key('btn_solicitar_reativacao_${p.id}'),
+                            onPressed: () => _abrirModalSolicitarReativacao(p),
+                            icon: const Icon(Icons.replay_rounded, size: 16, color: AppColors.blue600),
+                            label: const Text(
+                              'Solicitar Reativação',
+                              style: TextStyle(
+                                color: AppColors.blue600,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(44, 44),
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              side: const BorderSide(color: AppColors.blue600),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (!p.isTerminal) ...[
                         const SizedBox(height: AppSpacing.s8),
                         Align(
                           alignment: Alignment.centerRight,
@@ -1130,7 +1176,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 );
               }).toList(),
             ),
-            if (_ficha?.estado == 'ATIVA' || (_isBloqueadoParaEdicao && _ficha?.estado != 'CANCELADA')) ...[
+            if (_ficha?.estado == 'ATIVA' ||
+                (_isBloqueadoParaEdicao &&
+                    _ficha?.estado != 'CANCELADA' &&
+                    _ficha?.estado != 'REJEITADA')) ...[
               const SizedBox(height: AppSpacing.s12),
               Align(
                 alignment: Alignment.centerLeft,
@@ -1915,6 +1964,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     final gateway = widget.participacaoGateway;
     if (gateway == null) return;
 
+    final commandId = comandoOpaco();
+
     CancelarParticipacaoDialog.show(
       context,
       participacao: participacao,
@@ -1923,6 +1974,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         await gateway.cancelarParticipacao(
           participacaoId: participacao.id,
           motivo: motivo,
+          expectedVersion: participacao.versao,
+          commandId: commandId,
         );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1946,13 +1999,48 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     );
   }
 
+  void _abrirModalSolicitarReativacao(ParticipacaoModel participacao) {
+    final gateway = widget.participacaoGateway;
+    if (gateway == null) return;
+
+    SolicitarReativacaoDialog.show(
+      context,
+      participacao: participacao,
+      onConfirmar: (justificativa) async {
+        await gateway.solicitarReativacao(
+          equipeId: participacao.equipeId,
+          participacaoId: participacao.id,
+          justificativa: justificativa,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.navy900,
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: AppColors.surface),
+                const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: Text(
+                    'Solicitação de reativação da equipe ${participacao.nomeEquipe} enviada! Aguardando avaliação pastoral.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        await _carregarDados();
+      },
+    );
+  }
+
   void _abrirModalCancelarVoluntariado() {
     final fichaId = _ficha?.id;
     if (fichaId == null || fichaId.isEmpty) return;
 
-    final participacoesAfetadas = _participacoes
-        .where((p) => p.estado != 'CANCELADA' && p.estado != 'REJEITADA')
-        .toList();
+    final participacoesAfetadas =
+        _participacoes.where((p) => !p.isTerminal).toList();
+    final commandId = comandoOpaco();
 
     CancelarVoluntariadoDialog.show(
       context,
@@ -1963,6 +2051,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         await widget.fichaGateway.cancelarVoluntariado(
           fichaId: fichaId,
           motivo: motivo,
+          expectedVersion: _ficha?.versao,
+          commandId: commandId,
         );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

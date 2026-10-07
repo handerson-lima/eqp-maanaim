@@ -61,6 +61,7 @@ class FichaMockGateway implements FichaGateway {
   Future<void> cancelarVoluntariado({
     required String fichaId,
     String? motivo,
+    int? expectedVersion,
     String? commandId,
   }) async {}
 }
@@ -110,6 +111,26 @@ class ParticipacaoMockGateway implements ParticipacaoGateway {
     int? expectedVersion,
     String? commandId,
   }) async {}
+
+  @override
+  Future<ParticipacaoModel> solicitarReativacao({
+    required String equipeId,
+    String? participacaoId,
+    String? justificativa,
+    String? commandId,
+  }) async {
+    final nova = ParticipacaoModel(
+      id: 'mock-reativacao-$equipeId',
+      fichaId: 'mock-ficha',
+      equipeId: equipeId,
+      nomeEquipe: equipeId,
+      estado: 'AGUARDANDO_PASTOR_LOCAL',
+      ciclo: 'REATIVACAO',
+      proximaAcao: 'Aguardando avaliação do Pastor Local',
+    );
+    participacoes.add(nova);
+    return nova;
+  }
 }
 
 Widget criarAppTeste({

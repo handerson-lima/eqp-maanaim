@@ -2,6 +2,10 @@ import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../comando.dart';
 
+/// Mensagem neutra canônica exibida ao voluntário em decisões negativas (AD-12).
+const String mensagemNeutraCanonica =
+    'Procure o Pastor da igreja local para mais informações';
+
 /// Modelo de dados da participação do voluntário em uma equipe.
 class ParticipacaoModel {
   const ParticipacaoModel({
@@ -12,6 +16,7 @@ class ParticipacaoModel {
     required this.estado,
     required this.ciclo,
     required this.proximaAcao,
+    this.versao = 1,
     this.vigenciaInicio,
     this.vigenciaFim,
     this.cicloAtualId,
@@ -26,6 +31,7 @@ class ParticipacaoModel {
   final String estado;
   final String ciclo;
   final String proximaAcao;
+  final int versao;
   final String? vigenciaInicio;
   final String? vigenciaFim;
   final String? cicloAtualId;
@@ -55,6 +61,7 @@ class ParticipacaoModel {
       estado: map['estado'] as String? ?? 'RASCUNHO',
       ciclo: map['ciclo'] as String? ?? 'INICIAL',
       proximaAcao: map['proximaAcao'] as String? ?? 'Aguardando envio da ficha',
+      versao: (map['versao'] as num?)?.toInt() ?? 1,
       vigenciaInicio: map['vigenciaInicio'] as String?,
       vigenciaFim: map['vigenciaFim'] as String?,
       cicloAtualId: map['cicloAtualId'] as String?,
@@ -71,6 +78,7 @@ class ParticipacaoModel {
         'estado': estado,
         'ciclo': ciclo,
         'proximaAcao': proximaAcao,
+        'versao': versao,
         if (vigenciaInicio != null) 'vigenciaInicio': vigenciaInicio,
         if (vigenciaFim != null) 'vigenciaFim': vigenciaFim,
         if (cicloAtualId != null) 'cicloAtualId': cicloAtualId,
@@ -86,6 +94,7 @@ class ParticipacaoModel {
     String? estado,
     String? ciclo,
     String? proximaAcao,
+    int? versao,
     String? vigenciaInicio,
     String? vigenciaFim,
     String? cicloAtualId,
@@ -100,6 +109,7 @@ class ParticipacaoModel {
       estado: estado ?? this.estado,
       ciclo: ciclo ?? this.ciclo,
       proximaAcao: proximaAcao ?? this.proximaAcao,
+      versao: versao ?? this.versao,
       vigenciaInicio: vigenciaInicio ?? this.vigenciaInicio,
       vigenciaFim: vigenciaFim ?? this.vigenciaFim,
       cicloAtualId: cicloAtualId ?? this.cicloAtualId,
@@ -124,6 +134,12 @@ abstract interface class ParticipacaoGateway {
     required String participacaoId,
     String? motivo,
     int? expectedVersion,
+    String? commandId,
+  });
+  Future<ParticipacaoModel> solicitarReativacao({
+    required String equipeId,
+    String? participacaoId,
+    String? justificativa,
     String? commandId,
   });
 }
@@ -200,6 +216,37 @@ class FirebaseParticipacaoGateway implements ParticipacaoGateway {
       if (motivo != null && motivo.trim().isNotEmpty) 'motivo': motivo.trim(),
       if (expectedVersion != null) 'expectedVersion': expectedVersion,
     });
+  }
+
+  @override
+  Future<ParticipacaoModel> solicitarReativacao({
+    required String equipeId,
+    String? participacaoId,
+    String? justificativa,
+    String? commandId,
+  }) async {
+    final cid = commandId ?? comandoOpaco();
+    final resposta = await _functions.httpsCallable('solicitarReativacao').call({
+      'commandId': cid,
+      'equipeId': equipeId,
+      if (participacaoId != null && participacaoId.trim().isNotEmpty)
+        'participacaoId': participacaoId.trim(),
+      if (justificativa != null && justificativa.trim().isNotEmpty)
+        'justificativa': justificativa.trim(),
+    });
+    final dados = (resposta.data as Map).cast<String, dynamic>();
+    return ParticipacaoModel(
+      id: dados['participacaoId'] as String? ?? '',
+      fichaId: '',
+      equipeId: dados['equipeId'] as String? ?? equipeId,
+      nomeEquipe: dados['nomeEquipe'] as String? ?? '',
+      estado: dados['estado'] as String? ?? 'AGUARDANDO_PASTOR_LOCAL',
+      ciclo: 'REATIVACAO',
+      proximaAcao: dados['proximaAcao'] as String? ??
+          'Aguardando avaliação do Pastor Local',
+      cicloAtualId: dados['cicloId'] as String?,
+      criadoEm: dados['criadoEm'] as String?,
+    );
   }
 }
 
@@ -279,10 +326,33 @@ class MemoriaParticipacaoGateway implements ParticipacaoGateway {
       _participacoes[index] = p.copyWith(
         estado: 'CANCELADA',
         proximaAcao: motivo != null && motivo.trim().isNotEmpty
-            ? 'Procure o Pastor da igreja local para mais informações'
+            ? mensagemNeutraCanonica
             : 'Participação cancelada pelo voluntário',
       );
     }
+  }
+
+  @override
+  Future<ParticipacaoModel> solicitarReativacao({
+    required String equipeId,
+    String? participacaoId,
+    String? justificativa,
+    String? commandId,
+  }) async {
+    final nova = ParticipacaoModel(
+      id: 'mem-$equipeId-reativacao-${_participacoes.length}',
+      fichaId: 'mem-uid',
+      equipeId: equipeId,
+      nomeEquipe: nomesEquipes[equipeId] ?? equipeId,
+      estado: 'AGUARDANDO_PASTOR_LOCAL',
+      ciclo: 'REATIVACAO',
+      proximaAcao: 'Aguardando avaliação do Pastor Local',
+      cicloAtualId: 'ciclo-mem-reativacao-$equipeId',
+      criadoEm: DateTime.now().toIso8601String(),
+    );
+    _participacoes.add(nova);
+    _participacoes.sort((a, b) => a.nomeEquipe.compareTo(b.nomeEquipe));
+    return nova;
   }
 }
 

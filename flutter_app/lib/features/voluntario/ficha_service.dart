@@ -218,6 +218,7 @@ abstract interface class FichaGateway {
   Future<void> cancelarVoluntariado({
     required String fichaId,
     String? motivo,
+    int? expectedVersion,
     String? commandId,
   });
 }
@@ -280,6 +281,7 @@ class FirebaseFichaGateway implements FichaGateway {
   Future<void> cancelarVoluntariado({
     required String fichaId,
     String? motivo,
+    int? expectedVersion,
     String? commandId,
   }) async {
     final cid = commandId ?? comandoOpaco();
@@ -287,6 +289,7 @@ class FirebaseFichaGateway implements FichaGateway {
       'commandId': cid,
       'fichaId': fichaId,
       if (motivo != null && motivo.trim().isNotEmpty) 'motivo': motivo.trim(),
+      if (expectedVersion != null) 'expectedVersion': expectedVersion,
     });
   }
 }

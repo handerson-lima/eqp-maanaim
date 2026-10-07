@@ -84,6 +84,7 @@ class FichaFake implements FichaGateway {
   Future<void> cancelarVoluntariado({
     required String fichaId,
     String? motivo,
+    int? expectedVersion,
     String? commandId,
   }) async {}
 }

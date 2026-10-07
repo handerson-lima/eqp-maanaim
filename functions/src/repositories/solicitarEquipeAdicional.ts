@@ -10,7 +10,10 @@ import {
   type EntradaSolicitarEquipeAdicional,
   type ResultadoSolicitarEquipeAdicional,
 } from '../domain/solicitarEquipeAdicional.js';
-import { ESTADOS_PARTICIPACAO } from '../domain/participacao.js';
+import {
+  ESTADOS_PARTICIPACAO,
+  ESTADOS_TERMINAIS_PARTICIPACAO,
+} from '../domain/participacao.js';
 import { TERMO_ID_PADRAO } from '../domain/termos.js';
 
 export interface ContextoSolicitarEquipe {
@@ -21,9 +24,6 @@ export interface ContextoSolicitarEquipe {
 
 /** Teto de leitura das participações do voluntário na transação (AD-9). */
 const LIMITE_PARTICIPACOES_VOLUNTARIO = 100;
-
-/** Estados terminais que não bloqueiam uma nova solicitação (AD-11). */
-const ESTADOS_TERMINAIS_PARTICIPACAO = ['REJEITADA', 'CANCELADA', 'EXPIRADA', 'INATIVA'];
 
 /**
  * Estados que impedem nova solicitação, derivados do catálogo canônico

@@ -33,3 +33,4 @@ export { consultarLinhaDoTempoAutorizada } from './commands/consultarLinhaDoTemp
 export { solicitarEquipeAdicional } from './commands/solicitarEquipeAdicional.js';
 export { cancelarParticipacao } from './commands/cancelarParticipacao.js';
 export { cancelarVoluntariado } from './commands/cancelarVoluntariado.js';
+export { solicitarReativacao } from './commands/solicitarReativacao.js';

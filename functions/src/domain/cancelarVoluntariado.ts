@@ -5,6 +5,7 @@ import {
   ComandoDivergenteError,
   MotivoObrigatorioLiderancaError,
   SolicitacaoInvalidaError,
+  normalizarMotivo,
 } from './cancelarParticipacao.js';
 
 export {
@@ -32,6 +33,7 @@ export interface EntradaCancelarVoluntariado {
   commandId: string;
   fichaId: string;
   motivo?: string;
+  expectedVersion?: number;
   correlationId?: string;
   payloadHash: string;
 }
@@ -48,12 +50,14 @@ export interface ResultadoCancelarVoluntariado {
 export function calcularPayloadHashCancelarVoluntariado(
   fichaId: string,
   motivo?: string,
+  expectedVersion?: number,
 ): string {
   return createHash('sha256')
     .update(
       JSON.stringify({
         fichaId: fichaId.trim(),
         motivo: motivo?.trim() ?? '',
+        expectedVersion: expectedVersion ?? null,
       }),
     )
     .digest('hex');
@@ -82,14 +86,23 @@ export function validarCancelarVoluntariado(dados: unknown): EntradaCancelarVolu
     throw new SolicitacaoInvalidaError('fichaId é obrigatório.');
   }
 
-  const motivo = typeof payload.motivo === 'string' ? payload.motivo.trim() : undefined;
+  const motivo = normalizarMotivo(payload.motivo);
+  const expectedVersion =
+    typeof payload.expectedVersion === 'number' && Number.isInteger(payload.expectedVersion)
+      ? payload.expectedVersion
+      : undefined;
 
   return {
     commandId: payload.commandId.trim(),
     fichaId: payload.fichaId.trim(),
     motivo,
+    expectedVersion,
     correlationId:
       typeof payload.correlationId === 'string' ? payload.correlationId.trim() : undefined,
-    payloadHash: calcularPayloadHashCancelarVoluntariado(payload.fichaId, motivo),
+    payloadHash: calcularPayloadHashCancelarVoluntariado(
+      payload.fichaId,
+      motivo,
+      expectedVersion,
+    ),
   };
 }

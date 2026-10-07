@@ -1,5 +1,29 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+
+import '../../ui/components/buttons.dart';
+import '../../ui/tokens.dart';
 import 'participacao_service.dart';
+
+/// Mensagem de erro segura ao usuário, sem vazar detalhes internos.
+String mapearErroCancelamento(Object erro) {
+  if (erro is FirebaseFunctionsException) {
+    switch (erro.code) {
+      case 'permission-denied':
+        return 'Você não tem autorização para cancelar.';
+      case 'not-found':
+        return 'Registro não encontrado.';
+      case 'failed-precondition':
+        return erro.message ?? 'A operação não é possível no estado atual.';
+      case 'invalid-argument':
+        return erro.message ?? 'Dados inválidos para a operação.';
+      case 'unavailable':
+      case 'deadline-exceeded':
+        return 'Falha de conexão. Tente novamente.';
+    }
+  }
+  return 'Não foi possível concluir a operação. Tente novamente.';
+}
 
 /// Diálogo acessível para confirmação de cancelamento de uma participação individual.
 ///
@@ -81,7 +105,7 @@ class _CancelarParticipacaoDialogState extends State<CancelarParticipacaoDialog>
       if (mounted) {
         setState(() {
           _enviando = false;
-          _erroMensagem = 'Falha ao cancelar: ${e.toString().replaceAll('Exception: ', '')}';
+          _erroMensagem = mapearErroCancelamento(e);
         });
       }
     }
@@ -89,16 +113,17 @@ class _CancelarParticipacaoDialogState extends State<CancelarParticipacaoDialog>
 
   @override
   Widget build(BuildContext context) {
-    const corPerigo = Color(0xFFEF4444);
-    const corPerigoBg = Color(0xFFFDECEC);
-    const corNavy900 = Color(0xFF0F172A);
-    const corGray600 = Color(0xFF475569);
+    const corPerigo = AppColors.danger;
+    const corPerigoBg = AppColors.dangerBg;
+    const corNavy900 = AppColors.navy900;
+    const corGray600 = AppColors.textSecondary;
+    const corPerigoEscuro = Color(0xFF991B1B);
 
     final width = MediaQuery.of(context).size.width;
     final isMobile = width < 600;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: AppGeometry.cardBorderRadius),
       backgroundColor: Colors.white,
       insetPadding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 40, vertical: 24),
       child: ConstrainedBox(
@@ -160,7 +185,7 @@ class _CancelarParticipacaoDialogState extends State<CancelarParticipacaoDialog>
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: corPerigoBg,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: AppGeometry.buttonBorderRadius,
                     border: Border.all(color: corPerigo.withValues(alpha: 0.3)),
                   ),
                   child: Text(
@@ -169,7 +194,7 @@ class _CancelarParticipacaoDialogState extends State<CancelarParticipacaoDialog>
                         : 'Atenção: Ao cancelar sua participação na equipe ${widget.participacao.nomeEquipe}, ela será encerrada imediatamente. Suas outras equipes permanecerão ativas.',
                     style: const TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF991B1B),
+                      color: corPerigoEscuro,
                       height: 1.4,
                     ),
                   ),
@@ -193,8 +218,8 @@ class _CancelarParticipacaoDialogState extends State<CancelarParticipacaoDialog>
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'Informe o motivo detalhado para fins de auditoria...',
-                      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      hintStyle: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      border: OutlineInputBorder(borderRadius: AppGeometry.inputBorderRadius),
                       contentPadding: const EdgeInsets.all(12),
                     ),
                     validator: (val) {
@@ -213,7 +238,7 @@ class _CancelarParticipacaoDialogState extends State<CancelarParticipacaoDialog>
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
                       color: corPerigoBg,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: AppGeometry.buttonBorderRadius,
                     ),
                     child: Text(
                       _erroMensagem!,
@@ -229,8 +254,9 @@ class _CancelarParticipacaoDialogState extends State<CancelarParticipacaoDialog>
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    TextButton(
+                    SecondaryButton(
                       key: const Key('btn_cancelar_modal_participacao'),
+                      label: 'Manter Equipe',
                       onPressed: _enviando
                           ? null
                           : () {
@@ -238,38 +264,12 @@ class _CancelarParticipacaoDialogState extends State<CancelarParticipacaoDialog>
                                 Navigator.of(context).pop(false);
                               }
                             },
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(100, 44),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                      child: const Text(
-                        'Manter Equipe',
-                        style: TextStyle(color: corGray600, fontWeight: FontWeight.w600),
-                      ),
                     ),
-                    ElevatedButton(
+                    DangerButton(
                       key: const Key('btn_confirmar_cancelamento_participacao'),
-                      onPressed: _enviando ? null : _submeter,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: corPerigo,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(140, 44),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: _enviando
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Text(
-                              'Confirmar Cancelamento',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
+                      label: 'Confirmar Cancelamento',
+                      isLoading: _enviando,
+                      onPressed: _submeter,
                     ),
                   ],
                 ),

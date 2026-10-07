@@ -167,6 +167,7 @@ describe('Story 4.3: Repositório de Cancelar Participação', () => {
               }
               return { empty: true, docs: [] };
             },
+            limit: () => queryObj,
           };
           return queryObj;
         },

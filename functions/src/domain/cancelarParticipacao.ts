@@ -7,6 +7,28 @@ export class SolicitacaoInvalidaError extends Error {
   }
 }
 
+/** Limites canônicos da justificativa interna (paridade cliente/servidor). */
+export const MOTIVO_MIN_CARACTERES = 5;
+export const MOTIVO_MAX_CARACTERES = 1000;
+
+/** Normaliza e valida a justificativa interna, se informada. */
+export function normalizarMotivo(motivo: unknown): string | undefined {
+  if (typeof motivo !== 'string') return undefined;
+  const limpo = motivo.trim();
+  if (limpo.length === 0) return undefined;
+  if (limpo.length < MOTIVO_MIN_CARACTERES) {
+    throw new SolicitacaoInvalidaError(
+      `Motivo deve ter no mínimo ${MOTIVO_MIN_CARACTERES} caracteres.`,
+    );
+  }
+  if (limpo.length > MOTIVO_MAX_CARACTERES) {
+    throw new SolicitacaoInvalidaError(
+      `Motivo deve ter no máximo ${MOTIVO_MAX_CARACTERES} caracteres.`,
+    );
+  }
+  return limpo;
+}
+
 export class ParticipacaoNaoEncontradaError extends Error {
   constructor(message = 'Participação não encontrada.') {
     super(message);
@@ -72,12 +94,14 @@ export interface ResultadoCancelarParticipacao {
 export function calcularPayloadHashCancelarParticipacao(
   participacaoId: string,
   motivo?: string,
+  expectedVersion?: number,
 ): string {
   return createHash('sha256')
     .update(
       JSON.stringify({
         participacaoId: participacaoId.trim(),
         motivo: motivo?.trim() ?? '',
+        expectedVersion: expectedVersion ?? null,
       }),
     )
     .digest('hex');
@@ -106,7 +130,7 @@ export function validarCancelarParticipacao(dados: unknown): EntradaCancelarPart
     throw new SolicitacaoInvalidaError('participacaoId é obrigatório.');
   }
 
-  const motivo = typeof payload.motivo === 'string' ? payload.motivo.trim() : undefined;
+  const motivo = normalizarMotivo(payload.motivo);
   const expectedVersion =
     typeof payload.expectedVersion === 'number' && Number.isInteger(payload.expectedVersion)
       ? payload.expectedVersion
@@ -119,6 +143,10 @@ export function validarCancelarParticipacao(dados: unknown): EntradaCancelarPart
     expectedVersion,
     correlationId:
       typeof payload.correlationId === 'string' ? payload.correlationId.trim() : undefined,
-    payloadHash: calcularPayloadHashCancelarParticipacao(payload.participacaoId, motivo),
+    payloadHash: calcularPayloadHashCancelarParticipacao(
+      payload.participacaoId,
+      motivo,
+      expectedVersion,
+    ),
   };
 }

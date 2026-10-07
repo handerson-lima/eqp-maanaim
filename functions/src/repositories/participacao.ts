@@ -46,6 +46,7 @@ function montarParticipacao(id: string, dados: Record<string, unknown>): Partici
     equipeId: String(dados.equipeId ?? ''),
     nomeEquipe: String(dados.nomeEquipe ?? ''),
     estado,
+    versao: Number(dados.versao ?? 1),
     ciclo: String(dados.ciclo ?? 'INICIAL'),
     proximaAcao,
     vigenciaInicio: serializarTimestamp(dados.vigenciaInicio),

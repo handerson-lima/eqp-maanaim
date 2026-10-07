@@ -56,11 +56,11 @@ development_status:
   3-4-comunicação-de-decisões-e-acompanhamento-por-público: done
   epic-3-retrospective: optional
 
-  epic-4: in-progress
+  epic-4: done
   4-1-consultar-ficha-participações-e-histórico-autorizado: done
   4-2-solicitar-equipe-adicional: done
   4-3-cancelar-participação-ou-voluntariado: done
-  4-4-solicitar-e-aprovar-reativação: backlog
+  4-4-solicitar-e-aprovar-reativação: done
   epic-4-retrospective: optional
 
   epic-5: backlog

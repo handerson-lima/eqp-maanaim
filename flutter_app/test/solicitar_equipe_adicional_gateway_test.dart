@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:eqp_maanaim/features/voluntario/ficha_service.dart';
 import 'package:eqp_maanaim/features/voluntario/participacao_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -104,6 +105,95 @@ void main() {
 
       final lista = await gateway.obterMinhasParticipacoes();
       expect(lista.any((p) => p.equipeId == 'equipe-som'), isTrue);
+    });
+  });
+
+  group('FirebaseParticipacaoGateway.cancelarParticipacao', () {
+    test('invoca o callable com commandId, participacaoId, motivo e expectedVersion',
+        () async {
+      final funcoes = _FuncoesFake();
+      final gateway = FirebaseParticipacaoGateway(funcoes);
+
+      await gateway.cancelarParticipacao(
+        participacaoId: 'part-1',
+        motivo: 'Justificativa interna',
+        expectedVersion: 4,
+        commandId: 'cmd-fixo-12345678',
+      );
+
+      expect(funcoes.nomesChamados, ['cancelarParticipacao']);
+      expect(funcoes.ultimoCallable!.ultimosParametros, {
+        'commandId': 'cmd-fixo-12345678',
+        'participacaoId': 'part-1',
+        'motivo': 'Justificativa interna',
+        'expectedVersion': 4,
+      });
+    });
+
+    test('omite motivo em branco e expectedVersion nulo', () async {
+      final funcoes = _FuncoesFake();
+      final gateway = FirebaseParticipacaoGateway(funcoes);
+
+      await gateway.cancelarParticipacao(
+        participacaoId: 'part-2',
+        motivo: '   ',
+        commandId: 'cmd-fixo-87654321',
+      );
+
+      expect(funcoes.ultimoCallable!.ultimosParametros, {
+        'commandId': 'cmd-fixo-87654321',
+        'participacaoId': 'part-2',
+      });
+    });
+
+    test('gera commandId opaco quando não informado', () async {
+      final funcoes = _FuncoesFake();
+      final gateway = FirebaseParticipacaoGateway(funcoes);
+
+      await gateway.cancelarParticipacao(participacaoId: 'part-3');
+
+      final commandId =
+          funcoes.ultimoCallable!.ultimosParametros!['commandId'] as String;
+      expect(commandId.length, greaterThanOrEqualTo(8));
+    });
+  });
+
+  group('FirebaseFichaGateway.cancelarVoluntariado', () {
+    test('invoca o callable com commandId, fichaId, motivo e expectedVersion',
+        () async {
+      final funcoes = _FuncoesFake();
+      final gateway = FirebaseFichaGateway(funcoes);
+
+      await gateway.cancelarVoluntariado(
+        fichaId: 'vol-01',
+        motivo: 'Encerramento a pedido',
+        expectedVersion: 7,
+        commandId: 'cmd-ficha-12345678',
+      );
+
+      expect(funcoes.nomesChamados, ['cancelarVoluntariado']);
+      expect(funcoes.ultimoCallable!.ultimosParametros, {
+        'commandId': 'cmd-ficha-12345678',
+        'fichaId': 'vol-01',
+        'motivo': 'Encerramento a pedido',
+        'expectedVersion': 7,
+      });
+    });
+
+    test('omite motivo em branco e expectedVersion nulo', () async {
+      final funcoes = _FuncoesFake();
+      final gateway = FirebaseFichaGateway(funcoes);
+
+      await gateway.cancelarVoluntariado(
+        fichaId: 'vol-02',
+        motivo: '',
+        commandId: 'cmd-ficha-87654321',
+      );
+
+      expect(funcoes.ultimoCallable!.ultimosParametros, {
+        'commandId': 'cmd-ficha-87654321',
+        'fichaId': 'vol-02',
+      });
     });
   });
 }

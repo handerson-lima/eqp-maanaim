@@ -41,7 +41,10 @@ export type EstadoParticipacao =
   | 'AGUARDANDO_RESPONSAVEL_EQUIPE'
   | 'AGUARDANDO_COORDENADOR'
   | 'ATIVA'
-  | 'REJEITADA';
+  | 'REJEITADA'
+  | 'CANCELADA'
+  | 'EXPIRADA'
+  | 'INATIVA';
 
 export const ESTADOS_PARTICIPACAO: readonly EstadoParticipacao[] = [
   'RASCUNHO',
@@ -50,6 +53,20 @@ export const ESTADOS_PARTICIPACAO: readonly EstadoParticipacao[] = [
   'AGUARDANDO_COORDENADOR',
   'ATIVA',
   'REJEITADA',
+  'CANCELADA',
+  'EXPIRADA',
+  'INATIVA',
+];
+
+/**
+ * Estados terminais canônicos de uma participação (AD-11). Fonte única usada
+ * pelo cancelamento e por qualquer fluxo que libere nova solicitação.
+ */
+export const ESTADOS_TERMINAIS_PARTICIPACAO: readonly string[] = [
+  'REJEITADA',
+  'CANCELADA',
+  'EXPIRADA',
+  'INATIVA',
 ];
 
 export function normalizarEstadoParticipacao(valor: unknown): EstadoParticipacao {
@@ -65,6 +82,7 @@ export interface ParticipacaoRascunho {
   equipeId: string;
   nomeEquipe: string;
   estado: EstadoParticipacao;
+  versao: number;
   ciclo: string;
   proximaAcao: string;
   vigenciaInicio?: string | null;
