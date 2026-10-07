@@ -21,6 +21,8 @@ import '../renovacao/dashboard_renovacao_service.dart';
 import '../renovacao/dashboard_renovacao_screen.dart';
 import '../auditoria/auditoria_service.dart';
 import '../auditoria/auditoria_relatorios_screen.dart';
+import '../privacidade/retencao_service.dart';
+import '../privacidade/conformidade_retencao_screen.dart';
 
 class _AbaAdmin {
   const _AbaAdmin({required this.item, required this.builder});
@@ -45,6 +47,7 @@ class AdminShell extends StatefulWidget {
     this.coordenador,
     this.dashboardRenovacao,
     this.auditoria,
+    this.retencao,
   });
 
   final VoidCallback onSair;
@@ -58,6 +61,7 @@ class AdminShell extends StatefulWidget {
   final CoordenadorGateway? coordenador;
   final DashboardRenovacaoGateway? dashboardRenovacao;
   final AuditoriaRelatoriosGateway? auditoria;
+  final RetencaoGateway? retencao;
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -201,6 +205,17 @@ class _AdminShellState extends State<AdminShell> {
       ),
       builder: () => AuditoriaRelatoriosScreen(
         gateway: widget.auditoria ?? MemoriaAuditoriaGateway(),
+        onSair: widget.onSair,
+      ),
+    ),
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Retenção e Privacidade',
+        icon: Icons.privacy_tip_outlined,
+        selectedIcon: Icons.privacy_tip,
+      ),
+      builder: () => ConformidadeRetencaoScreen(
+        gateway: widget.retencao ?? MemoriaRetencaoGateway(),
         onSair: widget.onSair,
       ),
     ),

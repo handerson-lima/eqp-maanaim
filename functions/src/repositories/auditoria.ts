@@ -8,6 +8,7 @@ import {
   type ResultadoProcessamentoOutbox,
   type ResultadoReconciliacao,
 } from '../domain/auditoria.js';
+import { mascararTexto, mensagemErroSegura, sanitizarErro, sanitizarPii } from '../domain/privacidade.js';
 
 /**
  * Emite ou atualiza um alerta operacional em `alertasOperacionais/:alertaId` (AD-8/AD-10).
@@ -17,9 +18,16 @@ export async function emitirAlertaOperacionalRepo(
   alerta: Omit<AlertaOperacional, 'criadoEm'>,
 ): Promise<void> {
   const alertaRef = db.collection('alertasOperacionais').doc(alerta.id);
+  // AD-12: alertas nunca carregam PII; motivo e detalhes passam pelo sanitizador canônico.
+  const motivoSeguro = mascararTexto(alerta.motivo);
+  const detalhesSeguros = alerta.detalhes
+    ? (sanitizarPii(alerta.detalhes) as Record<string, unknown>)
+    : undefined;
   await alertaRef.set(
     {
       ...alerta,
+      motivo: motivoSeguro,
+      ...(detalhesSeguros ? { detalhes: detalhesSeguros } : {}),
       criadoEm: FieldValue.serverTimestamp(),
     },
     { merge: true },
@@ -29,7 +37,7 @@ export async function emitirAlertaOperacionalRepo(
     tipo: alerta.tipo,
     severidade: alerta.severidade,
     commandId: alerta.commandId,
-    motivo: alerta.motivo,
+    motivo: motivoSeguro,
   });
 }
 
@@ -114,7 +122,7 @@ export async function processarEntradaAuditOutboxRepo(
 
     return { sucesso: true, commandId: id, jaProcessado: false };
   } catch (err: unknown) {
-    const mensagemErro = err instanceof Error ? err.message : String(err);
+    const mensagemErro = mensagemErroSegura(err);
     logger.error('Falha ao processar entrada de auditOutbox:', {
       commandId: id,
       erro: mensagemErro,
@@ -151,7 +159,7 @@ export async function processarEntradaAuditOutboxRepo(
         });
       }
     } catch (gravacaoErr) {
-      logger.error('Falha secundária ao registrar erro em auditOutbox:', gravacaoErr);
+      logger.error('Falha secundária ao registrar erro em auditOutbox:', sanitizarErro(gravacaoErr));
     }
 
     return { sucesso: false, commandId: id, jaProcessado: false, erro: mensagemErro };
@@ -250,7 +258,7 @@ export async function reconciliarAuditoriaRepo(
       }
     }
   } catch (errCmd) {
-    logger.warn('Aviso durante varredura de commands na reconciliação:', errCmd);
+    logger.warn('Aviso durante varredura de commands na reconciliação:', sanitizarErro(errCmd));
   }
 
   return {

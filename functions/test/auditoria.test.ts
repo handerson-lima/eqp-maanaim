@@ -43,21 +43,23 @@ describe('Story 6.1: Domínio, Orçamento Transacional e Sanitização de Audito
     expect(resBytes.motivo).toContain('Tamanho estimado da transação');
   });
 
-  it('sanitiza e mascara CPF em strings e metadados recursivos', () => {
+  it('sanitiza e mascara CPF em strings e remove chaves que denotam PII', () => {
     const entrada = {
       descricao: 'Decisão para o voluntário com CPF 123.456.789-00 aprovada.',
-      listaCpfs: ['987.654.321-99', '11122233344'],
+      lista: ['987.654.321-99', '11122233344'],
       aninhado: {
-        cpfFormatado: '123.456.789-10',
         observacao: 'Nada sensível aqui',
+        contato: 'voluntario@exemplo.com',
       },
     };
 
     const sanitizado = sanitizarDadoAuditoria(entrada) as typeof entrada;
     expect(sanitizado.descricao).toBe('Decisão para o voluntário com CPF ***.***.***-** aprovada.');
-    expect(sanitizado.listaCpfs[0]).toBe('***.***.***-**');
-    expect(sanitizado.aninhado.cpfFormatado).toBe('***.***.***-**');
+    expect(sanitizado.lista[0]).toBe('***.***.***-**');
+    expect(sanitizado.lista[1]).toBe('***.***.***-**');
     expect(sanitizado.aninhado.observacao).toBe('Nada sensível aqui');
+    // Chave `contato` (PII) é removida por minimização, não mascarada.
+    expect((sanitizado.aninhado as Record<string, unknown>).contato).toBeUndefined();
   });
 
   it('remove campos de senhas, tokens e chaves privadas da auditoria', () => {
@@ -121,10 +123,16 @@ describe('Story 6.1: Domínio, Orçamento Transacional e Sanitização de Audito
     expect(reg.antes).toEqual({ estado: 'AGUARDANDO_PASTOR_LOCAL' });
     expect(reg.depois).toEqual({ estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE' });
     expect(reg.metadados?.igrejaId).toBe('igreja-central');
-    expect(reg.metadados?.cpfVoluntario).toBe('***.***.***-**');
+    // Chaves que denotam PII são removidas por minimização (AD-12).
+    expect(reg.metadados?.cpfVoluntario).toBeUndefined();
     expect(reg.metadados?.tokenSessao).toBeUndefined();
     expect(reg.versaoSchema).toBe(1);
     expect(reg.sanitizado).toBe(true);
+    // Retenção probatória: criação + 5 anos em UTC.
+    expect(reg.retencaoAte).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(new Date(reg.retencaoAte).getUTCFullYear()).toBe(
+      new Date().getUTCFullYear() + 5,
+    );
   });
 
   it('valida parâmetros da callable de reconciliação de auditoria', () => {

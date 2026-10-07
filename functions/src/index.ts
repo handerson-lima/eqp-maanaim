@@ -47,3 +47,6 @@ export { consultarAuditoriaAutorizada } from './commands/consultarAuditoriaAutor
 export { consultarRelatorioOperacional } from './commands/consultarRelatorioOperacional.js';
 export { gerarPdfParticipacao } from './commands/gerarPdfParticipacao.js';
 export { obterUrlDownloadPdf } from './commands/obterUrlDownloadPdf.js';
+export { executarRotinaRetencao } from './commands/executarRotinaRetencao.js';
+export { consultarConformidadeRetencao } from './commands/consultarConformidadeRetencao.js';
+export { expurgarRascunhosScheduled } from './triggers/expurgarRascunhosScheduled.js';

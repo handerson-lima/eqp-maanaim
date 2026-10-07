@@ -42,6 +42,19 @@ export class ParticipacaoNaoAprovadaParaPdfError extends Error {
 }
 
 /**
+ * AD-12: uma ficha anonimizada não pode gerar novo PDF nem originar nova cópia
+ * com PII; os objetos já retidos permanecem sob a política de 5 anos.
+ */
+export class FichaAnonimizadaParaPdfError extends Error {
+  constructor(
+    mensagem = 'Ficha anonimizada não pode gerar novo termo em PDF.',
+  ) {
+    super(mensagem);
+    this.name = 'FichaAnonimizadaParaPdfError';
+  }
+}
+
+/**
  * Converte data ISO ou objeto Date para formato institucional por extenso.
  * Exemplo: "15 de outubro de 2026"
  */

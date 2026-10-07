@@ -9,6 +9,8 @@
  * 5. Toda operação de mutação crítica deve caber no orçamento transacional do Firestore (limite de 500 escritas).
  */
 
+import { calcularRetencaoAte, sanitizarPii } from './privacidade.js';
+
 export interface EntidadeReferenciada {
   tipo: string;
   id: string;
@@ -48,6 +50,8 @@ export interface RegistroAuditoria {
   materializadoEm: unknown;
   versaoSchema: number;
   sanitizado: boolean;
+  /** Fim da retenção probatória (criação + 5 anos, UTC) — AD-12. */
+  retencaoAte: string;
 }
 
 export type TipoAlertaOperacional =
@@ -123,55 +127,12 @@ export function validarOrcamentoTransacional(
   return { valido: true };
 }
 
-const CHAVES_SENSIVEIS_PROIBIDAS = new Set([
-  'senha',
-  'password',
-  'token',
-  'refreshtoken',
-  'secret',
-  'authorization',
-  'assinaturaprivada',
-  'privatekey',
-  'segredo',
-]);
-
-const REGEX_CPF_PADRAO = /\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g;
-
 /**
  * Sanitiza recursivamente qualquer payload destinado à coleção imutável `auditoria` (AD-8/AD-12).
- * Remove tokens, senhas e mascara qualquer CPF porventura presente em metadados.
+ * Delega ao sanitizador canônico: remove PII/segredos por chave e mascara CPF, e-mail e telefone.
  */
 export function sanitizarDadoAuditoria(valor: unknown): unknown {
-  if (valor === null || valor === undefined) {
-    return valor;
-  }
-
-  if (typeof valor === 'string') {
-    // Mascara qualquer CPF encontrado no texto
-    return valor.replace(REGEX_CPF_PADRAO, '***.***.***-**');
-  }
-
-  if (Array.isArray(valor)) {
-    return valor.map((item) => sanitizarDadoAuditoria(item));
-  }
-
-  if (typeof valor === 'object') {
-    const objSanitizado: Record<string, unknown> = {};
-    for (const [chave, val] of Object.entries(valor as Record<string, unknown>)) {
-      const chaveNormalizada = chave.toLowerCase().replace(/[_\s-]/g, '');
-      const ehSensivel = Array.from(CHAVES_SENSIVEIS_PROIBIDAS).some((s) =>
-        chaveNormalizada.includes(s),
-      );
-      if (ehSensivel) {
-        // Omite campos com segredos, tokens ou senhas
-        continue;
-      }
-      objSanitizado[chave] = sanitizarDadoAuditoria(val);
-    }
-    return objSanitizado;
-  }
-
-  return valor;
+  return sanitizarPii(valor);
 }
 
 /**
@@ -211,6 +172,7 @@ export function montarRegistroAuditoriaImutavel(
     materializadoEm,
     versaoSchema: 1,
     sanitizado: true,
+    retencaoAte: calcularRetencaoAte(new Date()),
   };
 }
 

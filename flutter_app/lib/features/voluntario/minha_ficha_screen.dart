@@ -22,6 +22,7 @@ import 'cancelar_participacao_dialog.dart';
 import 'cancelar_voluntariado_dialog.dart';
 import 'solicitar_reativacao_dialog.dart';
 import 'manifestar_renovacao_dialog.dart';
+import '../privacidade/politica_privacidade_card.dart';
 
 /// Tela responsiva mobile-first para o voluntário preencher e manter sua ficha cadastral permanente.
 class MinhaFichaScreen extends StatefulWidget {

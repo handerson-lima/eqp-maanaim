@@ -2,12 +2,14 @@ import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage';
 import {
   DadosPdfIncompletosError,
+  FichaAnonimizadaParaPdfError,
   ParticipacaoNaoAprovadaParaPdfError,
   gerarBufferPdfTermo,
   type DadosTermoPdf,
 } from '../domain/pdfTermo.js';
 import { AcessoNaoAutorizadoError } from '../domain/consultaHistorico.js';
 import { determinarEscopoAtor } from './consultaHistorico.js';
+import { calcularRetencaoAte } from '../domain/privacidade.js';
 
 export interface ContextoPdf {
   commandId?: string;
@@ -63,6 +65,11 @@ export async function extrairDadosCanonicosTermo(
     throw new AcessoNaoAutorizadoError();
   }
   const fData = fichaDoc.data() ?? {};
+
+  // AD-12: ficha anonimizada não origina novo PDF com PII.
+  if (fData.anonimizadaEm) {
+    throw new FichaAnonimizadaParaPdfError();
+  }
 
   // 2. Participação
   const partDoc = await db.collection('participacoes').doc(participacaoId).get();
@@ -277,15 +284,21 @@ export async function gerarPdfParticipacaoRepo(
   const bucket = bucketCustom ?? (getStorage().bucket() as unknown as StorageBucketLike);
   const file = bucket.file(caminhoStorage);
 
+  // Metadado de retenção probatória: criação + 5 anos em UTC (AD-12).
+  const retencaoAte = calcularRetencaoAte(new Date());
+
   await file.save(Buffer.from(pdfBytes), {
     contentType: 'application/pdf',
     metadata: {
-      fichaId,
-      participacaoId,
-      geradoEm: new Date().toISOString(),
-      versaoTermo: String(dados.versaoTermo ?? 1),
-      geradoPorUid: contexto.atorUid,
-      geradoPorPapel: escopo.papel,
+      metadata: {
+        fichaId,
+        participacaoId,
+        geradoEm: new Date().toISOString(),
+        versaoTermo: String(dados.versaoTermo ?? 1),
+        geradoPorUid: contexto.atorUid,
+        geradoPorPapel: escopo.papel,
+        retencaoAte,
+      },
     },
   });
 

@@ -23,6 +23,8 @@ import 'features/responsavel_equipe/responsavel_equipe_service.dart';
 import 'features/coordenador/coordenador_service.dart';
 import 'features/coordenador/fila_coordenador_screen.dart';
 import 'features/renovacao/dashboard_renovacao_service.dart';
+import 'features/auditoria/auditoria_service.dart';
+import 'features/privacidade/retencao_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,6 +93,8 @@ Future<void> main() async {
       responsavelEquipe: FirebaseResponsavelEquipeGateway(functions),
       coordenador: FirebaseCoordenadorGateway(functions),
       dashboardRenovacao: FirebaseDashboardRenovacaoGateway(functions),
+      auditoria: FirebaseAuditoriaGateway(functions),
+      retencao: CloudFunctionsRetencaoGateway(functions: functions),
     ),
   );
 }
@@ -121,6 +125,8 @@ class MaanaimApp extends StatelessWidget {
     this.responsavelEquipe,
     this.coordenador,
     this.dashboardRenovacao,
+    this.auditoria,
+    this.retencao,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -135,6 +141,8 @@ class MaanaimApp extends StatelessWidget {
   final ResponsavelEquipeGateway? responsavelEquipe;
   final CoordenadorGateway? coordenador;
   final DashboardRenovacaoGateway? dashboardRenovacao;
+  final AuditoriaRelatoriosGateway? auditoria;
+  final RetencaoGateway? retencao;
   @override
   Widget build(BuildContext c) => MaterialApp(
     title: 'Maanaim',
@@ -153,6 +161,8 @@ class MaanaimApp extends StatelessWidget {
       responsavelEquipe: responsavelEquipe,
       coordenador: coordenador,
       dashboardRenovacao: dashboardRenovacao,
+      auditoria: auditoria,
+      retencao: retencao,
     ),
   );
 }
@@ -175,6 +185,8 @@ class RaizSessao extends StatefulWidget {
     this.responsavelEquipe,
     this.coordenador,
     this.dashboardRenovacao,
+    this.auditoria,
+    this.retencao,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -189,6 +201,8 @@ class RaizSessao extends StatefulWidget {
   final ResponsavelEquipeGateway? responsavelEquipe;
   final CoordenadorGateway? coordenador;
   final DashboardRenovacaoGateway? dashboardRenovacao;
+  final AuditoriaRelatoriosGateway? auditoria;
+  final RetencaoGateway? retencao;
 
   @override
   State<RaizSessao> createState() => _RaizSessaoState();
@@ -267,6 +281,8 @@ class _RaizSessaoState extends State<RaizSessao> {
         responsavelEquipe: widget.responsavelEquipe,
         coordenador: widget.coordenador,
         dashboardRenovacao: widget.dashboardRenovacao,
+        auditoria: widget.auditoria,
+        retencao: widget.retencao,
       );
     },
   );
@@ -292,6 +308,8 @@ class AreaAutenticada extends StatefulWidget {
     this.responsavelEquipe,
     this.coordenador,
     this.dashboardRenovacao,
+    this.auditoria,
+    this.retencao,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -306,6 +324,8 @@ class AreaAutenticada extends StatefulWidget {
   final ResponsavelEquipeGateway? responsavelEquipe;
   final CoordenadorGateway? coordenador;
   final DashboardRenovacaoGateway? dashboardRenovacao;
+  final AuditoriaRelatoriosGateway? auditoria;
+  final RetencaoGateway? retencao;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -396,6 +416,8 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           responsavelEquipe: widget.responsavelEquipe,
           coordenador: widget.coordenador,
           dashboardRenovacao: widget.dashboardRenovacao,
+          auditoria: widget.auditoria,
+          retencao: widget.retencao,
         );
       }
       if (perfil == _PerfilAcesso.coordenador && widget.coordenador != null) {

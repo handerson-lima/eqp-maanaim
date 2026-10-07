@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-28-2026 22:53
-last_updated: 10-07-2026 05:36
+last_updated: 10-07-2026 19:51
 project: eqp_maanaim
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
@@ -74,7 +74,7 @@ development_status:
   6-1-registrar-e-reconciliar-evidência-auditoria-imutável: done
   6-2-consultar-auditoria-e-relatórios-autorizados: done
   6-3-gerar-e-entregar-pdf-privado-da-ficha: done
-  6-4-aplicar-retenção-minimização-e-controles-operacionais-de-dad: backlog
+  6-4-aplicar-retenção-minimização-e-controles-operacionais-de-dad: in-progress
   6-5-acesso-inclusivo-e-responsivo-às-superfícies-do-voluntariado: backlog
   6-6-verificar-segurança-índices-e-ambientes-firebase: backlog
   epic-6-retrospective: optional

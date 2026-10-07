@@ -7,7 +7,7 @@ import {
   ComandoDivergenteError,
   ConflitoVersaoError,
   IgrejaInvalidaError,
-  calcularDiffFicha,
+  calcularCamposAlterados,
   type EntradaSalvarMinhaFicha,
   type FichaPermanente,
 } from '../domain/ficha.js';
@@ -159,7 +159,7 @@ export async function salvarMinhaFichaRepo(
     const novaVersao = versaoAnterior + 1;
     const estadoFicha = dadosAtuais ? String(dadosAtuais.estado ?? 'RASCUNHO') : 'RASCUNHO';
 
-    const diff = calcularDiffFicha(dadosAtuais, entrada);
+    const camposAlterados = calcularCamposAlterados(dadosAtuais, entrada);
     const acaoAuditoria = dadosAtuais ? 'FICHA_ATUALIZADA' : 'FICHA_CRIADA';
 
     const novosDadosFicha: Record<string, unknown> = {
@@ -199,7 +199,7 @@ export async function salvarMinhaFichaRepo(
       actorUid: contexto.uid,
       action: acaoAuditoria,
       fichaId: contexto.uid,
-      diff,
+      camposAlterados,
       estadoFicha,
       versao: novaVersao,
       criadoEm: FieldValue.serverTimestamp(),

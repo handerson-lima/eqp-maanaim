@@ -404,6 +404,9 @@ describe('Repositório de Ficha Permanente (ficha.ts)', () => {
 
     const outboxSet = setCalls.find((c) => c.ref.col === 'auditOutbox');
     expect(outboxSet.data.action).toBe('FICHA_ATUALIZADA');
-    expect(outboxSet.data.diff.nomeCompleto).toBeDefined();
+    expect(outboxSet.data.camposAlterados).toContain('nomeCompleto');
+    expect(outboxSet.data.diff).toBeUndefined();
+    expect(JSON.stringify(outboxSet.data)).not.toContain(entrada.nomeCompleto);
+    expect(JSON.stringify(outboxSet.data)).not.toContain(entrada.cpf);
   });
 });

@@ -8,6 +8,7 @@ import {
 import { AcessoNaoAutorizadoError } from '../domain/consultaHistorico.js';
 import {
   DadosPdfIncompletosError,
+  FichaAnonimizadaParaPdfError,
   ParticipacaoNaoAprovadaParaPdfError,
 } from '../domain/pdfTermo.js';
 
@@ -94,6 +95,9 @@ export const gerarPdfParticipacao = onCall(
           'failed-precondition',
           error.message,
         );
+      }
+      if (error instanceof FichaAnonimizadaParaPdfError) {
+        throw new HttpsError('failed-precondition', error.message);
       }
       if (error instanceof HttpsError) {
         throw error;

@@ -237,3 +237,14 @@ export function calcularDiffFicha(
 
   return diff;
 }
+
+/**
+ * AD-12: auditoria e outbox nunca recebem valores cadastrais (nome, CPF, profissão).
+ * Apenas os NOMES dos campos alterados são registrados.
+ */
+export function calcularCamposAlterados(
+  anterior: Record<string, unknown> | null,
+  novo: EntradaSalvarMinhaFicha,
+): string[] {
+  return Object.keys(calcularDiffFicha(anterior, novo));
+}

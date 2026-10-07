@@ -7,6 +7,14 @@
         { "fieldPath": "estado", "order": "ASCENDING" },
         { "fieldPath": "vigenciaFim", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "fichas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "atualizadoEm", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

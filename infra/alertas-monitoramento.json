@@ -1,0 +1,107 @@
+{
+  "versao": "1.0",
+  "politica": "AD-12_V1",
+  "descricao": "Alertas operacionais de segurança e ambiente. Contas de serviço com menor privilégio; alterações de IAM, Rules, conta de serviço, deleções e falha de backup são monitoradas por Cloud Audit Logs.",
+  "policies": [
+    {
+      "categoria": "IAM",
+      "displayName": "Maanaim - Alteracao de IAM",
+      "documentation": {
+        "content": "Qualquer alteracao de politica de IAM no projeto deve ser revisada pela coordenacao de TI."
+      },
+      "conditions": [
+        {
+          "displayName": "SetIamPolicy detectado",
+          "conditionMatchedLog": {
+            "filter": "protoPayload.methodName=\"google.iam.admin.v1.SetIamPolicy\" OR protoPayload.methodName=\"google.cloud.iam.v1.SetIamPolicy\""
+          }
+        }
+      ],
+      "combiner": "OR",
+      "alertStrategy": {
+        "autoClose": "604800s"
+      },
+      "severity": "ERROR"
+    },
+    {
+      "categoria": "RULES",
+      "displayName": "Maanaim - Alteracao de Firestore/Storage Rules",
+      "documentation": {
+        "content": "Alteracoes de regras de seguranca do Firestore ou Storage exigem revisao imediata."
+      },
+      "conditions": [
+        {
+          "displayName": "Alteracao de Rules detectada",
+          "conditionMatchedLog": {
+            "filter": "protoPayload.methodName=\"google.firebase.rules.v1.RulesService.UpdateRuleset\" OR protoPayload.methodName=\"google.firebase.rules.v1.RulesService.CreateRuleset\""
+          }
+        }
+      ],
+      "combiner": "OR",
+      "alertStrategy": {
+        "autoClose": "604800s"
+      },
+      "severity": "ERROR"
+    },
+    {
+      "categoria": "SERVICE_ACCOUNT",
+      "displayName": "Maanaim - Alteracao de Conta de Servico",
+      "documentation": {
+        "content": "Criacao, alteracao de papeis ou remocao de contas de servico deve ser auditada (menor privilegio)."
+      },
+      "conditions": [
+        {
+          "displayName": "Alteracao de conta de servico detectada",
+          "conditionMatchedLog": {
+            "filter": "protoPayload.methodName=\"google.iam.admin.v1.CreateServiceAccount\" OR protoPayload.methodName=\"google.iam.admin.v1.UpdateServiceAccount\" OR protoPayload.methodName=\"google.iam.admin.v1.DeleteServiceAccount\""
+          }
+        }
+      ],
+      "combiner": "OR",
+      "alertStrategy": {
+        "autoClose": "604800s"
+      },
+      "severity": "WARNING"
+    },
+    {
+      "categoria": "DELETION",
+      "displayName": "Maanaim - Delecao de Documento ou Objeto",
+      "documentation": {
+        "content": "Delecoes de documentos Firestore ou objetos Storage exigem verificacao (retencao de 5 anos)."
+      },
+      "conditions": [
+        {
+          "displayName": "Delecao detectada",
+          "conditionMatchedLog": {
+            "filter": "protoPayload.methodName=\"google.firestore.v1.FirestoreAdmin.DeleteDocumentBatch\" OR protoPayload.methodName=\"storage.objects.delete\""
+          }
+        }
+      ],
+      "combiner": "OR",
+      "alertStrategy": {
+        "autoClose": "604800s"
+      },
+      "severity": "WARNING"
+    },
+    {
+      "categoria": "BACKUP_FAILURE",
+      "displayName": "Maanaim - Falha de Backup do Firestore",
+      "documentation": {
+        "content": "Falhas de backup agendado/exportacao do Firestore devem ser tratadas dentro do prazo de retencao."
+      },
+      "conditions": [
+        {
+          "displayName": "Falha de backup detectada",
+          "conditionMatchedLog": {
+            "filter": "protoPayload.methodName=\"google.firestore.admin.v1.FirestoreAdmin.ExportDocuments\" AND severity>=ERROR"
+          }
+        }
+      ],
+      "combiner": "OR",
+      "alertStrategy": {
+        "autoClose": "604800s"
+      },
+      "severity": "ERROR"
+    }
+  ]
+}
