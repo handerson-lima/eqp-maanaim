@@ -41,3 +41,7 @@ export { decidirCicloAnualPastor } from './commands/decidirCicloAnualPastor.js';
 export { decidirCicloAnualResponsavel } from './commands/decidirCicloAnualResponsavel.js';
 export { concluirCicloAnualCoordenador } from './commands/concluirCicloAnualCoordenador.js';
 export { obterDashboardRenovacao } from './commands/obterDashboardRenovacao.js';
+export { processarAuditOutbox, reconciliarAuditoriaScheduled } from './triggers/auditoria.js';
+export { reconciliarAuditoria } from './commands/reconciliarAuditoria.js';
+export { consultarAuditoriaAutorizada } from './commands/consultarAuditoriaAutorizada.js';
+export { consultarRelatorioOperacional } from './commands/consultarRelatorioOperacional.js';

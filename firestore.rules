@@ -34,6 +34,26 @@ service cloud.firestore {
       }
     }
 
+    // Recibos determinísticos (commands), fila transacional de eventos (auditOutbox),
+    // auditoria imutável append-only (auditoria) e alertas operacionais são geridos
+    // exclusivamente por Cloud Functions com credenciais de serviço (AD-8, AD-9 e AD-12).
+    // O cliente e administradores nunca lêem ou escrevem diretamente nestas coleções.
+    match /commands/{commandId} {
+      allow read, write: if false;
+    }
+
+    match /auditOutbox/{commandId} {
+      allow read, write: if false;
+    }
+
+    match /auditoria/{commandId} {
+      allow read, write: if false;
+    }
+
+    match /alertasOperacionais/{alertaId} {
+      allow read, write: if false;
+    }
+
     // A ficha (com CPF e demais PII), recibos, auditoria e qualquer outro
     // agregado nunca são lidos ou gravados diretamente pelo cliente: o estado
     // permitido é devolvido exclusivamente por Cloud Function autenticada.

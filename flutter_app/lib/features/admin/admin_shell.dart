@@ -19,6 +19,8 @@ import '../coordenador/fila_coordenador_screen.dart';
 import '../coordenador/coordenador_service.dart';
 import '../renovacao/dashboard_renovacao_service.dart';
 import '../renovacao/dashboard_renovacao_screen.dart';
+import '../auditoria/auditoria_service.dart';
+import '../auditoria/auditoria_relatorios_screen.dart';
 
 class _AbaAdmin {
   const _AbaAdmin({required this.item, required this.builder});
@@ -42,6 +44,7 @@ class AdminShell extends StatefulWidget {
     this.responsavelEquipe,
     this.coordenador,
     this.dashboardRenovacao,
+    this.auditoria,
   });
 
   final VoidCallback onSair;
@@ -54,6 +57,7 @@ class AdminShell extends StatefulWidget {
   final ResponsavelEquipeGateway? responsavelEquipe;
   final CoordenadorGateway? coordenador;
   final DashboardRenovacaoGateway? dashboardRenovacao;
+  final AuditoriaRelatoriosGateway? auditoria;
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -186,6 +190,17 @@ class _AdminShellState extends State<AdminShell> {
                 : (widget.responsavelEquipe != null
                     ? PapelDashboard.responsavelEquipe
                     : PapelDashboard.voluntario)),
+        onSair: widget.onSair,
+      ),
+    ),
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Auditoria & Relatórios',
+        icon: Icons.history_edu_outlined,
+        selectedIcon: Icons.history_edu,
+      ),
+      builder: () => AuditoriaRelatoriosScreen(
+        gateway: widget.auditoria ?? MemoriaAuditoriaGateway(),
         onSair: widget.onSair,
       ),
     ),

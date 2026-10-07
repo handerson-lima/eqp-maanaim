@@ -351,4 +351,23 @@ describe('contratos de segurança executáveis', () => {
     expect(coordenadorService).toContain("httpsCallable('decidirAtivacaoCoordenador')");
     expect(domainDecisaoCoordenador).toContain('MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA');
   });
+
+  it('impõe imutabilidade estrita e isolamento privilegiado para auditoria, outbox e commands (AD-8, AD-9 e AD-12)', () => {
+    // Regras do Firestore proíbem leitura e escrita direta de cliente em commands, auditOutbox, auditoria e alertasOperacionais
+    expect(regras).toContain('match /commands/{commandId} {\n      allow read, write: if false;\n    }');
+    expect(regras).toContain('match /auditOutbox/{commandId} {\n      allow read, write: if false;\n    }');
+    expect(regras).toContain('match /auditoria/{commandId} {\n      allow read, write: if false;\n    }');
+    expect(regras).toContain('match /alertasOperacionais/{alertaId} {\n      allow read, write: if false;\n    }');
+
+    // Exports das rotinas privilegiadas de auditoria e reconciliação
+    expect(index).toContain('export { processarAuditOutbox, reconciliarAuditoriaScheduled } from \'./triggers/auditoria.js\';');
+    expect(index).toContain('export { reconciliarAuditoria } from \'./commands/reconciliarAuditoria.js\';');
+
+    // Validação de segurança no comando de reconciliação
+    const cmdReconciliar = readFileSync(join(raiz, 'functions', 'src', 'commands', 'reconciliarAuditoria.ts'), 'utf8');
+    expect(cmdReconciliar).toContain('enforceAppCheck: true');
+    expect(cmdReconciliar).toContain('if (!request.auth)');
+    expect(cmdReconciliar).toContain('validarAutoridadeCoordenador');
+  });
 });
+

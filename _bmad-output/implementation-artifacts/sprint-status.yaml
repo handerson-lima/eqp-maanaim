@@ -70,9 +70,9 @@ development_status:
   5-4-exibir-dashboards-de-renovação-por-papel: done
   epic-5-retrospective: optional
 
-  epic-6: backlog
-  6-1-registrar-e-reconciliar-evidência-auditoria-imutável: backlog
-  6-2-consultar-auditoria-e-relatórios-autorizados: backlog
+  epic-6: in-progress
+  6-1-registrar-e-reconciliar-evidência-auditoria-imutável: done
+  6-2-consultar-auditoria-e-relatórios-autorizados: done
   6-3-gerar-e-entregar-pdf-privado-da-ficha: backlog
   6-4-aplicar-retenção-minimização-e-controles-operacionais-de-dad: backlog
   6-5-acesso-inclusivo-e-responsivo-às-superfícies-do-voluntariado: backlog
