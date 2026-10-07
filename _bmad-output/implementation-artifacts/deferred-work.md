@@ -107,3 +107,7 @@
 ## Deferred from: code review of story-5.1-calcular-vigencia-anual-e-alertas-de-renovacao (2026-10-07)
 
 - Job de expiração processa uma transação por participação (`functions/src/repositories/expirarCiclo.ts`): aumento de latência proporcional ao volume e aplicação parcial em caso de falha no meio do lote (recuperável por reexecução idempotente). Reestruturar para lote/claims atômicos é mudança maior, deferida.
+
+## Deferred from: code review of spec-6-4-aplicar-retencao-minimizacao-e-controles-operacionais-de-dados (2026-10-07)
+
+- Filtros das políticas de `infra/alertas-monitoramento.json` podem não corresponder aos nomes reais de método dos Cloud Audit Logs (ex.: `google.firestore.v1.FirestoreAdmin.DeleteDocumentBatch`, `storage.objects.delete` depende de Data Access logs, normalmente desabilitados; `ExportDocuments AND severity>=ERROR` pode não capturar falha de exportação), e o habilitar dos Data Access logs não está documentado. Marca maybe-false: validar no ambiente GCP (habilitar Data Access logs e forçar cada evento) settle se cada alerta dispara; se verdadeiro, severidade medium/high (controle ineficaz).
