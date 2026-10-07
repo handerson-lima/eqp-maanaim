@@ -235,15 +235,20 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
 
     try {
       final commandId = comandoOpaco();
-      await widget.gateway.decidirFicha(
-        EntradaDecisaoPastor(
-          commandId: commandId,
-          fichaId: item.fichaId,
-          decisao: decisao,
-          justificativa: justificativa,
-          expectedVersion: item.versao,
-        ),
+      final entrada = EntradaDecisaoPastor(
+        commandId: commandId,
+        fichaId: item.fichaId,
+        cicloId: item.cicloId,
+        decisao: decisao,
+        justificativa: justificativa,
+        expectedVersion: item.versao,
       );
+
+      if (item.isRenovacaoAnual) {
+        await widget.gateway.decidirCicloAnual(entrada);
+      } else {
+        await widget.gateway.decidirFicha(entrada);
+      }
 
       if (!mounted) return;
 
@@ -488,7 +493,32 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.s8),
+              if (item.isRenovacaoAnual) ...[
+                Container(
+                  key: Key('badgeRenovacaoAnual_${item.fichaId}'),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.blue50,
+                    border: Border.all(color: AppColors.blue600),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.autorenew_rounded, size: 14, color: AppColors.blue600),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Ciclo Anual ${item.ano}',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.blue600,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s8),
+              ],
               const StatusChip(
                 status: 'AGUARDANDO',
                 label: 'AGUARDANDO AVALIAÇÃO',

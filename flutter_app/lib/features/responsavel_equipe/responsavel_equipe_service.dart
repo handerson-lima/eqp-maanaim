@@ -15,6 +15,9 @@ class ItemFilaResponsavelEquipe {
     required this.proximaAcao,
     required this.versao,
     required this.enviadoEm,
+    this.isRenovacaoAnual = false,
+    this.cicloId,
+    this.anoVigencia,
   });
 
   final String participacaoId;
@@ -29,8 +32,15 @@ class ItemFilaResponsavelEquipe {
   final String proximaAcao;
   final int versao;
   final String enviadoEm;
+  final bool isRenovacaoAnual;
+  final String? cicloId;
+  final int? anoVigencia;
 
   factory ItemFilaResponsavelEquipe.fromMap(Map<String, dynamic> map) {
+    final isRenovacao = map['isRenovacaoAnual'] == true ||
+        (map['tipo'] ?? '').toString() == 'RENOVACAO_ANUAL' ||
+        (map['proximaAcao'] ?? '').toString().contains('Ciclo Anual');
+
     return ItemFilaResponsavelEquipe(
       participacaoId: (map['participacaoId'] ?? map['id'] ?? '').toString(),
       fichaId: (map['fichaId'] ?? '').toString(),
@@ -44,6 +54,9 @@ class ItemFilaResponsavelEquipe {
       proximaAcao: (map['proximaAcao'] ?? 'Aguardando avaliação do Responsável de Equipe').toString(),
       versao: map['versao'] is num ? (map['versao'] as num).toInt() : 1,
       enviadoEm: (map['enviadoEm'] ?? '').toString(),
+      isRenovacaoAnual: isRenovacao,
+      cicloId: map['cicloId']?.toString(),
+      anoVigencia: map['anoVigencia'] is num ? (map['anoVigencia'] as num).toInt() : null,
     );
   }
 
@@ -112,6 +125,7 @@ class EntradaDecidirParticipacaoResponsavel {
     required this.decisao,
     this.justificativa,
     required this.expectedVersion,
+    this.cicloId,
   });
 
   final String commandId;
@@ -120,11 +134,13 @@ class EntradaDecidirParticipacaoResponsavel {
   final String decisao; // 'APROVADO' | 'DESFAVORAVEL'
   final String? justificativa;
   final int expectedVersion;
+  final String? cicloId;
 
   Map<String, dynamic> toMap() => {
         'commandId': commandId,
         if (correlationId != null) 'correlationId': correlationId,
         'participacaoId': participacaoId,
+        if (cicloId != null) 'cicloId': cicloId,
         'decisao': decisao,
         if (justificativa != null) 'justificativa': justificativa,
         'expectedVersion': expectedVersion,
@@ -158,7 +174,7 @@ class ResultadoDecisaoResponsavelEquipe {
       repetido: map['repetido'] == true,
       participacaoId: (map['participacaoId'] ?? '').toString(),
       decisao: (map['decisao'] ?? '').toString(),
-      estado: (map['estado'] ?? '').toString(),
+      estado: (map['estado'] ?? map['estadoCiclo'] ?? '').toString(),
       versao: map['versao'] is num ? (map['versao'] as num).toInt() : 1,
       proximaAcao: (map['proximaAcao'] ?? '').toString(),
       decididoEm: (map['decididoEm'] ?? '').toString(),
@@ -169,6 +185,9 @@ class ResultadoDecisaoResponsavelEquipe {
 abstract class ResponsavelEquipeGateway {
   Future<ResultadoFilaResponsavelEquipe> obterFila();
   Future<ResultadoDecisaoResponsavelEquipe> decidirParticipacao(
+    EntradaDecidirParticipacaoResponsavel entrada,
+  );
+  Future<ResultadoDecisaoResponsavelEquipe> decidirCicloAnual(
     EntradaDecidirParticipacaoResponsavel entrada,
   );
 }
@@ -209,6 +228,17 @@ class FirebaseResponsavelEquipeGateway implements ResponsavelEquipeGateway {
   ) async {
     final callable =
         _functions.httpsCallable('decidirParticipacaoResponsavelEquipe');
+    final response =
+        await callable.call<Map<String, dynamic>>(entrada.toMap());
+    return ResultadoDecisaoResponsavelEquipe.fromMap(response.data);
+  }
+
+  @override
+  Future<ResultadoDecisaoResponsavelEquipe> decidirCicloAnual(
+    EntradaDecidirParticipacaoResponsavel entrada,
+  ) async {
+    final callable =
+        _functions.httpsCallable('decidirCicloAnualResponsavel');
     final response =
         await callable.call<Map<String, dynamic>>(entrada.toMap());
     return ResultadoDecisaoResponsavelEquipe.fromMap(response.data);
@@ -274,5 +304,12 @@ class MemoriaResponsavelEquipeGateway implements ResponsavelEquipeGateway {
       proximaAcao: proximaAcao,
       decididoEm: DateTime.now().toUtc().toIso8601String(),
     );
+  }
+
+  @override
+  Future<ResultadoDecisaoResponsavelEquipe> decidirCicloAnual(
+    EntradaDecidirParticipacaoResponsavel entrada,
+  ) async {
+    return decidirParticipacao(entrada);
   }
 }

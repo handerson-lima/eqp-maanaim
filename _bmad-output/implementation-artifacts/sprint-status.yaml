@@ -66,7 +66,7 @@ development_status:
   epic-5: in-progress
   5-1-calcular-vigência-anual-e-alertas-de-renovação: done
   5-2-manifestar-interesse-de-renovação-por-equipe: done
-  5-3-processar-aprovação-e-conclusão-do-ciclo-anual: backlog
+  5-3-processar-aprovação-e-conclusão-do-ciclo-anual: done
   5-4-exibir-dashboards-de-renovação-por-papel: backlog
   epic-5-retrospective: optional
 

@@ -37,3 +37,6 @@ export { solicitarReativacao } from './commands/solicitarReativacao.js';
 export { expirarCiclosVencidos } from './commands/expirarCiclo.js';
 export { expirarCiclosScheduled } from './triggers/expirarCicloScheduled.js';
 export { manifestarRenovacao } from './commands/manifestarRenovacao.js';
+export { decidirCicloAnualPastor } from './commands/decidirCicloAnualPastor.js';
+export { decidirCicloAnualResponsavel } from './commands/decidirCicloAnualResponsavel.js';
+export { concluirCicloAnualCoordenador } from './commands/concluirCicloAnualCoordenador.js';

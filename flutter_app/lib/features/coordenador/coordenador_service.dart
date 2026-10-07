@@ -12,6 +12,9 @@ class ParticipacaoItemCoordenador {
     this.responsavelDecididoEm,
     this.justificativaResponsavel,
     required this.elegivelAtivacao,
+    this.isRenovacaoAnual = false,
+    this.cicloId,
+    this.anoVigencia,
   });
 
   final String participacaoId;
@@ -23,9 +26,16 @@ class ParticipacaoItemCoordenador {
   final String? responsavelDecididoEm;
   final String? justificativaResponsavel;
   final bool elegivelAtivacao;
+  final bool isRenovacaoAnual;
+  final String? cicloId;
+  final int? anoVigencia;
 
   factory ParticipacaoItemCoordenador.fromMap(Map<String, dynamic> map) {
     final estadoStr = (map['estado'] ?? '').toString();
+    final isRenovacao = map['isRenovacaoAnual'] == true ||
+        (map['tipo'] ?? '').toString() == 'RENOVACAO_ANUAL' ||
+        (map['proximaAcao'] ?? '').toString().contains('Ciclo Anual');
+
     return ParticipacaoItemCoordenador(
       participacaoId: (map['participacaoId'] ?? map['id'] ?? '').toString(),
       equipeId: (map['equipeId'] ?? '').toString(),
@@ -36,6 +46,9 @@ class ParticipacaoItemCoordenador {
       responsavelDecididoEm: map['responsavelDecididoEm']?.toString(),
       justificativaResponsavel: map['justificativaResponsavel']?.toString(),
       elegivelAtivacao: map['elegivelAtivacao'] == true,
+      isRenovacaoAnual: isRenovacao,
+      cicloId: map['cicloId']?.toString(),
+      anoVigencia: map['anoVigencia'] is num ? (map['anoVigencia'] as num).toInt() : null,
     );
   }
 }
@@ -68,6 +81,18 @@ class ItemFilaCoordenador {
   final String? pastorLocalNome;
   final String? pastorLocalDecididoEm;
   final List<ParticipacaoItemCoordenador> participacoes;
+
+  bool get isRenovacaoAnual => participacoes.any((p) => p.isRenovacaoAnual);
+
+  String? get cicloId => participacoes
+      .where((p) => p.isRenovacaoAnual && p.cicloId != null)
+      .map((p) => p.cicloId)
+      .firstOrNull;
+
+  int? get anoVigencia => participacoes
+      .where((p) => p.isRenovacaoAnual && p.anoVigencia != null)
+      .map((p) => p.anoVigencia)
+      .firstOrNull;
 
   List<ParticipacaoItemCoordenador> get participacoesElegiveis =>
       participacoes.where((p) => p.elegivelAtivacao).toList();
@@ -163,6 +188,17 @@ abstract interface class CoordenadorGateway {
     String? observacao,
     required int expectedVersion,
   });
+
+  Future<ResultadoDecisaoCoordenador> concluirCicloAnual({
+    required String commandId,
+    String? correlationId,
+    required String cicloId,
+    required String decisao,
+    required bool confirmouReuniaoPastores,
+    String? observacao,
+    String? justificativa,
+    int? expectedVersion,
+  });
 }
 
 class FirebaseCoordenadorGateway implements CoordenadorGateway {
@@ -201,6 +237,32 @@ class FirebaseCoordenadorGateway implements CoordenadorGateway {
       'confirmouReuniaoPastores': confirmouReuniaoPastores,
       if (observacao != null) 'observacao': observacao,
       'expectedVersion': expectedVersion,
+    });
+    final dados = resp.data.cast<String, dynamic>();
+    return ResultadoDecisaoCoordenador.fromMap(dados);
+  }
+
+  @override
+  Future<ResultadoDecisaoCoordenador> concluirCicloAnual({
+    required String commandId,
+    String? correlationId,
+    required String cicloId,
+    required String decisao,
+    required bool confirmouReuniaoPastores,
+    String? observacao,
+    String? justificativa,
+    int? expectedVersion,
+  }) async {
+    final callable = _functions.httpsCallable('concluirCicloAnualCoordenador');
+    final resp = await callable.call<Map<dynamic, dynamic>>({
+      'commandId': commandId,
+      if (correlationId != null) 'correlationId': correlationId,
+      'cicloId': cicloId,
+      'decisao': decisao,
+      'confirmouReuniaoPastores': confirmouReuniaoPastores,
+      if (observacao != null) 'observacao': observacao,
+      if (justificativa != null) 'justificativa': justificativa,
+      if (expectedVersion != null) 'expectedVersion': expectedVersion,
     });
     final dados = resp.data.cast<String, dynamic>();
     return ResultadoDecisaoCoordenador.fromMap(dados);
@@ -290,6 +352,63 @@ class MemoriaCoordenadorGateway implements CoordenadorGateway {
       versaoFicha: item.versaoFicha + 1,
       participacoesAtivadas: ativadas,
       participacoesRejeitadas: rejeitadas,
+      vigenciaInicio: decisao == 'APROVADO' ? inicioIso : null,
+      vigenciaFim: decisao == 'APROVADO' ? fimIso : null,
+      decididoEm: inicioIso,
+    );
+  }
+
+  @override
+  Future<ResultadoDecisaoCoordenador> concluirCicloAnual({
+    required String commandId,
+    String? correlationId,
+    required String cicloId,
+    required String decisao,
+    required bool confirmouReuniaoPastores,
+    String? observacao,
+    String? justificativa,
+    int? expectedVersion,
+  }) async {
+    if (erroAoDecidir != null) throw erroAoDecidir!;
+    if (decisao == 'APROVADO' && !confirmouReuniaoPastores) {
+      throw Exception('É obrigatório confirmar a reunião de pastores.');
+    }
+    final agora = DateTime.now().toUtc();
+    final inicioIso = agora.toIso8601String();
+    final fimIso = DateTime.utc(
+      agora.year + 1,
+      agora.month,
+      agora.day,
+      agora.hour,
+      agora.minute,
+      agora.second,
+    ).toIso8601String();
+
+    historicoDecisoes.add({
+      'commandId': commandId,
+      'cicloId': cicloId,
+      'decisao': decisao,
+      'confirmouReuniaoPastores': confirmouReuniaoPastores,
+      'observacao': observacao ?? justificativa,
+    });
+
+    final index = _pendencias.indexWhere(
+      (p) => p.cicloId == cicloId || p.participacoes.any((part) => part.cicloId == cicloId),
+    );
+    ItemFilaCoordenador? item;
+    if (index >= 0) {
+      item = _pendencias.removeAt(index);
+    }
+
+    return ResultadoDecisaoCoordenador(
+      sucesso: true,
+      repetido: false,
+      fichaId: item?.fichaId ?? 'ficha_renovacao',
+      decisao: decisao,
+      estadoFicha: 'ATIVA',
+      versaoFicha: item != null ? item.versaoFicha + 1 : 2,
+      participacoesAtivadas: decisao == 'APROVADO' ? ['part-1'] : [],
+      participacoesRejeitadas: decisao == 'DESFAVORAVEL' ? ['part-1'] : [],
       vigenciaInicio: decisao == 'APROVADO' ? inicioIso : null,
       vigenciaFim: decisao == 'APROVADO' ? fimIso : null,
       decididoEm: inicioIso,

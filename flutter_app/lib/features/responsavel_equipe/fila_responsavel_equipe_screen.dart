@@ -253,15 +253,18 @@ class _FilaResponsavelEquipeScreenState
     final commandId = _gerarCommandId();
 
     try {
-      final res = await widget.gateway.decidirParticipacao(
-        EntradaDecidirParticipacaoResponsavel(
-          commandId: commandId,
-          participacaoId: item.participacaoId,
-          decisao: decisao,
-          justificativa: justificativa,
-          expectedVersion: item.versao,
-        ),
+      final entrada = EntradaDecidirParticipacaoResponsavel(
+        commandId: commandId,
+        participacaoId: item.participacaoId,
+        cicloId: item.cicloId,
+        decisao: decisao,
+        justificativa: justificativa,
+        expectedVersion: item.versao,
       );
+
+      final res = item.isRenovacaoAnual
+          ? await widget.gateway.decidirCicloAnual(entrada)
+          : await widget.gateway.decidirParticipacao(entrada);
 
       if (!mounted) return;
 
@@ -550,6 +553,32 @@ class _FilaResponsavelEquipeScreenState
                   ],
                 ),
               ),
+              if (item.isRenovacaoAnual) ...[
+                Container(
+                  key: Key('badgeRenovacaoAnual_${item.participacaoId}'),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.blue50,
+                    border: Border.all(color: AppColors.blue600),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.autorenew_rounded, size: 14, color: AppColors.blue600),
+                      const SizedBox(width: 4),
+                      Text(
+                        item.anoVigencia != null ? 'Ciclo Anual ${item.anoVigencia}' : 'Ciclo Anual',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.blue600,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(

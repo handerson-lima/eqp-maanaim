@@ -274,6 +274,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
       if (confirmou != true) return;
 
       await _executarDecisao(
+        item: item,
         commandId: _gerarCommandId('apr'),
         fichaId: item.fichaId,
         decisao: 'APROVADO',
@@ -414,6 +415,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
       if (confirmou != true) return;
 
       await _executarDecisao(
+        item: item,
         commandId: _gerarCommandId('rec'),
         fichaId: item.fichaId,
         decisao: 'DESFAVORAVEL',
@@ -424,6 +426,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   }
 
   Future<void> _executarDecisao({
+    required ItemFilaCoordenador item,
     required String commandId,
     required String fichaId,
     required String decisao,
@@ -434,29 +437,55 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
     setState(() => _processandoFichaId = fichaId);
 
     try {
-      final resultado = await widget.gateway.decidir(
-        commandId: commandId,
-        fichaId: fichaId,
-        decisao: decisao,
-        confirmouReuniaoPastores: confirmouReuniaoPastores,
-        observacao: observacao,
-        expectedVersion: expectedVersion,
-      );
+      if (item.isRenovacaoAnual && item.cicloId != null) {
+        final resultado = await widget.gateway.concluirCicloAnual(
+          commandId: commandId,
+          cicloId: item.cicloId!,
+          decisao: decisao,
+          confirmouReuniaoPastores: confirmouReuniaoPastores,
+          observacao: observacao,
+          expectedVersion: expectedVersion,
+        );
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      final msg = resultado.decisao == 'APROVADO'
-          ? 'Voluntariado ativado com sucesso!'
-          : 'Decisão desfavorável registrada com sucesso.';
+        final msg = resultado.decisao == 'APROVADO'
+            ? 'Renovação anual concluída com sucesso!'
+            : 'Decisão desfavorável da renovação anual registrada.';
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: resultado.decisao == 'APROVADO'
-              ? AppColors.success
-              : AppColors.navy900,
-        ),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: resultado.decisao == 'APROVADO'
+                ? AppColors.success
+                : AppColors.navy900,
+          ),
+        );
+      } else {
+        final resultado = await widget.gateway.decidir(
+          commandId: commandId,
+          fichaId: fichaId,
+          decisao: decisao,
+          confirmouReuniaoPastores: confirmouReuniaoPastores,
+          observacao: observacao,
+          expectedVersion: expectedVersion,
+        );
+
+        if (!mounted) return;
+
+        final msg = resultado.decisao == 'APROVADO'
+            ? 'Voluntariado ativado com sucesso!'
+            : 'Decisão desfavorável registrada com sucesso.';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: resultado.decisao == 'APROVADO'
+                ? AppColors.success
+                : AppColors.navy900,
+          ),
+        );
+      }
 
       await _carregarFila();
     } catch (e) {
@@ -488,6 +517,30 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
             fontSize: 11,
             fontWeight: FontWeight.bold,
           ),
+        ),
+      );
+
+  Widget _badgeRenovacaoAnual(int? ano) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.navy900.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+          border: Border.all(color: AppColors.navy900.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.sync_outlined, size: 12, color: AppColors.navy900),
+            const SizedBox(width: 4),
+            Text(
+              ano != null ? 'Ciclo Anual $ano' : 'Ciclo Anual',
+              style: const TextStyle(
+                color: AppColors.navy900,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       );
 
@@ -564,7 +617,13 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                     style: AppTypography.h3.copyWith(color: AppColors.navy900),
                   ),
                 ),
-                _badgeAguardando(),
+                Wrap(
+                  spacing: 4,
+                  children: [
+                    if (item.isRenovacaoAnual) _badgeRenovacaoAnual(item.anoVigencia),
+                    _badgeAguardando(),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.s8),
@@ -701,10 +760,21 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                 key: ValueKey('linhaCoordenador_${item.fichaId}'),
                 cells: [
                   DataCell(
-                    Text(
-                      item.voluntarioNome,
-                      key: Key('tabelaVoluntario_${item.fichaId}'),
-                      style: AppTypography.label.copyWith(color: AppColors.navy900),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          item.voluntarioNome,
+                          key: Key('tabelaVoluntario_${item.fichaId}'),
+                          style: AppTypography.label.copyWith(color: AppColors.navy900),
+                        ),
+                        if (item.isRenovacaoAnual)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: _badgeRenovacaoAnual(item.anoVigencia),
+                          ),
+                      ],
                     ),
                   ),
                   DataCell(Text(item.nomeIgreja, style: AppTypography.caption)),

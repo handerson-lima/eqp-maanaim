@@ -35,6 +35,8 @@ class ItemFilaPastor {
     required this.equipes,
     required this.enviadoEm,
     this.versao = 1,
+    this.isRenovacaoAnual = false,
+    this.cicloId,
   });
 
   final String id;
@@ -49,9 +51,11 @@ class ItemFilaPastor {
   final List<EquipeFilaPastor> equipes;
   final String enviadoEm;
   final int versao;
+  final bool isRenovacaoAnual;
+  final String? cicloId;
 
   factory ItemFilaPastor.fromMap(Map<String, dynamic> map) {
-    final equipesRaw = map['equipes'];
+    final equipesRaw = map['equipes'] ?? map['equipesRenovacao'];
     final List<EquipeFilaPastor> equipes = [];
     if (equipesRaw is List) {
       for (final eq in equipesRaw) {
@@ -60,6 +64,11 @@ class ItemFilaPastor {
         }
       }
     }
+
+    final isRenovacao = map['isRenovacaoAnual'] == true ||
+        (map['tipo'] ?? '').toString() == 'RENOVACAO_ANUAL' ||
+        (map['proximaAcao'] ?? '').toString().contains('Ciclo Anual') ||
+        (map['equipesRenovacao'] is List && (map['equipesRenovacao'] as List).isNotEmpty);
 
     return ItemFilaPastor(
       id: (map['id'] ?? '').toString(),
@@ -74,6 +83,8 @@ class ItemFilaPastor {
       equipes: equipes,
       enviadoEm: (map['enviadoEm'] ?? '').toString(),
       versao: map['versao'] is num ? (map['versao'] as num).toInt() : 1,
+      isRenovacaoAnual: isRenovacao,
+      cicloId: map['cicloId']?.toString(),
     );
   }
 }
@@ -114,6 +125,7 @@ class EntradaDecisaoPastor {
     required this.decisao,
     this.justificativa,
     required this.expectedVersion,
+    this.cicloId,
   });
 
   final String commandId;
@@ -122,11 +134,13 @@ class EntradaDecisaoPastor {
   final String decisao; // 'APROVADO' ou 'DESFAVORAVEL'
   final String? justificativa;
   final int expectedVersion;
+  final String? cicloId;
 
   Map<String, dynamic> toMap() => {
         'commandId': commandId,
         if (correlationId != null) 'correlationId': correlationId,
         'fichaId': fichaId,
+        if (cicloId != null) 'cicloId': cicloId,
         'decisao': decisao,
         if (justificativa != null) 'justificativa': justificativa,
         'expectedVersion': expectedVersion,
@@ -167,6 +181,7 @@ class ResultadoDecisaoPastor {
 abstract interface class PastorLocalGateway {
   Future<ResultadoFilaPastor> obterFila();
   Future<ResultadoDecisaoPastor> decidirFicha(EntradaDecisaoPastor entrada);
+  Future<ResultadoDecisaoPastor> decidirCicloAnual(EntradaDecisaoPastor entrada);
 }
 
 class FirebasePastorLocalGateway implements PastorLocalGateway {
@@ -200,6 +215,14 @@ class FirebasePastorLocalGateway implements PastorLocalGateway {
   @override
   Future<ResultadoDecisaoPastor> decidirFicha(EntradaDecisaoPastor entrada) async {
     final callable = _functions.httpsCallable('decidirFichaPastorLocal');
+    final resposta = await callable.call(entrada.toMap());
+    final dados = (resposta.data as Map).cast<String, dynamic>();
+    return ResultadoDecisaoPastor.fromMap(dados);
+  }
+
+  @override
+  Future<ResultadoDecisaoPastor> decidirCicloAnual(EntradaDecisaoPastor entrada) async {
+    final callable = _functions.httpsCallable('decidirCicloAnualPastor');
     final resposta = await callable.call(entrada.toMap());
     final dados = (resposta.data as Map).cast<String, dynamic>();
     return ResultadoDecisaoPastor.fromMap(dados);
@@ -270,5 +293,10 @@ class MemoriaPastorLocalGateway implements PastorLocalGateway {
 
     _recibos[entrada.commandId] = resultado;
     return resultado;
+  }
+
+  @override
+  Future<ResultadoDecisaoPastor> decidirCicloAnual(EntradaDecisaoPastor entrada) async {
+    return decidirFicha(entrada);
   }
 }
