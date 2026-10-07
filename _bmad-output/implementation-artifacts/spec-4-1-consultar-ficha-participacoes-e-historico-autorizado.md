@@ -2,7 +2,7 @@
 title: 'Story 4.1: Consultar ficha, participações e histórico autorizado'
 type: 'feature'
 created: '2026-10-06'
-status: 'ready-for-dev'
+status: 'done'
 baseline_commit: HEAD
 route: 'dispatch'
 review_loop_iteration: 1

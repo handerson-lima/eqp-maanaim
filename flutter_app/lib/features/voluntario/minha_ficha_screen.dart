@@ -10,6 +10,8 @@ import '../admin/catalogo_service.dart';
 import '../auth/validadores.dart';
 import '../termo/termo_service.dart';
 import 'ficha_service.dart';
+import 'historico_service.dart';
+import 'linha_tempo_widget.dart';
 import 'participacao_service.dart';
 
 /// Tela responsiva mobile-first para o voluntário preencher e manter sua ficha cadastral permanente.
@@ -20,6 +22,7 @@ class MinhaFichaScreen extends StatefulWidget {
     required this.catalogoGateway,
     this.participacaoGateway,
     this.termoGateway,
+    this.historicoService,
     this.onSair,
     this.userName,
   });
@@ -28,6 +31,7 @@ class MinhaFichaScreen extends StatefulWidget {
   final CatalogoGateway catalogoGateway;
   final ParticipacaoGateway? participacaoGateway;
   final TermoGateway? termoGateway;
+  final HistoricoService? historicoService;
   final VoidCallback? onSair;
   final String? userName;
 
@@ -65,6 +69,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   bool _enviando = false;
   String? _mensagemSucessoEnvio;
   String? _erroEnvio;
+
+  late final HistoricoService _historicoService;
+  List<EventoLinhaDoTempoModel> _eventosHistorico = [];
+  bool _carregandoEventos = false;
 
   bool get _isRascunho => _ficha?.isRascunho ?? true;
   bool get _isAguardandoPastor => _ficha?.estado == 'AGUARDANDO_PASTOR_LOCAL';
@@ -117,6 +125,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   @override
   void initState() {
     super.initState();
+    _historicoService = widget.historicoService ?? HistoricoService();
     _nomeController.addListener(_aoMudarCampos);
     _profissaoController.addListener(_aoMudarCampos);
     _cpfController.addListener(_aoMudarCampos);
@@ -203,6 +212,27 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           }
           _carregando = false;
         });
+
+        if (respostaFicha.ficha != null && !respostaFicha.ficha!.isRascunho) {
+          try {
+            setState(() {
+              _carregandoEventos = true;
+            });
+            final ev = await _historicoService.consultarLinhaDoTempoAutorizada();
+            if (mounted) {
+              setState(() {
+                _eventosHistorico = ev;
+                _carregandoEventos = false;
+              });
+            }
+          } catch (_) {
+            if (mounted) {
+              setState(() {
+                _carregandoEventos = false;
+              });
+            }
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -641,6 +671,21 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
               // Seção de Envio para Aprovação (Story 2.4)
               _buildSecaoEnvioAprovacao(pendencias),
+
+              // Seção da Linha do Tempo e Histórico Auditável (Story 4.1)
+              if (!_isRascunho || _eventosHistorico.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.s24),
+                SectionCard(
+                  title: 'Linha do Tempo e Histórico',
+                  subtitle:
+                      'Acompanhamento cronológico dos marcos e decisões do seu voluntariado.',
+                  child: LinhaDoTempoWidget(
+                    eventos: _eventosHistorico,
+                    isLoading: _carregandoEventos,
+                    tituloSecao: '',
+                  ),
+                ),
+              ],
             ],
           ),
         ),
