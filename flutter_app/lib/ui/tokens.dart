@@ -17,6 +17,9 @@ abstract final class AppColors {
   static const Color border = Color(0xFFDDE3EA);
   static const Color textPrimary = Color(0xFF172033);
   static const Color textSecondary = Color(0xFF667085);
+  static const Color neutral50 = Color(0xFFF9FAFB); // fundos neutros muito claros
+  static const Color neutral100 = Color(0xFFF3F4F6); // chips/etiquetas neutras
+  static const Color neutral150 = Color(0xFFF8FAFC); // containers informativos neutros
 
   // Semânticos (Status e Feedback)
   static const Color success = Color(0xFF16A34A);

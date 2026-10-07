@@ -75,3 +75,7 @@
 
 - Alterações fora do escopo declarado da story: `flutter_app/lib/features/admin/termos_screen.dart` (botões "Modelo Oficial (PDF)"/"Carregar texto oficial do modelo" com CNPJ/endereço no cliente) e `functions/src/commands/importarPastoresIniciais.ts` (bootstrap de `projectId`) não constam no Code Map/Tasks. Reavaliar em mudança separada.
 - Pré-condição "ao menos uma equipe" não filtra estado/ciclo da participação (`functions/src/repositories/termos.ts:365-376`): hoje não alcançável porque participações `CANCELADA`/`APROVADA` só surgem em epics posteriores; confirmar se estados não-rascunho podem coexistir com o aceite.
+
+## Deferred from: code review of story-3.4 (2026-10-06)
+
+- Campos/modelo introduzidos sem uso: `ParticipacaoModel.cicloAtualId` (`flutter_app/lib/features/voluntario/participacao_service.dart:31`) e `FichaModel.isAtiva`/`isRejeitada`/`proximaAcao` (`flutter_app/lib/features/voluntario/ficha_service.dart:76-77`) não são lidos por nenhuma tela; provavelmente consumidos nas Stories 4.x/5.x (deep link de ciclo/renovação). Diferido por não ter uso imediato e sem dano atual.

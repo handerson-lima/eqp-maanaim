@@ -11,6 +11,7 @@ import {
   type EntradaSalvarMinhaFicha,
   type FichaPermanente,
 } from '../domain/ficha.js';
+import { MENSAGEM_CANONICA_DECISAO_NEGATIVA } from '../domain/mensagens.js';
 
 export interface ContextoFicha {
   commandId: string;
@@ -63,11 +64,11 @@ function montarFicha(id: string, dados: Record<string, unknown>): FichaPermanent
     termoAceito,
     proximaAcao:
       String(dados.estado ?? '') === 'REJEITADA'
-        ? 'Procure o Pastor da igreja local para mais informações'
+        ? MENSAGEM_CANONICA_DECISAO_NEGATIVA
         : (dados.proximaAcao ? String(dados.proximaAcao) : null),
     mensagemVoluntario:
       String(dados.estado ?? '') === 'REJEITADA'
-        ? 'Procure o Pastor da igreja local para mais informações'
+        ? MENSAGEM_CANONICA_DECISAO_NEGATIVA
         : (dados.mensagemVoluntario ? String(dados.mensagemVoluntario) : null),
     criadoEm: serializarTimestamp(dados.criadoEm),
     atualizadoEm: serializarTimestamp(dados.atualizadoEm),

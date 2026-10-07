@@ -62,6 +62,9 @@ class StatusChip extends StatelessWidget {
       case 'PENDENTE':
       case 'AGUARDANDO_APROVACAO':
       case 'AGUARDANDO_APROVAÇÃO':
+      case 'AGUARDANDO_PASTOR_LOCAL':
+      case 'AGUARDANDO_RESPONSAVEL_EQUIPE':
+      case 'AGUARDANDO_COORDENADOR':
         return const StatusConfig(
           label: 'AGUARDANDO',
           backgroundColor: AppColors.warningBg,

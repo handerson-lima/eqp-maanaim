@@ -28,15 +28,43 @@ export class ParticipacaoInvalidaError extends Error {
   }
 }
 
-export const MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA =
-  'Procure o Pastor da igreja local para mais informações';
+export { MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA } from './mensagens.js';
+
+/**
+ * Estados canônicos de uma participação. Novos estados (ex.: ciclo anual,
+ * cancelamento, reativação) devem ser adicionados aqui para preservar a
+ * validação em tempo de compilação.
+ */
+export type EstadoParticipacao =
+  | 'RASCUNHO'
+  | 'AGUARDANDO_PASTOR_LOCAL'
+  | 'AGUARDANDO_RESPONSAVEL_EQUIPE'
+  | 'AGUARDANDO_COORDENADOR'
+  | 'ATIVA'
+  | 'REJEITADA';
+
+export const ESTADOS_PARTICIPACAO: readonly EstadoParticipacao[] = [
+  'RASCUNHO',
+  'AGUARDANDO_PASTOR_LOCAL',
+  'AGUARDANDO_RESPONSAVEL_EQUIPE',
+  'AGUARDANDO_COORDENADOR',
+  'ATIVA',
+  'REJEITADA',
+];
+
+export function normalizarEstadoParticipacao(valor: unknown): EstadoParticipacao {
+  const estado = String(valor ?? '').trim().toUpperCase();
+  return (ESTADOS_PARTICIPACAO as readonly string[]).includes(estado)
+    ? (estado as EstadoParticipacao)
+    : 'RASCUNHO';
+}
 
 export interface ParticipacaoRascunho {
   id: string;
   fichaId: string;
   equipeId: string;
   nomeEquipe: string;
-  estado: string;
+  estado: EstadoParticipacao;
   ciclo: string;
   proximaAcao: string;
   vigenciaInicio?: string | null;

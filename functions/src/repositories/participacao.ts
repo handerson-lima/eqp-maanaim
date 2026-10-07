@@ -4,9 +4,13 @@ import {
   EquipeInvalidaError,
   FichaNaoEncontradaError,
   MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
+  normalizarEstadoParticipacao,
   type EntradaSalvarParticipacoesRascunho,
   type ParticipacaoRascunho,
 } from '../domain/participacao.js';
+
+/** Teto de leitura das participações do voluntário (AD-9). */
+const LIMITE_PARTICIPACOES_VOLUNTARIO = 100;
 
 export interface ContextoParticipacao {
   commandId: string;
@@ -30,8 +34,8 @@ function serializarTimestamp(valor: unknown): string | null {
 }
 
 function montarParticipacao(id: string, dados: Record<string, unknown>): ParticipacaoRascunho {
-  const estado = String(dados.estado ?? 'RASCUNHO');
-  const ehNegativa = estado === 'REJEITADA' || dados.decisao === 'DESFAVORAVEL';
+  const estado = normalizarEstadoParticipacao(dados.estado);
+  const ehNegativa = estado === 'REJEITADA';
   const proximaAcao = ehNegativa
     ? MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA
     : String(dados.proximaAcao ?? (estado === 'RASCUNHO' ? 'Aguardando envio da ficha' : 'Em análise'));
@@ -62,6 +66,7 @@ export async function obterMinhasParticipacoesRepo(
   const snapshot = await db
     .collection('participacoes')
     .where('fichaId', '==', uid)
+    .limit(LIMITE_PARTICIPACOES_VOLUNTARIO)
     .get();
 
   return snapshot.docs

@@ -6,6 +6,9 @@ import {
   type TipoNotificacao,
 } from '../domain/notificacao.js';
 
+/** Teto de leitura das notificações do voluntário (AD-9). */
+const LIMITE_NOTIFICACOES = 100;
+
 function serializarTimestamp(valor: unknown): string {
   if (!valor) return new Date().toISOString();
   if (valor instanceof Timestamp) return valor.toDate().toISOString();
@@ -69,6 +72,7 @@ export async function obterMinhasNotificacoesRepo(
   const snapshot = await db
     .collection('notificacoes')
     .where('destinatarioUid', '==', uid)
+    .limit(LIMITE_NOTIFICACOES)
     .get();
 
   return snapshot.docs

@@ -131,8 +131,8 @@ void main() {
       await tester.pumpWidget(criarAppTeste(ficha: ficha, participacoes: participacoes));
       await tester.pumpAndSettle();
 
-      // Confirma banner geral de ficha ativa
-      expect(find.byKey(const Key('banner_status_ativa')), findsOneWidget);
+      // Confirma o status consolidado de ficha ativa na seção dedicada
+      expect(find.text('Status da Solicitação'), findsWidgets);
       expect(find.text('Voluntariado Ativo no Maanaim'), findsWidgets);
 
       // Confirma equipe e indicador de vigência anual formatado
@@ -173,6 +173,38 @@ void main() {
       expect(find.text('Aguardando Coordenador'), findsWidgets);
     });
 
+    testWidgets('rotula etapa do responsável sem expor o estado interno cru', (tester) async {
+      final ficha = FichaModel(
+        id: 'user-123',
+        nomeCompleto: 'Gabriel Oliveira',
+        cpf: '12345678901',
+        profissao: 'Músico',
+        igrejaId: 'ig-centro',
+        estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE',
+        versao: 2,
+        proximaAcao: 'Análise pelos Responsáveis de Equipe',
+      );
+
+      final List<ParticipacaoModel> participacoes = [
+        const ParticipacaoModel(
+          id: 'part-1',
+          fichaId: 'user-123',
+          equipeId: 'eq-louvor',
+          nomeEquipe: 'Louvor',
+          ciclo: '2026',
+          estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE',
+          proximaAcao: 'Aguardando avaliação do Responsável de Equipe',
+        ),
+      ];
+
+      await tester.pumpWidget(criarAppTeste(ficha: ficha, participacoes: participacoes));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aguardando Responsável'), findsWidgets);
+      // Não expõe o estado técnico bruto ao usuário
+      expect(find.text('AGUARDANDO_RESPONSAVEL_EQUIPE'), findsNothing);
+    });
+
     testWidgets('exibe mensagem canônica neutra OBRIGATÓRIA e NUNCA expõe "rejeitado" ou justificativas internas', (tester) async {
       final ficha = FichaModel(
         id: 'user-123',
@@ -203,8 +235,9 @@ void main() {
 
       const mensagemCanonica = 'Procure o Pastor da igreja local para mais informações';
 
-      // 1. Deve exibir a mensagem neutra canônica obrigatória
+      // 1. Deve exibir a mensagem neutra canônica obrigatória, sem pontuação extra
       expect(find.text(mensagemCanonica), findsWidgets);
+      expect(find.text('$mensagemCanonica.'), findsNothing);
 
       // 2. NUNCA expor "rejeitado", "rejeitada", "indeferido" ou justificativas internas na árvore de UI
       expect(find.textContaining(RegExp(r'rejeitad', caseSensitive: false), findRichText: true), findsNothing);

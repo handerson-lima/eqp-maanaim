@@ -73,7 +73,7 @@ describe('Repositório de Participações (participacao.ts)', () => {
     const mockDb: any = {
       collection: (col: string) => ({
         where: (campo: string, op: string, valor: string) => ({
-          get: async () => ({ docs: [] }),
+          limit: () => ({ get: async () => ({ docs: [] }) }),
         }),
       }),
     };
@@ -111,7 +111,7 @@ describe('Repositório de Participações (participacao.ts)', () => {
     const mockDb: any = {
       collection: (col: string) => ({
         where: (campo: string, op: string, valor: string) => ({
-          get: async () => ({ docs }),
+          limit: () => ({ get: async () => ({ docs }) }),
         }),
       }),
     };

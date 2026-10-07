@@ -26,4 +26,8 @@ export { decidirParticipacaoResponsavelEquipe } from './commands/decidirParticip
 export { obterFilaCoordenador } from './commands/obterFilaCoordenador.js';
 export { decidirAtivacaoCoordenador } from './commands/decidirAtivacaoCoordenador.js';
 export { obterMinhasNotificacoes } from './commands/obterMinhasNotificacoes.js';
+export { obterDetalheSolicitacao } from './commands/obterDetalheSolicitacao.js';
+export { notificarEventoAuditOutbox } from './triggers/notificacoes.js';
+export { consultarFichaAutorizada } from './commands/consultarFichaAutorizada.js';
+export { consultarLinhaDoTempoAutorizada } from './commands/consultarLinhaDoTempoAutorizada.js';
 

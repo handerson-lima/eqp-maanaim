@@ -75,7 +75,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       return 'Voluntariado homologado e ativo no Maanaim.';
     }
     if (_ficha?.estado == 'REJEITADA') {
-      return 'Procure o Pastor da igreja local para mais informações.';
+      return _mensagemNegativaVoluntario;
     }
     if (_ficha?.estado == 'AGUARDANDO_COORDENADOR') {
       return 'Aguardando homologação final do Coordenador Geral.';
@@ -108,6 +108,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     return StatusChip(status: _ficha?.estado ?? 'RASCUNHO');
   }
 
+  /// Mensagem neutra canônica do voluntário. Prefere o valor projetado pelo
+  /// servidor (`mensagemVoluntario`) e só recorre ao literal como fallback.
+  String get _mensagemNegativaVoluntario =>
+      _ficha?.mensagemVoluntario ??
+      'Procure o Pastor da igreja local para mais informações';
 
   @override
   void initState() {
@@ -793,7 +798,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
                 if (p.isAtiva) {
                   return Container(
-                    key: Key('card_participacao_$eqId'),
+                    key: Key('card_participacao_${p.id}'),
                     margin: const EdgeInsets.only(bottom: AppSpacing.s8),
                     padding: const EdgeInsets.all(AppSpacing.s12),
                     decoration: BoxDecoration(
@@ -824,7 +829,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF3F4F6),
+                                color: AppColors.neutral100,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -873,7 +878,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
                 if (p.isRejeitada) {
                   return Container(
-                    key: Key('card_participacao_$eqId'),
+                    key: Key('card_participacao_${p.id}'),
                     margin: const EdgeInsets.only(bottom: AppSpacing.s8),
                     padding: const EdgeInsets.all(AppSpacing.s12),
                     decoration: BoxDecoration(
@@ -906,7 +911,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: AppColors.neutral150,
                             borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
                             border: Border.all(color: AppColors.border),
                           ),
@@ -916,7 +921,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                               const SizedBox(width: AppSpacing.s8),
                               Expanded(
                                 child: Text(
-                                  'Procure o Pastor da igreja local para mais informações',
+                                  p.proximaAcao,
                                   style: AppTypography.body.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.navy900,
@@ -938,10 +943,12 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                         ? 'Aguardando Responsável'
                         : p.estado == 'AGUARDANDO_COORDENADOR'
                             ? 'Aguardando Coordenador'
-                            : p.estado;
+                            : p.estado == 'RASCUNHO'
+                                ? 'Rascunho'
+                                : 'Em análise';
 
                 return Container(
-                  key: Key('card_participacao_$eqId'),
+                  key: Key('card_participacao_${p.id}'),
                   margin: const EdgeInsets.only(bottom: AppSpacing.s8),
                   padding: const EdgeInsets.all(AppSpacing.s12),
                   decoration: BoxDecoration(
@@ -975,7 +982,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF3F4F6),
+                              color: AppColors.neutral100,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -1007,7 +1014,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.s16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
+                color: AppColors.neutral50,
                 borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
                 border: Border.all(color: AppColors.border),
               ),
@@ -1072,7 +1079,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF3F4F6),
+                                    color: AppColors.neutral100,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -1139,7 +1146,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   String _formatarDataApenas(String? iso) {
     if (iso == null || iso.trim().isEmpty) return '—';
     try {
-      final dt = DateTime.parse(iso).toLocal();
+      // A vigência é definida pelo servidor em UTC; formata-se em UTC para não
+      // deslocar o dia do ciclo anual em fusos negativos.
+      final dt = DateTime.parse(iso).toUtc();
       final dia = dt.day.toString().padLeft(2, '0');
       final mes = dt.month.toString().padLeft(2, '0');
       final ano = dt.year.toString();
@@ -1150,209 +1159,13 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   }
 
   Widget _buildBannerStatus(List<String> pendencias) {
-    if (_ficha?.estado == 'ATIVA') {
-      return Container(
-        key: const Key('banner_status_ativa'),
-        padding: const EdgeInsets.all(AppSpacing.s16),
-        decoration: BoxDecoration(
-          color: AppColors.successBg,
-          borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
-          border: Border.all(color: AppColors.success.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.check_circle_outline, color: AppColors.success, size: 24),
-            const SizedBox(width: AppSpacing.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Voluntariado Ativo no Maanaim',
-                    style: AppTypography.label.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.success,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s4),
-                  Text(
-                    'Sua ficha e equipes aprovadas foram homologadas pela Coordenação Geral com vigência anual ativa.',
-                    style: AppTypography.body.copyWith(color: AppColors.textPrimary),
-                  ),
-                  const SizedBox(height: AppSpacing.s8),
-                  Row(
-                    children: [
-                      const Icon(Icons.check, size: 16, color: AppColors.success),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          'Próxima ação: Voluntariado ativo',
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.success,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
+    // Os estados pós-envio (ATIVA, REJEITADA e AGUARDANDO_*) são apresentados
+    // em `_buildSecaoEnvioAprovacao` ("Status da Solicitação"). O banner fica
+    // restrito ao rascunho para não duplicar conteúdo nem anúncios de leitor
+    // de tela.
+    if (!_isRascunho) {
+      return const SizedBox.shrink();
     }
-
-    if (_ficha?.estado == 'REJEITADA') {
-      return Container(
-        key: const Key('banner_status_rejeitada'),
-        padding: const EdgeInsets.all(AppSpacing.s16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.info_outline, color: AppColors.navy800, size: 24),
-            const SizedBox(width: AppSpacing.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Orientações sobre sua solicitação',
-                    style: AppTypography.label.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.navy900,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s8),
-                  Text(
-                    'Procure o Pastor da igreja local para mais informações',
-                    style: AppTypography.body.copyWith(
-                      color: AppColors.navy900,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_ficha?.estado == 'AGUARDANDO_COORDENADOR') {
-      return Container(
-        key: const Key('banner_status_aguardando_coordenador'),
-        padding: const EdgeInsets.all(AppSpacing.s16),
-        decoration: BoxDecoration(
-          color: AppColors.blue50,
-          borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
-          border: Border.all(color: AppColors.blue600),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.hourglass_top_rounded, color: AppColors.blue600, size: 24),
-            const SizedBox(width: AppSpacing.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Status: Aguardando homologação do Coordenador Geral',
-                    style: AppTypography.label.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.navy900,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s4),
-                  Text(
-                    'Suas equipes foram aprovadas pelos respectivos responsáveis e aguardam homologação da Coordenação Geral após a Reunião de Pastores.',
-                    style: AppTypography.body.copyWith(color: AppColors.textPrimary),
-                  ),
-                  const SizedBox(height: AppSpacing.s8),
-                  Row(
-                    children: [
-                      const Icon(Icons.arrow_forward, size: 16, color: AppColors.blue600),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Próxima ação: Homologação da Coordenação Geral',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.blue600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_ficha?.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE') {
-      return Container(
-        key: const Key('banner_status_aguardando_responsavel'),
-        padding: const EdgeInsets.all(AppSpacing.s16),
-        decoration: BoxDecoration(
-          color: AppColors.blue50,
-          borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
-          border: Border.all(color: AppColors.blue600),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.people_outline, color: AppColors.blue600, size: 24),
-            const SizedBox(width: AppSpacing.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Status: Aguardando parecer dos Responsáveis de Equipe',
-                    style: AppTypography.label.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.navy900,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s4),
-                  Text(
-                    'Sua ficha foi aprovada pelo Pastor Local e agora está em deliberação paralela pelos responsáveis de cada equipe solicitada.',
-                    style: AppTypography.body.copyWith(color: AppColors.textPrimary),
-                  ),
-                  const SizedBox(height: AppSpacing.s8),
-                  Row(
-                    children: [
-                      const Icon(Icons.arrow_forward, size: 16, color: AppColors.blue600),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Próxima ação: Análise pelos Responsáveis de Equipe',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.blue600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_isAguardandoPastor) {
-      return _buildBannerAguardandoPastor();
-    }
-
     return _buildBannerPendencias(pendencias);
   }
 
@@ -1444,63 +1257,6 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     color: AppColors.textSecondary,
                     fontStyle: FontStyle.italic,
                   ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBannerAguardandoPastor() {
-    final nomeIgreja = _igrejas
-        .cast<IgrejaCatalogo?>()
-        .firstWhere((i) => i?.id == _igrejaSelecionadaId, orElse: () => null)
-        ?.rotulo ?? _igrejaSelecionadaId ?? 'sua igreja local';
-
-    return Container(
-      key: const Key('banner_status_aguardando_pastor'),
-      padding: const EdgeInsets.all(AppSpacing.s16),
-      decoration: BoxDecoration(
-        color: AppColors.blue50,
-        borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
-        border: Border.all(color: AppColors.blue600),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.hourglass_top_rounded, color: AppColors.blue600, size: 24),
-          const SizedBox(width: AppSpacing.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Status: Aguardando avaliação do Pastor Local',
-                  style: AppTypography.label.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.navy900,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.s4),
-                Text(
-                  'Sua ficha foi enviada e está na fila de avaliação do Pastor Local de $nomeIgreja. Enquanto a solicitação estiver em avaliação, as informações cadastrais e equipes permanecem bloqueadas para edição.',
-                  style: AppTypography.body.copyWith(color: AppColors.textPrimary),
-                ),
-                const SizedBox(height: AppSpacing.s8),
-                Row(
-                  children: [
-                    const Icon(Icons.arrow_forward, size: 16, color: AppColors.blue600),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Próxima ação: Avaliação pelo Pastor Local',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.blue600,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -2220,7 +1976,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.s16),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
+            color: AppColors.neutral150,
             borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
             border: Border.all(color: AppColors.border),
           ),
@@ -2245,7 +2001,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               ),
               const SizedBox(height: AppSpacing.s12),
               Text(
-                'Procure o Pastor da igreja local para mais informações',
+                _mensagemNegativaVoluntario,
                 style: AppTypography.body.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppColors.navy900,

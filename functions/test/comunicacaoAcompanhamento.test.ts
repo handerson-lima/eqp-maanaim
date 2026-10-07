@@ -18,6 +18,10 @@ import {
   obterMinhasNotificacoesRepo,
 } from '../src/repositories/notificacao.js';
 import { obterMinhasNotificacoes } from '../src/commands/obterMinhasNotificacoes.js';
+import { mapearEventoAuditoriaParaNotificacao } from '../src/domain/notificacao.js';
+import { processarEventoAuditOutbox } from '../src/triggers/notificacoes.js';
+import { obterDetalheSolicitacaoRepo } from '../src/repositories/detalheSolicitacao.js';
+import { SemVinculoVigenteError } from '../src/domain/detalheSolicitacao.js';
 
 describe('Story 3.4: Comunicação de decisões e acompanhamento por público', () => {
   describe('Sanitização de Projeções do Voluntário (AD-11, AD-12 e FR28)', () => {
@@ -71,7 +75,7 @@ describe('Story 3.4: Comunicação de decisões e acompanhamento por público', 
       const mockDb: any = {
         collection: (col: string) => ({
           where: (campo: string, op: string, valor: string) => ({
-            get: async () => ({ docs }),
+            limit: () => ({ get: async () => ({ docs }) }),
           }),
         }),
       };
@@ -203,6 +207,15 @@ describe('Story 3.4: Comunicação de decisões e acompanhamento por público', 
         mensagem: 'Seu pedido foi rejeitado',
       };
       expect(validarAusenciaPIIEJustificativas(payloadComRejeitado).seguro).toBe(false);
+
+      // Violação por chave de PII em camelCase/alias (checagem case-insensitive)
+      const payloadComNomeCompleto = {
+        destinatarioUid: 'u4',
+        nomeCompleto: 'José da Silva',
+      };
+      expect(validarAusenciaPIIEJustificativas(payloadComNomeCompleto).seguro).toBe(false);
+      const payloadComCpfMaiusculo = { destinatarioUid: 'u5', CPF: '00000000000' };
+      expect(validarAusenciaPIIEJustificativas(payloadComCpfMaiusculo).seguro).toBe(false);
     });
 
     it('emitirNotificacaoSeguraRepo persiste a notificação validada no Firestore', async () => {
@@ -247,7 +260,7 @@ describe('Story 3.4: Comunicação de decisões e acompanhamento por público', 
       ).rejects.toThrow(/Tentativa de emitir notificação inválida/);
     });
 
-    it('obterMinhasNotificacoesRepo retorna apenas as notificações do usuário ordenadas por data', async () => {
+    it('obterMinhasNotificacoesRepo isola por destinatarioUid (ignora notificações de outro usuário)', async () => {
       const docs = [
         {
           id: 'n-1',
@@ -271,12 +284,28 @@ describe('Story 3.4: Comunicação de decisões e acompanhamento por público', 
             criadoEm: '2026-10-06T18:00:00.000Z',
           }),
         },
+        {
+          id: 'n-intruso',
+          data: () => ({
+            destinatarioUid: 'outro-voluntario',
+            tipo: 'DECISAO_COORDENADOR',
+            estado: 'ATIVA',
+            proximaAcao: 'Voluntariado ativo no Maanaim',
+            deepLink: '/minha-ficha',
+            criadoEm: '2026-10-06T20:00:00.000Z',
+          }),
+        },
       ];
 
+      // O mock honra o filtro `where` para provar o isolamento por uid.
       const mockDb: any = {
         collection: (col: string) => ({
           where: (campo: string, op: string, valor: string) => ({
-            get: async () => ({ docs }),
+            limit: () => ({
+              get: async () => ({
+                docs: docs.filter((d) => (d.data() as any)[campo] === valor),
+              }),
+            }),
           }),
         }),
       };
@@ -284,6 +313,7 @@ describe('Story 3.4: Comunicação de decisões e acompanhamento por público', 
       const resultado = await obterMinhasNotificacoesRepo(mockDb, 'vol-300');
 
       expect(resultado).toHaveLength(2);
+      expect(resultado.map((n) => n.id)).not.toContain('n-intruso');
       // Mais recente primeiro
       expect(resultado[0].id).toBe('n-2');
       expect(resultado[1].id).toBe('n-1');
@@ -304,6 +334,205 @@ describe('Story 3.4: Comunicação de decisões e acompanhamento por público', 
           data: { uid: 'voluntario-b' },
         } as any),
       ).rejects.toThrow('Não é permitido consultar as notificações de outro voluntário.');
+    });
+  });
+
+  describe('Trigger de notificações pós-compromisso (AD-10)', () => {
+    it('mapeia eventos decisórios de auditOutbox para parâmetros de notificação', () => {
+      const enviada = mapearEventoAuditoriaParaNotificacao({
+        acao: 'FICHA_ENVIADA_APROVACAO',
+        entidades: [{ tipo: 'FICHA', id: 'vol-1' }],
+        depois: { estado: 'AGUARDANDO_PASTOR_LOCAL' },
+      });
+      expect(enviada).toEqual({
+        destinatarioUid: 'vol-1',
+        tipo: 'FICHA_ENVIADA',
+        estado: 'AGUARDANDO_PASTOR_LOCAL',
+      });
+
+      const coordenador = mapearEventoAuditoriaParaNotificacao({
+        action: 'DECISAO_COORDENADOR',
+        fichaId: 'vol-2',
+        novoEstadoFicha: 'ATIVA',
+      });
+      expect(coordenador).toEqual({
+        destinatarioUid: 'vol-2',
+        tipo: 'DECISAO_COORDENADOR',
+        estado: 'ATIVA',
+      });
+    });
+
+    it('não gera notificação para eventos não decisórios ou sem destinatário', () => {
+      expect(
+        mapearEventoAuditoriaParaNotificacao({
+          action: 'FICHA_ATUALIZADA',
+          fichaId: 'vol-1',
+          estado: 'RASCUNHO',
+        }),
+      ).toBeNull();
+      expect(
+        mapearEventoAuditoriaParaNotificacao({
+          action: 'DECISAO_COORDENADOR',
+          novoEstadoFicha: 'ATIVA',
+        }),
+      ).toBeNull();
+    });
+
+    it('processarEventoAuditOutbox emite notificação idempotente a partir do evento', async () => {
+      const gravados: any[] = [];
+      const db: any = {
+        collection: () => ({
+          doc: (id: string) => ({
+            set: async (dados: any) => {
+              gravados.push({ id, dados });
+            },
+          }),
+        }),
+      };
+
+      const emitida = await processarEventoAuditOutbox(db, 'cmd-notif-1', {
+        action: 'DECISAO_COORDENADOR',
+        fichaId: 'vol-9',
+        novoEstadoFicha: 'ATIVA',
+      });
+
+      expect(emitida).toBe(true);
+      expect(gravados).toHaveLength(1);
+      expect(gravados[0].id).toBe('notif_cmd-notif-1_vol-9');
+      expect(gravados[0].dados.destinatarioUid).toBe('vol-9');
+      expect(gravados[0].dados.proximaAcao).toBe('Voluntariado ativo no Maanaim');
+    });
+
+    it('processarEventoAuditOutbox ignora eventos não notificáveis', async () => {
+      const gravados: any[] = [];
+      const db: any = {
+        collection: () => ({
+          doc: (id: string) => ({
+            set: async (dados: any) => {
+              gravados.push({ id, dados });
+            },
+          }),
+        }),
+      };
+
+      const emitida = await processarEventoAuditOutbox(db, 'cmd-save', {
+        action: 'FICHA_ATUALIZADA',
+        fichaId: 'vol-9',
+        estado: 'RASCUNHO',
+      });
+
+      expect(emitida).toBe(false);
+      expect(gravados).toHaveLength(0);
+    });
+  });
+
+  describe('Reautorização em runtime de acesso a solicitação (AD-2)', () => {
+    function mockDetalheDb(overrides: {
+      ficha?: Record<string, unknown>;
+      igreja?: Record<string, unknown>;
+      vinculoPastorIgreja?: Record<string, unknown>;
+      equipe?: Record<string, unknown>;
+      vinculoPastorEquipe?: Record<string, unknown>;
+      autoridade?: Record<string, unknown>;
+      participacoes?: Array<Record<string, unknown> & { id: string }>;
+    }): any {
+      return {
+        collection: (col: string) => ({
+          doc: () => ({
+            get: async () => {
+              const data =
+                col === 'fichas'
+                  ? overrides.ficha
+                  : col === 'igrejas'
+                    ? overrides.igreja
+                    : col === 'vinculosPastorIgreja'
+                      ? overrides.vinculoPastorIgreja
+                      : col === 'equipes'
+                        ? overrides.equipe
+                        : col === 'vinculosPastorEquipe'
+                          ? overrides.vinculoPastorEquipe
+                          : col === 'autoridadesAdministrativas'
+                            ? overrides.autoridade
+                            : undefined;
+              return { exists: data !== undefined, data: () => data ?? {} };
+            },
+          }),
+          where: () => ({
+            limit: () => ({
+              get: async () => ({
+                docs: (overrides.participacoes ?? []).map((p) => ({
+                  id: p.id,
+                  data: () => p,
+                })),
+              }),
+            }),
+          }),
+        }),
+      };
+    }
+
+    it('voluntário dono acessa a própria solicitação', async () => {
+      const db = mockDetalheDb({
+        ficha: { ownerUid: 'vol-1', igrejaId: 'ig-1', nomeCompleto: 'Ana', estado: 'ATIVA', versao: 4 },
+        participacoes: [{ id: 'p1', equipeId: 'eq-1', nomeEquipe: 'Louvor', estado: 'ATIVA', ciclo: '2026' }],
+      });
+
+      const detalhe = await obterDetalheSolicitacaoRepo(db, 'vol-1', 'vol-1');
+
+      expect(detalhe.papelSolicitante).toBe('VOLUNTARIO');
+      expect(detalhe.participacoes).toHaveLength(1);
+    });
+
+    it('pastor com vínculo vigente acessa a solicitação da sua igreja', async () => {
+      const db = mockDetalheDb({
+        ficha: { ownerUid: 'vol-2', igrejaId: 'ig-2', nomeCompleto: 'João', estado: 'AGUARDANDO_PASTOR_LOCAL', versao: 2 },
+        igreja: { ativo: true, pastorLocalVigentePessoaId: 'pastor-1', pastorLocalVigenteVinculoId: 'v-1' },
+        vinculoPastorIgreja: { estado: 'VIGENTE', pessoaId: 'pastor-1' },
+      });
+
+      const detalhe = await obterDetalheSolicitacaoRepo(db, 'pastor-1', 'vol-2');
+
+      expect(detalhe.papelSolicitante).toBe('PASTOR_LOCAL');
+      expect(detalhe.vinculoId).toBe('v-1');
+    });
+
+    it('bloqueia pastor cujo vínculo foi encerrado (deep link após expiração)', async () => {
+      const db = mockDetalheDb({
+        ficha: { ownerUid: 'vol-2', igrejaId: 'ig-2', nomeCompleto: 'João', estado: 'AGUARDANDO_PASTOR_LOCAL', versao: 2 },
+        igreja: { ativo: true, pastorLocalVigentePessoaId: 'pastor-1', pastorLocalVigenteVinculoId: 'v-1' },
+        vinculoPastorIgreja: { estado: 'ENCERRADO', pessoaId: 'pastor-1' },
+      });
+
+      await expect(
+        obterDetalheSolicitacaoRepo(db, 'pastor-1', 'vol-2'),
+      ).rejects.toThrow(SemVinculoVigenteError);
+    });
+
+    it('responsável vigente de uma equipe da ficha acessa a solicitação', async () => {
+      const db = mockDetalheDb({
+        ficha: { ownerUid: 'vol-3', igrejaId: 'ig-3', nomeCompleto: 'Maria', estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE', versao: 2 },
+        igreja: { ativo: true },
+        equipe: { responsavelVigentePessoaId: 'resp-1', responsavelVigenteVinculoId: 've-1' },
+        vinculoPastorEquipe: { estado: 'VIGENTE', pessoaId: 'resp-1' },
+        participacoes: [{ id: 'p1', equipeId: 'eq-9', nomeEquipe: 'Apoio', estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE' }],
+      });
+
+      const detalhe = await obterDetalheSolicitacaoRepo(db, 'resp-1', 'vol-3');
+
+      expect(detalhe.papelSolicitante).toBe('RESPONSAVEL_EQUIPE');
+    });
+
+    it('bloqueia usuário sem vínculo vigente com permission-denied', async () => {
+      const db = mockDetalheDb({
+        ficha: { ownerUid: 'vol-4', igrejaId: 'ig-4', nomeCompleto: 'Rui', estado: 'AGUARDANDO_PASTOR_LOCAL', versao: 1 },
+        igreja: { ativo: true, pastorLocalVigentePessoaId: 'outro-pastor' },
+        participacoes: [{ id: 'p1', equipeId: 'eq-x', nomeEquipe: 'Som', estado: 'AGUARDANDO_PASTOR_LOCAL' }],
+        equipe: { responsavelVigentePessoaId: 'outro-resp' },
+      });
+
+      await expect(
+        obterDetalheSolicitacaoRepo(db, 'intruso', 'vol-4'),
+      ).rejects.toThrow('Usuário não possui vínculo vigente.');
     });
   });
 });

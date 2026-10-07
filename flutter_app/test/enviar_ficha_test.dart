@@ -289,16 +289,10 @@ void main() {
       findsOneWidget,
     );
 
-    // Banner de status superior exibido
-    expect(find.byKey(const Key('banner_status_aguardando_pastor')), findsOneWidget);
-    expect(
-      find.text('Status: Aguardando avaliação do Pastor Local'),
-      findsWidgets,
-    );
-    expect(
-      find.text('Próxima ação: Avaliação pelo Pastor Local'),
-      findsOneWidget,
-    );
+    // Status consolidado exibido na seção dedicada
+    expect(find.text('Status da Solicitação'), findsWidgets);
+    expect(find.text('Ficha Enviada com Sucesso'), findsOneWidget);
+    expect(find.text('Avaliação e manifestação pastoral'), findsWidgets);
 
     // Verifica campos em modo somente leitura
     final campoNome = tester.widget<TextField>(
