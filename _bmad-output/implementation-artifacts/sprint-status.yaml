@@ -63,11 +63,11 @@ development_status:
   4-4-solicitar-e-aprovar-reativação: done
   epic-4-retrospective: optional
 
-  epic-5: in-progress
+  epic-5: done
   5-1-calcular-vigência-anual-e-alertas-de-renovação: done
   5-2-manifestar-interesse-de-renovação-por-equipe: done
   5-3-processar-aprovação-e-conclusão-do-ciclo-anual: done
-  5-4-exibir-dashboards-de-renovação-por-papel: backlog
+  5-4-exibir-dashboards-de-renovação-por-papel: done
   epic-5-retrospective: optional
 
   epic-6: backlog

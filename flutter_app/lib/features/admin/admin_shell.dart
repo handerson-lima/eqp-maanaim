@@ -17,6 +17,8 @@ import '../responsavel_equipe/fila_responsavel_equipe_screen.dart';
 import '../responsavel_equipe/responsavel_equipe_service.dart';
 import '../coordenador/fila_coordenador_screen.dart';
 import '../coordenador/coordenador_service.dart';
+import '../renovacao/dashboard_renovacao_service.dart';
+import '../renovacao/dashboard_renovacao_screen.dart';
 
 class _AbaAdmin {
   const _AbaAdmin({required this.item, required this.builder});
@@ -39,6 +41,7 @@ class AdminShell extends StatefulWidget {
     this.pastor,
     this.responsavelEquipe,
     this.coordenador,
+    this.dashboardRenovacao,
   });
 
   final VoidCallback onSair;
@@ -50,6 +53,7 @@ class AdminShell extends StatefulWidget {
   final PastorLocalGateway? pastor;
   final ResponsavelEquipeGateway? responsavelEquipe;
   final CoordenadorGateway? coordenador;
+  final DashboardRenovacaoGateway? dashboardRenovacao;
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -167,6 +171,24 @@ class _AdminShellState extends State<AdminShell> {
           onSair: widget.onSair,
         ),
       ),
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Renovações',
+        icon: Icons.autorenew_outlined,
+        selectedIcon: Icons.autorenew,
+      ),
+      builder: () => DashboardRenovacaoScreen(
+        gateway: widget.dashboardRenovacao ?? MemoriaDashboardRenovacaoGateway(),
+        papelInicial: widget.coordenador != null
+            ? PapelDashboard.coordenador
+            : (widget.pastor != null
+                ? PapelDashboard.pastorLocal
+                : (widget.responsavelEquipe != null
+                    ? PapelDashboard.responsavelEquipe
+                    : PapelDashboard.voluntario)),
+        onSair: widget.onSair,
+      ),
+    ),
   ];
 
   Widget _corpo() {

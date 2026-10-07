@@ -22,6 +22,7 @@ import 'features/pastor/pastor_service.dart';
 import 'features/responsavel_equipe/responsavel_equipe_service.dart';
 import 'features/coordenador/coordenador_service.dart';
 import 'features/coordenador/fila_coordenador_screen.dart';
+import 'features/renovacao/dashboard_renovacao_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,6 +90,7 @@ Future<void> main() async {
       pastor: FirebasePastorLocalGateway(functions),
       responsavelEquipe: FirebaseResponsavelEquipeGateway(functions),
       coordenador: FirebaseCoordenadorGateway(functions),
+      dashboardRenovacao: FirebaseDashboardRenovacaoGateway(functions),
     ),
   );
 }
@@ -118,6 +120,7 @@ class MaanaimApp extends StatelessWidget {
     this.pastor,
     this.responsavelEquipe,
     this.coordenador,
+    this.dashboardRenovacao,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -131,6 +134,7 @@ class MaanaimApp extends StatelessWidget {
   final PastorLocalGateway? pastor;
   final ResponsavelEquipeGateway? responsavelEquipe;
   final CoordenadorGateway? coordenador;
+  final DashboardRenovacaoGateway? dashboardRenovacao;
   @override
   Widget build(BuildContext c) => MaterialApp(
     title: 'Maanaim',
@@ -148,6 +152,7 @@ class MaanaimApp extends StatelessWidget {
       pastor: pastor,
       responsavelEquipe: responsavelEquipe,
       coordenador: coordenador,
+      dashboardRenovacao: dashboardRenovacao,
     ),
   );
 }
@@ -169,6 +174,7 @@ class RaizSessao extends StatefulWidget {
     this.pastor,
     this.responsavelEquipe,
     this.coordenador,
+    this.dashboardRenovacao,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -182,6 +188,7 @@ class RaizSessao extends StatefulWidget {
   final PastorLocalGateway? pastor;
   final ResponsavelEquipeGateway? responsavelEquipe;
   final CoordenadorGateway? coordenador;
+  final DashboardRenovacaoGateway? dashboardRenovacao;
 
   @override
   State<RaizSessao> createState() => _RaizSessaoState();
@@ -259,6 +266,7 @@ class _RaizSessaoState extends State<RaizSessao> {
         pastor: widget.pastor,
         responsavelEquipe: widget.responsavelEquipe,
         coordenador: widget.coordenador,
+        dashboardRenovacao: widget.dashboardRenovacao,
       );
     },
   );
@@ -283,6 +291,7 @@ class AreaAutenticada extends StatefulWidget {
     this.pastor,
     this.responsavelEquipe,
     this.coordenador,
+    this.dashboardRenovacao,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -296,6 +305,7 @@ class AreaAutenticada extends StatefulWidget {
   final PastorLocalGateway? pastor;
   final ResponsavelEquipeGateway? responsavelEquipe;
   final CoordenadorGateway? coordenador;
+  final DashboardRenovacaoGateway? dashboardRenovacao;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -385,6 +395,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           pastor: widget.pastor,
           responsavelEquipe: widget.responsavelEquipe,
           coordenador: widget.coordenador,
+          dashboardRenovacao: widget.dashboardRenovacao,
         );
       }
       if (perfil == _PerfilAcesso.coordenador && widget.coordenador != null) {
