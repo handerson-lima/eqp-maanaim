@@ -15,6 +15,8 @@ import '../pastor/fila_pastor_screen.dart';
 import '../pastor/pastor_service.dart';
 import '../responsavel_equipe/fila_responsavel_equipe_screen.dart';
 import '../responsavel_equipe/responsavel_equipe_service.dart';
+import '../coordenador/fila_coordenador_screen.dart';
+import '../coordenador/coordenador_service.dart';
 
 class _AbaAdmin {
   const _AbaAdmin({required this.item, required this.builder});
@@ -36,6 +38,7 @@ class AdminShell extends StatefulWidget {
     this.termos,
     this.pastor,
     this.responsavelEquipe,
+    this.coordenador,
   });
 
   final VoidCallback onSair;
@@ -46,6 +49,7 @@ class AdminShell extends StatefulWidget {
   final TermosGateway? termos;
   final PastorLocalGateway? pastor;
   final ResponsavelEquipeGateway? responsavelEquipe;
+  final CoordenadorGateway? coordenador;
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -148,6 +152,18 @@ class _AdminShellState extends State<AdminShell> {
         ),
         builder: () => FilaResponsavelEquipeScreen(
           gateway: widget.responsavelEquipe!,
+          onSair: widget.onSair,
+        ),
+      ),
+    if (widget.coordenador != null)
+      _AbaAdmin(
+        item: const AppNavItem(
+          label: 'Fila do Coordenador',
+          icon: Icons.verified_outlined,
+          selectedIcon: Icons.verified,
+        ),
+        builder: () => FilaCoordenadorScreen(
+          gateway: widget.coordenador!,
           onSair: widget.onSair,
         ),
       ),

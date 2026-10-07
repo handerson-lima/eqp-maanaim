@@ -70,6 +70,45 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   bool get _isAguardandoPastor => _ficha?.estado == 'AGUARDANDO_PASTOR_LOCAL';
   bool get _isBloqueadoParaEdicao => !_isRascunho;
 
+  String _obterSubtituloHeader() {
+    if (_ficha?.estado == 'ATIVA') {
+      return 'Voluntariado homologado e ativo no Maanaim.';
+    }
+    if (_ficha?.estado == 'REJEITADA') {
+      return 'Procure o Pastor da igreja local para mais informações.';
+    }
+    if (_ficha?.estado == 'AGUARDANDO_COORDENADOR') {
+      return 'Aguardando homologação final do Coordenador Geral.';
+    }
+    if (_ficha?.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE') {
+      return 'Em análise pelos Responsáveis de Equipe.';
+    }
+    if (_isAguardandoPastor) {
+      return 'Ficha enviada para avaliação do Pastor Local.';
+    }
+    return 'Acesso realizado. Sua ficha pode continuar em rascunho.';
+  }
+
+  Widget _obterActionHeader() {
+    if (_ficha?.estado == 'ATIVA') {
+      return const StatusChip(status: 'ATIVA', label: 'Ativa');
+    }
+    if (_ficha?.estado == 'REJEITADA') {
+      return const StatusChip(status: 'INATIVA', label: 'Consulte o Pastor');
+    }
+    if (_ficha?.estado == 'AGUARDANDO_COORDENADOR') {
+      return const StatusChip(status: 'AGUARDANDO', label: 'Aguardando Coordenador');
+    }
+    if (_ficha?.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE') {
+      return const StatusChip(status: 'AGUARDANDO', label: 'Aguardando Equipes');
+    }
+    if (_isAguardandoPastor) {
+      return const StatusChip(status: 'AGUARDANDO_PASTOR_LOCAL', label: 'Aguardando Pastor Local');
+    }
+    return StatusChip(status: _ficha?.estado ?? 'RASCUNHO');
+  }
+
+
   @override
   void initState() {
     super.initState();
@@ -322,7 +361,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       ),
     ];
 
-    final estadoExibicao = _ficha?.estado ?? 'RASCUNHO';
+    final estadoExibicao = _ficha?.estado == 'REJEITADA'
+        ? null
+        : (_ficha?.estado ?? 'RASCUNHO');
 
     return AppShell(
       items: navItems,
@@ -349,7 +390,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                         title: 'Minha Ficha',
                         subtitle:
                             'Acesso realizado. Sua ficha pode continuar em rascunho.',
-                        action: StatusChip(status: _ficha?.estado ?? 'RASCUNHO'),
+                        action: _obterActionHeader(),
                       ),
                       const SizedBox(height: AppSpacing.s32),
                       const Center(
@@ -395,21 +436,14 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               // Cabeçalho da página
               PageHeader(
                 title: 'Minha Ficha',
-                subtitle: _isAguardandoPastor
-                    ? 'Ficha enviada para avaliação do Pastor Local.'
-                    : 'Acesso realizado. Sua ficha pode continuar em rascunho.',
-                action: StatusChip(status: _ficha?.estado ?? 'RASCUNHO'),
+                subtitle: _obterSubtituloHeader(),
+                action: _obterActionHeader(),
               ),
               const SizedBox(height: AppSpacing.s20),
 
               // Banner de pendências ou status de aprovação
-              if (_isAguardandoPastor) ...[
-                _buildBannerAguardandoPastor(),
-                const SizedBox(height: AppSpacing.s20),
-              ] else ...[
-                _buildBannerPendencias(pendencias),
-                const SizedBox(height: AppSpacing.s20),
-              ],
+              _buildBannerStatus(pendencias),
+              const SizedBox(height: AppSpacing.s20),
 
               // Mensagens de sucesso ou erro
               if (_mensagemSucesso != null) ...[
@@ -734,16 +768,242 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           const Divider(color: AppColors.border),
           const SizedBox(height: AppSpacing.s16),
           Text(
-            _isAguardandoPastor ? 'Participações em Avaliação' : 'Participações no Rascunho',
+            _isBloqueadoParaEdicao ? 'Acompanhamento por Equipe' : 'Participações no Rascunho',
             style: AppTypography.h3,
           ),
           const SizedBox(height: AppSpacing.s4),
           Text(
-            'Cada equipe selecionada gera uma participação independente.',
+            _isBloqueadoParaEdicao
+                ? 'Situação individual de cada equipe solicitada e vigência anual.'
+                : 'Cada equipe selecionada gera uma participação independente.',
             style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.s12),
-          if (_equipesSelecionadasIds.isEmpty)
+          if (_isBloqueadoParaEdicao && _participacoes.isNotEmpty)
+            Column(
+              children: _participacoes.map((p) {
+                final eqId = p.equipeId;
+                final equipe = _equipes.cast<EquipeCatalogo?>().firstWhere(
+                      (e) => e?.id == eqId,
+                      orElse: () => null,
+                    );
+                final nomeEquipe = p.nomeEquipe.isNotEmpty
+                    ? p.nomeEquipe
+                    : (equipe?.nome ?? eqId);
+
+                if (p.isAtiva) {
+                  return Container(
+                    key: Key('card_participacao_$eqId'),
+                    margin: const EdgeInsets.only(bottom: AppSpacing.s8),
+                    padding: const EdgeInsets.all(AppSpacing.s12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                      border: Border.all(color: AppColors.success),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                nomeEquipe,
+                                style: AppTypography.label.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s8),
+                            const StatusChip(status: 'ATIVA', label: 'Ativa'),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.s8),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Ciclo: ${p.ciclo}',
+                                style: AppTypography.caption.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s8),
+                            Expanded(
+                              child: Text(
+                                p.proximaAcao,
+                                style: AppTypography.caption.copyWith(
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (p.vigenciaInicio != null && p.vigenciaFim != null) ...[
+                          const SizedBox(height: AppSpacing.s8),
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today_outlined,
+                                  size: 14, color: AppColors.blue600),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Vigência: ${_formatarDataApenas(p.vigenciaInicio)} até ${_formatarDataApenas(p.vigenciaFim)}',
+                                  style: AppTypography.caption.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.navy900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }
+
+                if (p.isRejeitada) {
+                  return Container(
+                    key: Key('card_participacao_$eqId'),
+                    margin: const EdgeInsets.only(bottom: AppSpacing.s8),
+                    padding: const EdgeInsets.all(AppSpacing.s12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                nomeEquipe,
+                                style: AppTypography.label.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s8),
+                            const StatusChip(
+                              status: 'INATIVA',
+                              label: 'Informação',
+                              showDot: false,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.s8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline, size: 18, color: AppColors.navy800),
+                              const SizedBox(width: AppSpacing.s8),
+                              Expanded(
+                                child: Text(
+                                  'Procure o Pastor da igreja local para mais informações',
+                                  style: AppTypography.body.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.navy900,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final statusChipLabel = p.estado == 'AGUARDANDO_PASTOR_LOCAL'
+                    ? 'Aguardando Pastor Local'
+                    : p.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE'
+                        ? 'Aguardando Responsável'
+                        : p.estado == 'AGUARDANDO_COORDENADOR'
+                            ? 'Aguardando Coordenador'
+                            : p.estado;
+
+                return Container(
+                  key: Key('card_participacao_$eqId'),
+                  margin: const EdgeInsets.only(bottom: AppSpacing.s8),
+                  padding: const EdgeInsets.all(AppSpacing.s12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              nomeEquipe,
+                              style: AppTypography.label.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.s8),
+                          StatusChip(
+                            status: p.estado,
+                            label: statusChipLabel,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.s4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Ciclo: ${p.ciclo}',
+                              style: AppTypography.caption.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.s8),
+                          Expanded(
+                            child: Text(
+                              p.proximaAcao,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            )
+          else if (_equipesSelecionadasIds.isEmpty)
             Container(
               padding: const EdgeInsets.all(AppSpacing.s16),
               decoration: BoxDecoration(
@@ -874,6 +1134,226 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         ],
       ),
     );
+  }
+
+  String _formatarDataApenas(String? iso) {
+    if (iso == null || iso.trim().isEmpty) return '—';
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final dia = dt.day.toString().padLeft(2, '0');
+      final mes = dt.month.toString().padLeft(2, '0');
+      final ano = dt.year.toString();
+      return '$dia/$mes/$ano';
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  Widget _buildBannerStatus(List<String> pendencias) {
+    if (_ficha?.estado == 'ATIVA') {
+      return Container(
+        key: const Key('banner_status_ativa'),
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: AppColors.successBg,
+          borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.check_circle_outline, color: AppColors.success, size: 24),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Voluntariado Ativo no Maanaim',
+                    style: AppTypography.label.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.success,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  Text(
+                    'Sua ficha e equipes aprovadas foram homologadas pela Coordenação Geral com vigência anual ativa.',
+                    style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: AppSpacing.s8),
+                  Row(
+                    children: [
+                      const Icon(Icons.check, size: 16, color: AppColors.success),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'Próxima ação: Voluntariado ativo',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_ficha?.estado == 'REJEITADA') {
+      return Container(
+        key: const Key('banner_status_rejeitada'),
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.info_outline, color: AppColors.navy800, size: 24),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Orientações sobre sua solicitação',
+                    style: AppTypography.label.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navy900,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s8),
+                  Text(
+                    'Procure o Pastor da igreja local para mais informações',
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.navy900,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_ficha?.estado == 'AGUARDANDO_COORDENADOR') {
+      return Container(
+        key: const Key('banner_status_aguardando_coordenador'),
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: AppColors.blue50,
+          borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+          border: Border.all(color: AppColors.blue600),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.hourglass_top_rounded, color: AppColors.blue600, size: 24),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Status: Aguardando homologação do Coordenador Geral',
+                    style: AppTypography.label.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navy900,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  Text(
+                    'Suas equipes foram aprovadas pelos respectivos responsáveis e aguardam homologação da Coordenação Geral após a Reunião de Pastores.',
+                    style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: AppSpacing.s8),
+                  Row(
+                    children: [
+                      const Icon(Icons.arrow_forward, size: 16, color: AppColors.blue600),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Próxima ação: Homologação da Coordenação Geral',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.blue600,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_ficha?.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE') {
+      return Container(
+        key: const Key('banner_status_aguardando_responsavel'),
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: AppColors.blue50,
+          borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+          border: Border.all(color: AppColors.blue600),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.people_outline, color: AppColors.blue600, size: 24),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Status: Aguardando parecer dos Responsáveis de Equipe',
+                    style: AppTypography.label.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navy900,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  Text(
+                    'Sua ficha foi aprovada pelo Pastor Local e agora está em deliberação paralela pelos responsáveis de cada equipe solicitada.',
+                    style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: AppSpacing.s8),
+                  Row(
+                    children: [
+                      const Icon(Icons.arrow_forward, size: 16, color: AppColors.blue600),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Próxima ação: Análise pelos Responsáveis de Equipe',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.blue600,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_isAguardandoPastor) {
+      return _buildBannerAguardandoPastor();
+    }
+
+    return _buildBannerPendencias(pendencias);
   }
 
   Widget _buildBannerPendencias(List<String> pendencias) {
@@ -1682,6 +2162,200 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         _termoVigente != null &&
         _ficha?.termoAceito?.versaoId == _termoVigente?.id;
     final aptoParaEnvio = dadosCompletos && temEquipes && termoAceito;
+
+    if (_ficha?.estado == 'ATIVA') {
+      return SectionCard(
+        title: 'Status da Solicitação',
+        subtitle: 'Voluntariado ativo e homologado.',
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.s16),
+          decoration: BoxDecoration(
+            color: AppColors.successBg,
+            borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+            border: Border.all(color: AppColors.success),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.check_circle, color: AppColors.success, size: 24),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      'Voluntariado Ativo no Maanaim',
+                      style: AppTypography.h3.copyWith(
+                        fontSize: 16,
+                        color: AppColors.navy900,
+                      ),
+                    ),
+                  ),
+                  const StatusChip(status: 'ATIVA', label: 'Ativa'),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              Text(
+                'Sua ficha e equipes aprovadas foram homologadas pela Coordenação Geral do Maanaim com ciclo de vigência anual ativo.',
+                style: AppTypography.body,
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              const Divider(color: AppColors.border),
+              const SizedBox(height: AppSpacing.s8),
+              _buildLinhaComprovante('Situação', 'Voluntariado Ativo'),
+              _buildLinhaComprovante('Próxima Ação', 'Atuação voluntária'),
+              _buildLinhaComprovante(
+                'Equipes Ativas',
+                _participacoes.where((p) => p.isAtiva).map((p) => p.nomeEquipe).join(', '),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_ficha?.estado == 'REJEITADA') {
+      return SectionCard(
+        title: 'Status da Solicitação',
+        subtitle: 'Solicitação concluída.',
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.s16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.info_outline, color: AppColors.navy800, size: 24),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      'Orientações sobre a Solicitação',
+                      style: AppTypography.h3.copyWith(
+                        fontSize: 16,
+                        color: AppColors.navy900,
+                      ),
+                    ),
+                  ),
+                  const StatusChip(status: 'INATIVA', label: 'Informação', showDot: false),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              Text(
+                'Procure o Pastor da igreja local para mais informações',
+                style: AppTypography.body.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.navy900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_ficha?.estado == 'AGUARDANDO_COORDENADOR') {
+      return SectionCard(
+        title: 'Status da Solicitação',
+        subtitle: 'Sua solicitação aguarda homologação da Coordenação Geral.',
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.s16),
+          decoration: BoxDecoration(
+            color: AppColors.blue50,
+            borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+            border: Border.all(color: AppColors.blue600),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.hourglass_top, color: AppColors.blue600, size: 24),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      'Homologação da Coordenação Geral',
+                      style: AppTypography.h3.copyWith(
+                        fontSize: 16,
+                        color: AppColors.navy900,
+                      ),
+                    ),
+                  ),
+                  const StatusChip(status: 'AGUARDANDO', label: 'Aguardando Coordenador'),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              Text(
+                'Suas equipes foram aprovadas pelos responsáveis e estão em fase de homologação final após a Reunião de Pastores.',
+                style: AppTypography.body,
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              const Divider(color: AppColors.border),
+              const SizedBox(height: AppSpacing.s8),
+              _buildLinhaComprovante('Próximo Responsável', 'Coordenador Geral'),
+              _buildLinhaComprovante('Próxima Ação', 'Homologação e ativação anual'),
+              _buildLinhaComprovante(
+                'Equipes em Homologação',
+                _participacoes.map((p) => p.nomeEquipe).join(', '),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_ficha?.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE') {
+      return SectionCard(
+        title: 'Status da Solicitação',
+        subtitle: 'Sua solicitação está em análise pelos Responsáveis de Equipe.',
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.s16),
+          decoration: BoxDecoration(
+            color: AppColors.blue50,
+            borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+            border: Border.all(color: AppColors.blue600),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.people_outline, color: AppColors.blue600, size: 24),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      'Avaliação pelos Responsáveis de Equipe',
+                      style: AppTypography.h3.copyWith(
+                        fontSize: 16,
+                        color: AppColors.navy900,
+                      ),
+                    ),
+                  ),
+                  const StatusChip(status: 'AGUARDANDO', label: 'Aguardando Equipes'),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              Text(
+                'Sua solicitação foi aprovada pelo Pastor Local e está em deliberação paralela pelos responsáveis de cada equipe solicitada.',
+                style: AppTypography.body,
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              const Divider(color: AppColors.border),
+              const SizedBox(height: AppSpacing.s8),
+              _buildLinhaComprovante('Próximo Responsável', 'Responsáveis de Equipe'),
+              _buildLinhaComprovante('Próxima Ação', 'Análise de equipes'),
+              _buildLinhaComprovante(
+                'Equipes em Análise',
+                _participacoes.map((p) => p.nomeEquipe).join(', '),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     if (_isAguardandoPastor) {
       return SectionCard(

@@ -28,17 +28,24 @@ export class ParticipacaoInvalidaError extends Error {
   }
 }
 
+export const MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA =
+  'Procure o Pastor da igreja local para mais informações';
+
 export interface ParticipacaoRascunho {
   id: string;
   fichaId: string;
   equipeId: string;
   nomeEquipe: string;
-  estado: 'RASCUNHO';
-  ciclo: 'INICIAL';
+  estado: string;
+  ciclo: string;
   proximaAcao: string;
+  vigenciaInicio?: string | null;
+  vigenciaFim?: string | null;
+  cicloAtualId?: string | null;
   criadoEm?: string | null;
   atualizadoEm?: string | null;
 }
+
 
 export interface EntradaSalvarParticipacoesRascunho {
   commandId: string;

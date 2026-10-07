@@ -20,12 +20,13 @@ class UsuarioFake implements User {
 }
 
 class IdentidadeFake implements IdentidadeGateway {
-  IdentidadeFake({this.email, this.admin = false});
+  IdentidadeFake({this.email, this.admin = false, this.coordenador = false});
   String? email;
   int criadas = 0;
   int redefinicoes = 0;
   int logouts = 0;
   bool admin;
+  bool coordenador;
   final StreamController<User?> _authController =
       StreamController<User?>.broadcast();
 
@@ -54,6 +55,9 @@ class IdentidadeFake implements IdentidadeGateway {
 
   @override
   Future<bool> possuiAdministracao() async => admin;
+
+  @override
+  Future<bool> possuiCoordenacao() async => coordenador;
 
   @override
   Future<void> sair() async {

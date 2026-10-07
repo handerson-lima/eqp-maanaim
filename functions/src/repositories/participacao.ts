@@ -3,6 +3,7 @@ import {
   ComandoDivergenteError,
   EquipeInvalidaError,
   FichaNaoEncontradaError,
+  MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
   type EntradaSalvarParticipacoesRascunho,
   type ParticipacaoRascunho,
 } from '../domain/participacao.js';
@@ -29,14 +30,23 @@ function serializarTimestamp(valor: unknown): string | null {
 }
 
 function montarParticipacao(id: string, dados: Record<string, unknown>): ParticipacaoRascunho {
+  const estado = String(dados.estado ?? 'RASCUNHO');
+  const ehNegativa = estado === 'REJEITADA' || dados.decisao === 'DESFAVORAVEL';
+  const proximaAcao = ehNegativa
+    ? MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA
+    : String(dados.proximaAcao ?? (estado === 'RASCUNHO' ? 'Aguardando envio da ficha' : 'Em análise'));
+
   return {
     id,
     fichaId: String(dados.fichaId ?? ''),
     equipeId: String(dados.equipeId ?? ''),
     nomeEquipe: String(dados.nomeEquipe ?? ''),
-    estado: 'RASCUNHO',
-    ciclo: 'INICIAL',
-    proximaAcao: String(dados.proximaAcao ?? 'Aguardando envio da ficha'),
+    estado,
+    ciclo: String(dados.ciclo ?? 'INICIAL'),
+    proximaAcao,
+    vigenciaInicio: serializarTimestamp(dados.vigenciaInicio),
+    vigenciaFim: serializarTimestamp(dados.vigenciaFim),
+    cicloAtualId: dados.cicloAtualId ? String(dados.cicloAtualId) : null,
     criadoEm: serializarTimestamp(dados.criadoEm),
     atualizadoEm: serializarTimestamp(dados.atualizadoEm),
   };

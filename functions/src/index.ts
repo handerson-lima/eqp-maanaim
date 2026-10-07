@@ -23,3 +23,7 @@ export { obterFilaPastorLocal } from './commands/obterFilaPastorLocal.js';
 export { decidirFichaPastorLocal } from './commands/decidirFichaPastorLocal.js';
 export { obterFilaResponsavelEquipe } from './commands/obterFilaResponsavelEquipe.js';
 export { decidirParticipacaoResponsavelEquipe } from './commands/decidirParticipacaoResponsavelEquipe.js';
+export { obterFilaCoordenador } from './commands/obterFilaCoordenador.js';
+export { decidirAtivacaoCoordenador } from './commands/decidirAtivacaoCoordenador.js';
+export { obterMinhasNotificacoes } from './commands/obterMinhasNotificacoes.js';
+

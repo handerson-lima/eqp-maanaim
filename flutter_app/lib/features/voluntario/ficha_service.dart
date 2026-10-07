@@ -55,6 +55,8 @@ class FichaModel {
     required this.estado,
     required this.versao,
     this.termoAceito,
+    this.proximaAcao,
+    this.mensagemVoluntario,
     this.atualizadoEm,
   });
 
@@ -66,9 +68,13 @@ class FichaModel {
   final String estado;
   final int versao;
   final TermoAceitoModel? termoAceito;
+  final String? proximaAcao;
+  final String? mensagemVoluntario;
   final String? atualizadoEm;
 
   bool get isRascunho => estado == 'RASCUNHO';
+  bool get isAtiva => estado == 'ATIVA';
+  bool get isRejeitada => estado == 'REJEITADA';
 
   factory FichaModel.fromMap(Map<String, dynamic> map) {
     final termoAceitoRaw = map['termoAceito'];
@@ -85,6 +91,8 @@ class FichaModel {
       estado: map['estado'] as String? ?? 'RASCUNHO',
       versao: (map['versao'] as num?)?.toInt() ?? 1,
       termoAceito: termoAceito,
+      proximaAcao: map['proximaAcao'] as String?,
+      mensagemVoluntario: map['mensagemVoluntario'] as String?,
       atualizadoEm: map['atualizadoEm'] as String?,
     );
   }
@@ -98,6 +106,8 @@ class FichaModel {
         'estado': estado,
         'versao': versao,
         if (termoAceito != null) 'termoAceito': termoAceito!.toMap(),
+        if (proximaAcao != null) 'proximaAcao': proximaAcao,
+        if (mensagemVoluntario != null) 'mensagemVoluntario': mensagemVoluntario,
         if (atualizadoEm != null) 'atualizadoEm': atualizadoEm,
       };
 
@@ -110,6 +120,8 @@ class FichaModel {
     String? estado,
     int? versao,
     TermoAceitoModel? termoAceito,
+    String? proximaAcao,
+    String? mensagemVoluntario,
     String? atualizadoEm,
   }) {
     return FichaModel(
@@ -121,6 +133,8 @@ class FichaModel {
       estado: estado ?? this.estado,
       versao: versao ?? this.versao,
       termoAceito: termoAceito ?? this.termoAceito,
+      proximaAcao: proximaAcao ?? this.proximaAcao,
+      mensagemVoluntario: mensagemVoluntario ?? this.mensagemVoluntario,
       atualizadoEm: atualizadoEm ?? this.atualizadoEm,
     );
   }

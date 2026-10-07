@@ -56,6 +56,8 @@ export interface FichaPermanente {
   estado: string; // 'RASCUNHO', etc.
   versao: number;
   termoAceito?: TermoAceitoResumo | null;
+  proximaAcao?: string | null;
+  mensagemVoluntario?: string | null;
   criadoEm?: string | null;
   atualizadoEm?: string | null;
 }

@@ -39,6 +39,11 @@ const repoEnviarFicha = readFileSync(join(raiz, 'functions', 'src', 'repositorie
 const obterFilaPastorCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'obterFilaPastorLocal.ts'), 'utf8');
 const decidirFichaPastorCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'decidirFichaPastorLocal.ts'), 'utf8');
 const repoDecisaoPastor = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'decisaoPastor.ts'), 'utf8');
+const obterFilaCoordenadorCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'obterFilaCoordenador.ts'), 'utf8');
+const decidirAtivacaoCoordenadorCmd = readFileSync(join(raiz, 'functions', 'src', 'commands', 'decidirAtivacaoCoordenador.ts'), 'utf8');
+const repoDecisaoCoordenador = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'decisaoCoordenador.ts'), 'utf8');
+const domainDecisaoCoordenador = readFileSync(join(raiz, 'functions', 'src', 'domain', 'decisaoCoordenador.ts'), 'utf8');
+const coordenadorService = readFileSync(join(raiz, 'flutter_app', 'lib', 'features', 'coordenador', 'coordenador_service.dart'), 'utf8');
 
 describe('contratos de segurança executáveis', () => {
   it('nega escrita de domínio e leitura direta de ficha pelo cliente', () => {
@@ -317,5 +322,33 @@ describe('contratos de segurança executáveis', () => {
     const auditoria = repoDecisaoPastor.match(/tx\.set\(auditoriaRef, \{([\s\S]*?)\n    \}\);/)?.[1];
     expect(auditoria).toBeDefined();
     expect(auditoria).not.toMatch(/cpf|nomeCompleto|email|justificativa/);
+  });
+
+  it('protege a fila e a decisão do coordenador com App Check, autoridade canônica e auditoria sem PII', () => {
+    expect(obterFilaCoordenadorCmd).toContain('enforceAppCheck: true');
+    expect(obterFilaCoordenadorCmd).toContain('if (!request.auth)');
+    expect(obterFilaCoordenadorCmd).not.toMatch(/console\.(log|error)/);
+
+    expect(decidirAtivacaoCoordenadorCmd).toContain('enforceAppCheck: true');
+    expect(decidirAtivacaoCoordenadorCmd).toContain('if (!request.auth)');
+    expect(decidirAtivacaoCoordenadorCmd).toContain('validarDecidirAtivacaoCoordenador');
+    expect(decidirAtivacaoCoordenadorCmd).not.toMatch(/console\.(log|error)/);
+
+    expect(repoDecisaoCoordenador).toContain('runTransaction');
+    expect(repoDecisaoCoordenador).toContain('reciboSnap.exists');
+    expect(repoDecisaoCoordenador).toContain('payloadHash');
+    // Fonte canônica única de autoridade (AD-2/AD-9).
+    expect(repoDecisaoCoordenador).toContain("collection('autoridadesAdministrativas')");
+    expect(repoDecisaoCoordenador).not.toContain("collection('coordenadores')");
+
+    const auditoria = repoDecisaoCoordenador.match(/tx\.set\(auditoriaRef, \{([\s\S]*?)\n    \}\);/)?.[1];
+    expect(auditoria).toBeDefined();
+    expect(auditoria).not.toMatch(/cpf|nomeCompleto|email|justificativa/);
+
+    expect(index).toContain('export { obterFilaCoordenador }');
+    expect(index).toContain('export { decidirAtivacaoCoordenador }');
+    expect(coordenadorService).toContain("httpsCallable('obterFilaCoordenador')");
+    expect(coordenadorService).toContain("httpsCallable('decidirAtivacaoCoordenador')");
+    expect(domainDecisaoCoordenador).toContain('MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA');
   });
 });

@@ -61,6 +61,14 @@ function montarFicha(id: string, dados: Record<string, unknown>): FichaPermanent
     estado: String(dados.estado ?? 'RASCUNHO'),
     versao: Number(dados.versao ?? 1),
     termoAceito,
+    proximaAcao:
+      String(dados.estado ?? '') === 'REJEITADA'
+        ? 'Procure o Pastor da igreja local para mais informações'
+        : (dados.proximaAcao ? String(dados.proximaAcao) : null),
+    mensagemVoluntario:
+      String(dados.estado ?? '') === 'REJEITADA'
+        ? 'Procure o Pastor da igreja local para mais informações'
+        : (dados.mensagemVoluntario ? String(dados.mensagemVoluntario) : null),
     criadoEm: serializarTimestamp(dados.criadoEm),
     atualizadoEm: serializarTimestamp(dados.atualizadoEm),
   };

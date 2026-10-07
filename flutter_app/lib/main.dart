@@ -20,6 +20,8 @@ import 'features/voluntario/participacao_service.dart';
 import 'features/termo/termo_service.dart';
 import 'features/pastor/pastor_service.dart';
 import 'features/responsavel_equipe/responsavel_equipe_service.dart';
+import 'features/coordenador/coordenador_service.dart';
+import 'features/coordenador/fila_coordenador_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,6 +88,7 @@ Future<void> main() async {
       ficha: FirebaseFichaGateway(functions),
       pastor: FirebasePastorLocalGateway(functions),
       responsavelEquipe: FirebaseResponsavelEquipeGateway(functions),
+      coordenador: FirebaseCoordenadorGateway(functions),
     ),
   );
 }
@@ -114,6 +117,7 @@ class MaanaimApp extends StatelessWidget {
     this.termoVoluntario,
     this.pastor,
     this.responsavelEquipe,
+    this.coordenador,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -126,6 +130,7 @@ class MaanaimApp extends StatelessWidget {
   final TermoGateway? termoVoluntario;
   final PastorLocalGateway? pastor;
   final ResponsavelEquipeGateway? responsavelEquipe;
+  final CoordenadorGateway? coordenador;
   @override
   Widget build(BuildContext c) => MaterialApp(
     title: 'Maanaim',
@@ -142,6 +147,7 @@ class MaanaimApp extends StatelessWidget {
       termoVoluntario: termoVoluntario,
       pastor: pastor,
       responsavelEquipe: responsavelEquipe,
+      coordenador: coordenador,
     ),
   );
 }
@@ -162,6 +168,7 @@ class RaizSessao extends StatefulWidget {
     this.termoVoluntario,
     this.pastor,
     this.responsavelEquipe,
+    this.coordenador,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -174,6 +181,7 @@ class RaizSessao extends StatefulWidget {
   final TermoGateway? termoVoluntario;
   final PastorLocalGateway? pastor;
   final ResponsavelEquipeGateway? responsavelEquipe;
+  final CoordenadorGateway? coordenador;
 
   @override
   State<RaizSessao> createState() => _RaizSessaoState();
@@ -250,10 +258,15 @@ class _RaizSessaoState extends State<RaizSessao> {
         termoVoluntario: widget.termoVoluntario,
         pastor: widget.pastor,
         responsavelEquipe: widget.responsavelEquipe,
+        coordenador: widget.coordenador,
       );
     },
   );
 }
+
+/// Perfil de acesso resolvido a partir das claims da sessão, preservando o
+/// menor privilégio: administrador > coordenador > voluntário.
+enum _PerfilAcesso { administrador, coordenador, voluntario }
 
 class AreaAutenticada extends StatefulWidget {
   const AreaAutenticada(
@@ -269,6 +282,7 @@ class AreaAutenticada extends StatefulWidget {
     this.termoVoluntario,
     this.pastor,
     this.responsavelEquipe,
+    this.coordenador,
   });
   final AuthService auth;
   final CatalogoGateway? catalogo;
@@ -281,15 +295,26 @@ class AreaAutenticada extends StatefulWidget {
   final TermoGateway? termoVoluntario;
   final PastorLocalGateway? pastor;
   final ResponsavelEquipeGateway? responsavelEquipe;
+  final CoordenadorGateway? coordenador;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
 
 class _AreaAutenticadaState extends State<AreaAutenticada> {
-  late Future<bool> _autorizacao = widget.auth.possuiAdministracao();
+  late Future<_PerfilAcesso> _autorizacao = _resolverPerfil();
+
+  Future<_PerfilAcesso> _resolverPerfil() async {
+    if (await widget.auth.possuiAdministracao()) {
+      return _PerfilAcesso.administrador;
+    }
+    if (await widget.auth.possuiCoordenacao()) {
+      return _PerfilAcesso.coordenador;
+    }
+    return _PerfilAcesso.voluntario;
+  }
 
   void _retentar() => setState(() {
-    _autorizacao = widget.auth.possuiAdministracao();
+    _autorizacao = _resolverPerfil();
   });
 
   Future<void> _sair() async {
@@ -308,7 +333,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<bool>(
+  Widget build(BuildContext context) => FutureBuilder<_PerfilAcesso>(
     future: _autorizacao,
     builder: (context, estado) {
       if (estado.hasError) {
@@ -348,25 +373,34 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           ),
         );
       }
-      return estado.data!
-          ? AdminShell(
-              onSair: _sair,
-              catalogo: widget.catalogo,
-              seed: widget.seed,
-              pessoas: widget.pessoas,
-              vinculos: widget.vinculos,
-              termos: widget.termos,
-              pastor: widget.pastor,
-              responsavelEquipe: widget.responsavelEquipe,
-            )
-          : MinhaFichaScreen(
-              fichaGateway: _obterFichaGateway(),
-              catalogoGateway: _obterCatalogoGateway(),
-              participacaoGateway: _obterParticipacaoGateway(),
-              termoGateway: _obterTermoGateway(),
-              onSair: _sair,
-              userName: widget.auth.emailAtual,
-            );
+      final perfil = estado.data!;
+      if (perfil == _PerfilAcesso.administrador) {
+        return AdminShell(
+          onSair: _sair,
+          catalogo: widget.catalogo,
+          seed: widget.seed,
+          pessoas: widget.pessoas,
+          vinculos: widget.vinculos,
+          termos: widget.termos,
+          pastor: widget.pastor,
+          responsavelEquipe: widget.responsavelEquipe,
+          coordenador: widget.coordenador,
+        );
+      }
+      if (perfil == _PerfilAcesso.coordenador && widget.coordenador != null) {
+        return FilaCoordenadorScreen(
+          gateway: widget.coordenador!,
+          onSair: _sair,
+        );
+      }
+      return MinhaFichaScreen(
+        fichaGateway: _obterFichaGateway(),
+        catalogoGateway: _obterCatalogoGateway(),
+        participacaoGateway: _obterParticipacaoGateway(),
+        termoGateway: _obterTermoGateway(),
+        onSair: _sair,
+        userName: widget.auth.emailAtual,
+      );
     },
   );
 

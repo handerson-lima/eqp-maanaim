@@ -43,6 +43,8 @@ export const obterMinhaFicha = onCall(
         estado: ficha.estado,
         versao: ficha.versao,
         termoAceito: ficha.termoAceito ?? null,
+        proximaAcao: ficha.proximaAcao ?? null,
+        mensagemVoluntario: ficha.mensagemVoluntario ?? null,
         atualizadoEm: ficha.atualizadoEm,
       },
     };

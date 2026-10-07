@@ -11,6 +11,9 @@ abstract interface class IdentidadeGateway {
   Future<void> enviarRedefinicao(String email, ActionCodeSettings settings);
   Future<bool> possuiAdministracao();
 
+  /// `true` quando a sessão possui a claim de Coordenador Geral vigente.
+  Future<bool> possuiCoordenacao();
+
   /// Encerra a sessão autenticada.
   Future<void> sair();
 
@@ -73,9 +76,16 @@ abstract interface class SeedGateway {
 /// Nome da Custom Claim administrativa; espelha o backend.
 const String claimAdministrativa = 'maanaimAdmin';
 
+/// Nome da Custom Claim de Coordenador Geral; espelha o backend.
+const String claimCoordenacao = 'maanaimCoordenador';
+
 /// Lê a claim administrativa do mapa de claims, aceitando apenas `true`.
 bool claimAdministrativaAtiva(Map<String, dynamic>? claims) =>
     claims?[claimAdministrativa] == true;
+
+/// Lê a claim de Coordenação do mapa de claims, aceitando apenas `true`.
+bool claimCoordenacaoAtiva(Map<String, dynamic>? claims) =>
+    claims?[claimCoordenacao] == true;
 
 class FirebaseIdentidadeGateway implements IdentidadeGateway {
   FirebaseIdentidadeGateway(this._auth);
@@ -102,6 +112,14 @@ class FirebaseIdentidadeGateway implements IdentidadeGateway {
     if (usuario == null) return false;
     final token = await usuario.getIdTokenResult(true);
     return claimAdministrativaAtiva(token.claims);
+  }
+
+  @override
+  Future<bool> possuiCoordenacao() async {
+    final usuario = _auth.currentUser;
+    if (usuario == null) return false;
+    final token = await usuario.getIdTokenResult(true);
+    return claimCoordenacaoAtiva(token.claims);
   }
 
   @override
@@ -174,6 +192,9 @@ class AuthService {
 
   /// Renovar token evita que a UI mantenha uma concessão/revogação antiga.
   Future<bool> possuiAdministracao() => _identidade.possuiAdministracao();
+
+  /// Renovar token evita que a UI mantenha uma concessão/revogação antiga.
+  Future<bool> possuiCoordenacao() => _identidade.possuiCoordenacao();
 
   Future<void> sair() => _identidade.sair();
 

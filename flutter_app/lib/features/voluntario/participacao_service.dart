@@ -12,6 +12,9 @@ class ParticipacaoModel {
     required this.estado,
     required this.ciclo,
     required this.proximaAcao,
+    this.vigenciaInicio,
+    this.vigenciaFim,
+    this.cicloAtualId,
     this.criadoEm,
     this.atualizadoEm,
   });
@@ -23,10 +26,16 @@ class ParticipacaoModel {
   final String estado;
   final String ciclo;
   final String proximaAcao;
+  final String? vigenciaInicio;
+  final String? vigenciaFim;
+  final String? cicloAtualId;
   final String? criadoEm;
   final String? atualizadoEm;
 
   bool get isRascunho => estado == 'RASCUNHO';
+  bool get isAtiva => estado == 'ATIVA';
+  bool get isRejeitada => estado == 'REJEITADA';
+  bool get isPendente => !isRascunho && !isAtiva && !isRejeitada;
 
   factory ParticipacaoModel.fromMap(Map<String, dynamic> map) {
     return ParticipacaoModel(
@@ -37,6 +46,9 @@ class ParticipacaoModel {
       estado: map['estado'] as String? ?? 'RASCUNHO',
       ciclo: map['ciclo'] as String? ?? 'INICIAL',
       proximaAcao: map['proximaAcao'] as String? ?? 'Aguardando envio da ficha',
+      vigenciaInicio: map['vigenciaInicio'] as String?,
+      vigenciaFim: map['vigenciaFim'] as String?,
+      cicloAtualId: map['cicloAtualId'] as String?,
       criadoEm: map['criadoEm'] as String?,
       atualizadoEm: map['atualizadoEm'] as String?,
     );
@@ -50,6 +62,9 @@ class ParticipacaoModel {
         'estado': estado,
         'ciclo': ciclo,
         'proximaAcao': proximaAcao,
+        if (vigenciaInicio != null) 'vigenciaInicio': vigenciaInicio,
+        if (vigenciaFim != null) 'vigenciaFim': vigenciaFim,
+        if (cicloAtualId != null) 'cicloAtualId': cicloAtualId,
         if (criadoEm != null) 'criadoEm': criadoEm,
         if (atualizadoEm != null) 'atualizadoEm': atualizadoEm,
       };
@@ -62,6 +77,9 @@ class ParticipacaoModel {
     String? estado,
     String? ciclo,
     String? proximaAcao,
+    String? vigenciaInicio,
+    String? vigenciaFim,
+    String? cicloAtualId,
     String? criadoEm,
     String? atualizadoEm,
   }) {
@@ -73,6 +91,9 @@ class ParticipacaoModel {
       estado: estado ?? this.estado,
       ciclo: ciclo ?? this.ciclo,
       proximaAcao: proximaAcao ?? this.proximaAcao,
+      vigenciaInicio: vigenciaInicio ?? this.vigenciaInicio,
+      vigenciaFim: vigenciaFim ?? this.vigenciaFim,
+      cicloAtualId: cicloAtualId ?? this.cicloAtualId,
       criadoEm: criadoEm ?? this.criadoEm,
       atualizadoEm: atualizadoEm ?? this.atualizadoEm,
     );

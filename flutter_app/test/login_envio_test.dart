@@ -32,6 +32,9 @@ class IdentidadeEntrarPendente implements IdentidadeGateway {
   Future<bool> possuiAdministracao() async => false;
 
   @override
+  Future<bool> possuiCoordenacao() async => false;
+
+  @override
   Future<void> sair() async {}
 
   @override
