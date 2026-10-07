@@ -124,6 +124,10 @@ class ParticipacaoConsultaModel {
     required this.proximaAcao,
     this.vigenciaInicio,
     this.vigenciaFim,
+    this.situacaoVigencia,
+    this.diasParaVencimento,
+    this.alertaVigencia,
+    this.emAlertaRenovacao = false,
     this.cicloAtualId,
     this.atualizadoEm,
   });
@@ -137,6 +141,10 @@ class ParticipacaoConsultaModel {
   final String proximaAcao;
   final String? vigenciaInicio;
   final String? vigenciaFim;
+  final String? situacaoVigencia;
+  final int? diasParaVencimento;
+  final String? alertaVigencia;
+  final bool emAlertaRenovacao;
   final String? cicloAtualId;
   final String? atualizadoEm;
 
@@ -154,6 +162,10 @@ class ParticipacaoConsultaModel {
       proximaAcao: map['proximaAcao'] as String? ?? '',
       vigenciaInicio: map['vigenciaInicio'] as String?,
       vigenciaFim: map['vigenciaFim'] as String?,
+      situacaoVigencia: map['situacaoVigencia'] as String?,
+      diasParaVencimento: (map['diasParaVencimento'] as num?)?.toInt(),
+      alertaVigencia: map['alertaVigencia'] as String?,
+      emAlertaRenovacao: map['emAlertaRenovacao'] as bool? ?? false,
       cicloAtualId: map['cicloAtualId'] as String?,
       atualizadoEm: map['atualizadoEm'] as String?,
     );

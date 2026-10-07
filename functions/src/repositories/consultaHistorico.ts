@@ -14,6 +14,8 @@ import {
   type ResultadoConsultaLinhaDoTempo,
 } from '../domain/consultaHistorico.js';
 import { avaliarAutoridadeCoordenador } from './decisaoCoordenador.js';
+import { classificarVigencia, type ConfiguracaoJanelaVigencia } from '../domain/vigencia.js';
+import { obterConfiguracaoJanelaVigencia } from './configuracaoVigencia.js';
 
 function serializarTimestamp(valor: unknown): string | null {
   if (!valor) return null;
@@ -295,6 +297,9 @@ export async function consultarFichaAutorizadaRepo(
     );
   }
 
+  const configVigencia: ConfiguracaoJanelaVigencia =
+    await obterConfiguracaoJanelaVigencia(db);
+
   const participacoes: ParticipacaoConsultaAutorizada[] = participacoesDocs
     .map((doc) => {
       const d = doc.data() ?? {};
@@ -304,6 +309,11 @@ export async function consultarFichaAutorizadaRepo(
         ? MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA
         : String(d.proximaAcao ?? (estado === 'RASCUNHO' ? 'Aguardando envio da ficha' : 'Em análise'));
 
+      const vigenciaInicio = serializarTimestamp(d.vigenciaInicio);
+      const vigenciaFim = serializarTimestamp(d.vigenciaFim);
+      const alertaInfo =
+        estado === 'ATIVA' ? classificarVigencia(Date.now(), vigenciaFim, configVigencia) : null;
+
       return {
         id: doc.id,
         fichaId: String(d.fichaId ?? fichaIdEfetivo),
@@ -312,8 +322,12 @@ export async function consultarFichaAutorizadaRepo(
         estado: escopo.ehProprioVoluntario ? estadoPublicoVoluntario(estado) : estado,
         ciclo: String(d.ciclo ?? 'INICIAL'),
         proximaAcao,
-        vigenciaInicio: serializarTimestamp(d.vigenciaInicio),
-        vigenciaFim: serializarTimestamp(d.vigenciaFim),
+        vigenciaInicio,
+        vigenciaFim,
+        situacaoVigencia: alertaInfo?.situacao ?? (estado === 'EXPIRADA' ? 'EXPIRADA' : null),
+        diasParaVencimento: alertaInfo?.diasRestantes ?? null,
+        alertaVigencia: alertaInfo?.alerta ?? null,
+        emAlertaRenovacao: alertaInfo?.emAlertaRenovacao ?? false,
         cicloAtualId: d.cicloAtualId ? String(d.cicloAtualId) : null,
         atualizadoEm: serializarTimestamp(d.atualizadoEm),
       };
@@ -415,8 +429,13 @@ export async function consultarLinhaDoTempoAutorizadaRepo(
 
     // Responsável de Equipe: isolamento estrito por equipe; eventos sem equipe autorizada são descartados
     if (escopo.papel === 'RESPONSAVEL_EQUIPE') {
-      if (etapa !== 'RESPONSAVEL_EQUIPE') continue;
-      if (!equipeId || !escopo.equipeIdsAutorizadas?.includes(equipeId)) continue;
+      const equipeAutorizada = !!equipeId && !!escopo.equipeIdsAutorizadas?.includes(equipeId);
+      const ehExpiracao = e.tipo === 'EXPIRACAO_CICLO_ANUAL';
+      if (etapa === 'RESPONSAVEL_EQUIPE' || ehExpiracao) {
+        if (!equipeAutorizada) continue;
+      } else {
+        continue;
+      }
     }
 
     if (etapa === 'PASTOR_LOCAL') {
@@ -488,6 +507,19 @@ export async function consultarLinhaDoTempoAutorizadaRepo(
         justificativaInterna: escopo.ehProprioVoluntario
           ? null
           : (e.justificativa ?? e.justificativaInterna ?? e.observacao ?? null) as string | null,
+      });
+    } else if (e.tipo === 'EXPIRACAO_CICLO_ANUAL') {
+      eventosBrutos.push({
+        id: doc.id,
+        tipo: 'EXPIRACAO_CICLO_ANUAL',
+        etapa: 'SISTEMA',
+        titulo: 'Vigência anual expirada',
+        descricao: 'A vigência anual foi encerrada automaticamente pelo sistema por falta de renovação.',
+        estadoVisual: 'CONCLUIDO',
+        timestamp,
+        ator: escopo.ehProprioVoluntario ? null : { nome: 'Sistema', papel: 'SISTEMA', vinculoId: null },
+        equipeId,
+        justificativaInterna: null,
       });
     }
   }

@@ -124,6 +124,39 @@ describe('Repositório de Participações (participacao.ts)', () => {
     expect(resultado[0].ciclo).toBe('INICIAL');
   });
 
+  it('obterMinhasParticipacoesRepo projeta alerta de vigência para participação ATIVA próxima do vencimento (Story 5.1)', async () => {
+    const vigenciaInicio = new Date('2025-10-27T12:00:00.000Z').toISOString();
+    const vigenciaFim = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString();
+    const docs = [
+      {
+        id: 'part-alerta',
+        data: () => ({
+          fichaId: 'uid-voluntario-1',
+          equipeId: 'eq-a',
+          nomeEquipe: 'Apoio',
+          estado: 'ATIVA',
+          ciclo: 'INICIAL',
+          proximaAcao: 'Voluntariado ativo',
+          vigenciaInicio,
+          vigenciaFim,
+        }),
+      },
+    ];
+
+    const mockDb: any = {
+      collection: () => ({
+        where: () => ({ limit: () => ({ get: async () => ({ docs }) }) }),
+      }),
+    };
+
+    const resultado = await obterMinhasParticipacoesRepo(mockDb, 'uid-voluntario-1');
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0].situacaoVigencia).toBe('RENOVACAO_IMINENTE_30D');
+    expect(resultado[0].diasParaVencimento).toBeGreaterThan(0);
+    expect(resultado[0].alertaVigencia).toBeTruthy();
+    expect(resultado[0].emAlertaRenovacao).toBe(true);
+  });
+
   it('salvarParticipacoesRascunhoRepo falha com FichaNaoEncontradaError se ficha permanente não existir', async () => {
     const entrada = validarSalvarParticipacoes({
       commandId: 'cmd-teste-sem-ficha',

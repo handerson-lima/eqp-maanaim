@@ -5,6 +5,7 @@ import '../../ui/components/app_shell.dart';
 import '../../ui/components/buttons.dart';
 import '../../ui/components/layout_elements.dart';
 import '../../ui/components/status_chips.dart';
+import '../../ui/components/vigencia_badge.dart';
 import '../../ui/tokens.dart';
 import '../admin/catalogo_service.dart';
 import '../auth/validadores.dart';
@@ -18,6 +19,7 @@ import 'solicitar_equipe_modal.dart';
 import 'cancelar_participacao_dialog.dart';
 import 'cancelar_voluntariado_dialog.dart';
 import 'solicitar_reativacao_dialog.dart';
+import 'manifestar_renovacao_dialog.dart';
 
 /// Tela responsiva mobile-first para o voluntário preencher e manter sua ficha cadastral permanente.
 class MinhaFichaScreen extends StatefulWidget {
@@ -859,6 +861,55 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               ),
             ),
           ],
+          if (_participacoes.any((p) => p.isEmJanelaRenovacao)) ...[
+            const SizedBox(height: AppSpacing.s12),
+            Container(
+              key: const Key('banner_renovacao_disponivel'),
+              padding: const EdgeInsets.all(AppSpacing.s12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.autorenew_rounded, color: AppColors.blue600, size: 24),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Renovação Anual Disponível',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppColors.navy900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Você possui participações com renovação aberta. Indique se deseja continuar servindo no próximo ano.',
+                          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s8),
+                  ElevatedButton(
+                    key: const Key('btn_abrir_renovacao_banner'),
+                    onPressed: () => _abrirModalRenovacao(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.blue600,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(44, 44),
+                    ),
+                    child: const Text('Renovar'),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.s12),
           if (_isBloqueadoParaEdicao && _participacoes.isNotEmpty) ...[
             Column(
@@ -947,26 +998,90 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                             ],
                           ),
                         ],
-                        const SizedBox(height: AppSpacing.s8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton.icon(
-                            key: Key('btn_cancelar_participacao_${p.id}'),
-                            onPressed: () => _abrirModalCancelarParticipacao(p),
-                            icon: const Icon(Icons.cancel_outlined, size: 16, color: AppColors.danger),
-                            label: const Text(
-                              'Cancelar Participação',
-                              style: TextStyle(
-                                color: AppColors.danger,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                        if (p.emAlertaRenovacao || p.situacaoVigencia != null || p.diasParaVencimento != null) ...[
+                          const SizedBox(height: AppSpacing.s4),
+                          VigenciaBadge(
+                            key: Key('badge_vigencia_${p.id}'),
+                            vigenciaInicio: p.vigenciaInicio,
+                            vigenciaFim: p.vigenciaFim,
+                            situacaoVigencia: p.situacaoVigencia,
+                            diasParaVencimento: p.diasParaVencimento,
+                            alertaVigencia: p.alertaVigencia,
+                            compact: true,
+                          ),
+                        ],
+                        if (p.isRenovacaoManifestada) ...[
+                          const SizedBox(height: AppSpacing.s4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: p.intencaoRenovacao == 'CONTINUAR'
+                                  ? const Color(0xFFEFF6FF)
+                                  : const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: p.intencaoRenovacao == 'CONTINUAR'
+                                    ? const Color(0xFFBFDBFE)
+                                    : const Color(0xFFFDE68A),
                               ),
                             ),
-                            style: TextButton.styleFrom(
-                              minimumSize: const Size(44, 44),
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              p.intencaoRenovacao == 'CONTINUAR'
+                                  ? 'Renovação manifestada: Continuar'
+                                  : 'Encerramento programado ao término da vigência',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: p.intencaoRenovacao == 'CONTINUAR'
+                                    ? AppColors.blue600
+                                    : const Color(0xFFB45309),
+                              ),
                             ),
                           ),
+                        ],
+                        const SizedBox(height: AppSpacing.s8),
+                        Wrap(
+                          alignment: WrapAlignment.end,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: AppSpacing.s8,
+                          runSpacing: AppSpacing.s4,
+                          children: [
+                            if (p.isEmJanelaRenovacao)
+                              TextButton.icon(
+                                key: Key('btn_renovar_participacao_${p.id}'),
+                                onPressed: () => _abrirModalRenovacao(participacaoEspecifica: p),
+                                icon: const Icon(Icons.autorenew_rounded, size: 16, color: AppColors.blue600),
+                                label: Text(
+                                  p.isRenovacaoManifestada ? 'Alterar Renovação' : 'Manifestar Renovação',
+                                  style: const TextStyle(
+                                    color: AppColors.blue600,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  minimumSize: const Size(44, 44),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                              ),
+                            TextButton.icon(
+                              key: Key('btn_cancelar_participacao_${p.id}'),
+                              onPressed: () => _abrirModalCancelarParticipacao(p),
+                              icon: const Icon(Icons.cancel_outlined, size: 16, color: AppColors.danger),
+                              label: const Text(
+                                'Cancelar Participação',
+                                style: TextStyle(
+                                  color: AppColors.danger,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: TextButton.styleFrom(
+                                minimumSize: const Size(44, 44),
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -2023,6 +2138,48 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 Expanded(
                   child: Text(
                     'Solicitação de reativação da equipe ${participacao.nomeEquipe} enviada! Aguardando avaliação pastoral.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        await _carregarDados();
+      },
+    );
+  }
+
+  void _abrirModalRenovacao({ParticipacaoModel? participacaoEspecifica}) {
+    final gateway = widget.participacaoGateway;
+    if (gateway == null) return;
+
+    final elegiveis = participacaoEspecifica != null
+        ? [participacaoEspecifica]
+        : _participacoes.where((p) => p.isEmJanelaRenovacao).toList();
+
+    if (elegiveis.isEmpty) return;
+
+    ManifestarRenovacaoDialog.show(
+      context,
+      participacoesElegiveis: elegiveis,
+      participacaoPreSelecionadaId: participacaoEspecifica?.id,
+      onConfirmar: (manifestacoes) async {
+        final commandId = comandoOpaco();
+        await gateway.manifestarRenovacao(
+          manifestacoes: manifestacoes,
+          commandId: commandId,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.navy900,
+            content: Row(
+              children: [
+                Icon(Icons.check_circle_outline, color: AppColors.surface),
+                SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: Text(
+                    'Manifestação de renovação registrada com sucesso!',
                   ),
                 ),
               ],

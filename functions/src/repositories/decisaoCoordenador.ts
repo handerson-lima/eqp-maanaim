@@ -25,6 +25,7 @@ import {
   podeAdministrar,
   possuiPapel,
 } from '../domain/autoridadeAdministrativa.js';
+import { calcularVigenciaAnual } from '../domain/vigencia.js';
 
 export interface ContextoDecisaoCoordenador {
   commandId: string;
@@ -66,42 +67,6 @@ function mascararCpf(cpfRaw: unknown): string {
     return `${cpf.slice(0, 3)}.***.***-${cpf.slice(9)}`;
   }
   return '***.***.***-**';
-}
-
-/**
- * Soma exatamente um ano de calendário preservando o dia quando possível.
- * 29/02 recua para 28/02 no ano de destino não bissexto (mantém a vigência
- * contida no aniversário de aprovação, AD-7).
- */
-export function adicionarUmAno(data: Date): Date {
-  const ano = data.getUTCFullYear() + 1;
-  const mes = data.getUTCMonth();
-  const dia = data.getUTCDate();
-  const candidato = new Date(
-    Date.UTC(
-      ano,
-      mes,
-      dia,
-      data.getUTCHours(),
-      data.getUTCMinutes(),
-      data.getUTCSeconds(),
-      data.getUTCMilliseconds(),
-    ),
-  );
-  if (candidato.getUTCMonth() !== mes) {
-    return new Date(
-      Date.UTC(
-        ano,
-        mes + 1,
-        0,
-        data.getUTCHours(),
-        data.getUTCMinutes(),
-        data.getUTCSeconds(),
-        data.getUTCMilliseconds(),
-      ),
-    );
-  }
-  return candidato;
 }
 
 /**
@@ -426,12 +391,13 @@ export async function decidirAtivacaoCoordenadorRepo(
 
     if (entrada.decisao === 'APROVADO') {
       // Vigência de exatamente um ano a partir da aprovação final (AD-7/AD-11)
-      const dataFim = adicionarUmAno(agoraDate);
-      vigenciaInicio = agoraIso;
-      vigenciaFim = dataFim.toISOString();
-      vigenciaInicioTs = Timestamp.fromDate(agoraDate);
+      const vigencia = calcularVigenciaAnual(agoraDate);
+      const dataFim = vigencia.vigenciaFim;
+      vigenciaInicio = vigencia.vigenciaInicio.toISOString();
+      vigenciaFim = vigencia.vigenciaFim.toISOString();
+      vigenciaInicioTs = Timestamp.fromDate(vigencia.vigenciaInicio);
       vigenciaFimTs = Timestamp.fromDate(dataFim);
-      const anoVigencia = agoraDate.getUTCFullYear();
+      const anoVigencia = vigencia.anoVigencia;
 
       for (const partDoc of participacoesElegiveis) {
         const partData = partDoc.data() ?? {};

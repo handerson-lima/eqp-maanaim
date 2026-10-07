@@ -4,6 +4,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import '../../ui/components/app_shell.dart';
 import '../../ui/components/layout_elements.dart';
 import '../../ui/components/status_chips.dart';
+import '../../ui/components/vigencia_badge.dart';
 import '../../ui/tokens.dart';
 import 'historico_service.dart';
 import 'linha_tempo_widget.dart';
@@ -348,7 +349,7 @@ class _ConsultaFichaAutorizadaScreenState
                                       const Icon(
                                         Icons.calendar_today_outlined,
                                         size: 13,
-                                        color: AppColors.success,
+                                        color: AppColors.textSecondary,
                                       ),
                                       const SizedBox(width: 4),
                                       Expanded(
@@ -357,11 +358,25 @@ class _ConsultaFichaAutorizadaScreenState
                                           style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
-                                            color: AppColors.success,
+                                            color: AppColors.textSecondary,
                                           ),
                                         ),
                                       ),
                                     ],
+                                  ),
+                                ],
+                                if (part.emAlertaRenovacao ||
+                                    part.situacaoVigencia != null ||
+                                    part.diasParaVencimento != null) ...[
+                                  const SizedBox(height: AppSpacing.s4),
+                                  VigenciaBadge(
+                                    key: Key('badge_vigencia_${part.id}'),
+                                    vigenciaInicio: part.vigenciaInicio,
+                                    vigenciaFim: part.vigenciaFim,
+                                    situacaoVigencia: part.situacaoVigencia,
+                                    diasParaVencimento: part.diasParaVencimento,
+                                    alertaVigencia: part.alertaVigencia,
+                                    compact: true,
                                   ),
                                 ],
                               ],

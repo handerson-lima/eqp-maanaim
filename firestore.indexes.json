@@ -1,4 +1,13 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "participacoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "vigenciaFim", "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

@@ -74,6 +74,10 @@ export interface ParticipacaoConsultaAutorizada {
   proximaAcao: string;
   vigenciaInicio: string | null;
   vigenciaFim: string | null;
+  situacaoVigencia?: string | null;
+  diasParaVencimento?: number | null;
+  alertaVigencia?: string | null;
+  emAlertaRenovacao?: boolean;
   cicloAtualId: string | null;
   atualizadoEm: string | null;
 }
@@ -87,8 +91,10 @@ export interface EventoLinhaDoTempo {
     | 'DECISAO_RESPONSAVEL_EQUIPE'
     | 'HOMOLOGACAO_COORDENACAO'
     | 'CANCELAMENTO'
+    | 'EXPIRACAO_CICLO_ANUAL'
+    | 'REATIVACAO'
     | 'OUTRO';
-  etapa: 'CADASTRO' | 'PASTOR_LOCAL' | 'RESPONSAVEL_EQUIPE' | 'COORDENADOR_GERAL';
+  etapa: 'CADASTRO' | 'PASTOR_LOCAL' | 'RESPONSAVEL_EQUIPE' | 'COORDENADOR_GERAL' | 'SISTEMA';
   titulo: string;
   descricao: string;
   estadoVisual: 'CONCLUIDO' | 'EM_ANDAMENTO' | 'ORIENTACAO_PASTORAL';

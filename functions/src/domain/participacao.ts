@@ -87,6 +87,10 @@ export interface ParticipacaoRascunho {
   proximaAcao: string;
   vigenciaInicio?: string | null;
   vigenciaFim?: string | null;
+  situacaoVigencia?: string | null;
+  diasParaVencimento?: number | null;
+  alertaVigencia?: string | null;
+  emAlertaRenovacao?: boolean;
   cicloAtualId?: string | null;
   criadoEm?: string | null;
   atualizadoEm?: string | null;

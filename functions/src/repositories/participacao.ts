@@ -8,6 +8,8 @@ import {
   type EntradaSalvarParticipacoesRascunho,
   type ParticipacaoRascunho,
 } from '../domain/participacao.js';
+import { classificarVigencia, type ConfiguracaoJanelaVigencia } from '../domain/vigencia.js';
+import { obterConfiguracaoJanelaVigencia } from './configuracaoVigencia.js';
 
 /** Teto de leitura das participações do voluntário (AD-9). */
 const LIMITE_PARTICIPACOES_VOLUNTARIO = 100;
@@ -33,12 +35,21 @@ function serializarTimestamp(valor: unknown): string | null {
   return null;
 }
 
-function montarParticipacao(id: string, dados: Record<string, unknown>): ParticipacaoRascunho {
+function montarParticipacao(
+  id: string,
+  dados: Record<string, unknown>,
+  configVigencia?: ConfiguracaoJanelaVigencia,
+): ParticipacaoRascunho {
   const estado = normalizarEstadoParticipacao(dados.estado);
   const ehNegativa = estado === 'REJEITADA';
   const proximaAcao = ehNegativa
     ? MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA
     : String(dados.proximaAcao ?? (estado === 'RASCUNHO' ? 'Aguardando envio da ficha' : 'Em análise'));
+
+  const vigenciaInicio = serializarTimestamp(dados.vigenciaInicio);
+  const vigenciaFim = serializarTimestamp(dados.vigenciaFim);
+  const alertaInfo =
+    estado === 'ATIVA' ? classificarVigencia(Date.now(), vigenciaFim, configVigencia) : null;
 
   return {
     id,
@@ -49,8 +60,12 @@ function montarParticipacao(id: string, dados: Record<string, unknown>): Partici
     versao: Number(dados.versao ?? 1),
     ciclo: String(dados.ciclo ?? 'INICIAL'),
     proximaAcao,
-    vigenciaInicio: serializarTimestamp(dados.vigenciaInicio),
-    vigenciaFim: serializarTimestamp(dados.vigenciaFim),
+    vigenciaInicio,
+    vigenciaFim,
+    situacaoVigencia: alertaInfo?.situacao ?? (estado === 'EXPIRADA' ? 'EXPIRADA' : null),
+    diasParaVencimento: alertaInfo?.diasRestantes ?? null,
+    alertaVigencia: alertaInfo?.alerta ?? null,
+    emAlertaRenovacao: alertaInfo?.emAlertaRenovacao ?? false,
     cicloAtualId: dados.cicloAtualId ? String(dados.cicloAtualId) : null,
     criadoEm: serializarTimestamp(dados.criadoEm),
     atualizadoEm: serializarTimestamp(dados.atualizadoEm),
@@ -70,8 +85,10 @@ export async function obterMinhasParticipacoesRepo(
     .limit(LIMITE_PARTICIPACOES_VOLUNTARIO)
     .get();
 
+  const configVigencia = await obterConfiguracaoJanelaVigencia(db);
+
   return snapshot.docs
-    .map((doc) => montarParticipacao(doc.id, doc.data()))
+    .map((doc) => montarParticipacao(doc.id, doc.data(), configVigencia))
     .sort((a, b) => a.nomeEquipe.localeCompare(b.nomeEquipe));
 }
 

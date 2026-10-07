@@ -298,6 +298,58 @@ void main() {
       expect(find.text('Ficha enviada para aprovação'), findsOneWidget);
     });
 
+    testWidgets('exibe VigenciaBadge de alerta para participação em janela de renovação (Story 5.1)', (tester) async {
+      final fakeService = FakeHistoricoService(
+        resultadoFicha: const ResultadoConsultaFichaModel(
+          existe: true,
+          ficha: FichaConsultaModel(
+            id: 'vol-1',
+            ownerUid: 'vol-1',
+            nomeCompleto: 'Gabriel Silva',
+            profissao: 'Engenheiro',
+            cpfMascarado: '***.456.789-**',
+            igrejaId: 'igreja-1',
+            nomeIgreja: 'Igreja Central',
+            estado: 'ATIVA',
+            versao: 3,
+            proximaAcao: 'Voluntariado ativo',
+          ),
+          participacoes: [
+            ParticipacaoConsultaModel(
+              id: 'part-alerta',
+              fichaId: 'vol-1',
+              equipeId: 'eq-louvor',
+              nomeEquipe: 'Louvor',
+              estado: 'ATIVA',
+              ciclo: 'INICIAL',
+              proximaAcao: 'Voluntariado ativo',
+              vigenciaInicio: '2025-10-27T12:00:00Z',
+              vigenciaFim: '2026-10-27T12:00:00Z',
+              situacaoVigencia: 'RENOVACAO_IMINENTE_30D',
+              diasParaVencimento: 20,
+              alertaVigencia: 'Renovação necessária: vence em 20 dias',
+              emAlertaRenovacao: true,
+            ),
+          ],
+          papel: 'PASTOR_LOCAL',
+          equipesFiltradas: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ConsultaFichaAutorizadaScreen(
+            fichaId: 'vol-1',
+            historicoService: fakeService,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('badge_vigencia_part-alerta')), findsOneWidget);
+      expect(find.text('Renovação necessária: vence em 20 dias'), findsOneWidget);
+    });
+
     testWidgets('exibe banner de isolamento de equipe quando o ator é Responsável de Equipe com equipesFiltradas', (tester) async {
       final fakeService = FakeHistoricoService(
         resultadoFicha: const ResultadoConsultaFichaModel(

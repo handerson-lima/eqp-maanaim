@@ -103,3 +103,7 @@
 - Cancelamento administrativo pelas filas de Pastor/Equipe/Coordenador não implementado: o `Approach` da story prevê ação de cancelamento/desligamento com justificativa nas filas, mas só `MinhaFichaScreen` foi integrada com `isLideranca: false` fixo; o backend já valida a autoridade de liderança. Diferido: backend autoritativo; superfície de UI das filas em story própria.
 - Nomenclatura diverge do Code Map: o spec nomeia `ConfirmarCancelamentoParticipacaoDialog`/`ConfirmarCancelamentoVoluntariadoDialog` e `FichaService`/`FirebaseFichaService`/`MemoriaFichaService`; o código usa `Cancelar...Dialog` e `FichaGateway`/`FirebaseFichaGateway`, sem implementação em memória de `FichaGateway`. Diferido: cosmético, sem consumidor.
 - Vigência temporal do vínculo não validada nas checagens de autoridade: `verificarSePastorLocal`/`verificarSeResponsavelEquipe` só filtram `estado == 'VIGENTE'`, sem janela `inicioVigencia`/`fimVigencia` (AD-2), mesma convenção pré-existente de `decisaoPastor.ts:220-238`/`decisaoResponsavelEquipe.ts:240-260`. Diferido: padrão do codebase; o modelo marca o vínculo como `ENCERRADO` ao encerrar, sem caso alcançável hoje.
+
+## Deferred from: code review of story-5.1-calcular-vigencia-anual-e-alertas-de-renovacao (2026-10-07)
+
+- Job de expiração processa uma transação por participação (`functions/src/repositories/expirarCiclo.ts`): aumento de latência proporcional ao volume e aplicação parcial em caso de falha no meio do lote (recuperável por reexecução idempotente). Reestruturar para lote/claims atômicos é mudança maior, deferida.

@@ -6,6 +6,25 @@ import '../../comando.dart';
 const String mensagemNeutraCanonica =
     'Procure o Pastor da igreja local para mais informações';
 
+/// Item de manifestação de renovação por equipe (Story 5.2).
+class ManifestacaoEquipeInput {
+  const ManifestacaoEquipeInput({
+    required this.participacaoId,
+    required this.decisao,
+    this.justificativa,
+  });
+
+  final String participacaoId;
+  final String decisao; // 'CONTINUAR' ou 'NAO_CONTINUAR'
+  final String? justificativa;
+
+  Map<String, dynamic> toMap() => {
+        'participacaoId': participacaoId,
+        'decisao': decisao,
+        if (justificativa != null) 'justificativa': justificativa,
+      };
+}
+
 /// Modelo de dados da participação do voluntário em uma equipe.
 class ParticipacaoModel {
   const ParticipacaoModel({
@@ -19,7 +38,14 @@ class ParticipacaoModel {
     this.versao = 1,
     this.vigenciaInicio,
     this.vigenciaFim,
+    this.situacaoVigencia,
+    this.diasParaVencimento,
+    this.alertaVigencia,
+    this.emAlertaRenovacao = false,
     this.cicloAtualId,
+    this.intencaoRenovacao,
+    this.cicloRenovacaoId,
+    this.programadoEncerramentoEm,
     this.criadoEm,
     this.atualizadoEm,
   });
@@ -34,7 +60,14 @@ class ParticipacaoModel {
   final int versao;
   final String? vigenciaInicio;
   final String? vigenciaFim;
+  final String? situacaoVigencia;
+  final int? diasParaVencimento;
+  final String? alertaVigencia;
+  final bool emAlertaRenovacao;
   final String? cicloAtualId;
+  final String? intencaoRenovacao;
+  final String? cicloRenovacaoId;
+  final String? programadoEncerramentoEm;
   final String? criadoEm;
   final String? atualizadoEm;
 
@@ -44,6 +77,16 @@ class ParticipacaoModel {
   bool get isCancelada => estado == 'CANCELADA';
   bool get isExpirada => estado == 'EXPIRADA';
   bool get isInativa => estado == 'INATIVA';
+
+  /// Retorna verdadeiro se a participação estiver ativa e dentro da janela de renovação (AD-7 / Story 5.1).
+  bool get isEmJanelaRenovacao =>
+      isAtiva &&
+      (emAlertaRenovacao ||
+          situacaoVigencia == 'ALERTA_PREVIO_60D' ||
+          situacaoVigencia == 'RENOVACAO_IMINENTE_30D');
+
+  /// Indica se já houve manifestação prévia registrada nesta vigência.
+  bool get isRenovacaoManifestada => intencaoRenovacao != null;
 
   /// Estados terminais não bloqueiam uma nova solicitação (AD-11). Deve manter
   /// paridade com `ESTADOS_TERMINAIS_PARTICIPACAO` no backend.
@@ -64,7 +107,14 @@ class ParticipacaoModel {
       versao: (map['versao'] as num?)?.toInt() ?? 1,
       vigenciaInicio: map['vigenciaInicio'] as String?,
       vigenciaFim: map['vigenciaFim'] as String?,
+      situacaoVigencia: map['situacaoVigencia'] as String?,
+      diasParaVencimento: (map['diasParaVencimento'] as num?)?.toInt(),
+      alertaVigencia: map['alertaVigencia'] as String?,
+      emAlertaRenovacao: map['emAlertaRenovacao'] as bool? ?? false,
       cicloAtualId: map['cicloAtualId'] as String?,
+      intencaoRenovacao: map['intencaoRenovacao'] as String?,
+      cicloRenovacaoId: map['cicloRenovacaoId'] as String?,
+      programadoEncerramentoEm: map['programadoEncerramentoEm'] as String?,
       criadoEm: map['criadoEm'] as String?,
       atualizadoEm: map['atualizadoEm'] as String?,
     );
@@ -81,7 +131,15 @@ class ParticipacaoModel {
         'versao': versao,
         if (vigenciaInicio != null) 'vigenciaInicio': vigenciaInicio,
         if (vigenciaFim != null) 'vigenciaFim': vigenciaFim,
+        if (situacaoVigencia != null) 'situacaoVigencia': situacaoVigencia,
+        if (diasParaVencimento != null) 'diasParaVencimento': diasParaVencimento,
+        if (alertaVigencia != null) 'alertaVigencia': alertaVigencia,
+        'emAlertaRenovacao': emAlertaRenovacao,
         if (cicloAtualId != null) 'cicloAtualId': cicloAtualId,
+        if (intencaoRenovacao != null) 'intencaoRenovacao': intencaoRenovacao,
+        if (cicloRenovacaoId != null) 'cicloRenovacaoId': cicloRenovacaoId,
+        if (programadoEncerramentoEm != null)
+          'programadoEncerramentoEm': programadoEncerramentoEm,
         if (criadoEm != null) 'criadoEm': criadoEm,
         if (atualizadoEm != null) 'atualizadoEm': atualizadoEm,
       };
@@ -97,7 +155,14 @@ class ParticipacaoModel {
     int? versao,
     String? vigenciaInicio,
     String? vigenciaFim,
+    String? situacaoVigencia,
+    int? diasParaVencimento,
+    String? alertaVigencia,
+    bool? emAlertaRenovacao,
     String? cicloAtualId,
+    String? intencaoRenovacao,
+    String? cicloRenovacaoId,
+    String? programadoEncerramentoEm,
     String? criadoEm,
     String? atualizadoEm,
   }) {
@@ -112,7 +177,15 @@ class ParticipacaoModel {
       versao: versao ?? this.versao,
       vigenciaInicio: vigenciaInicio ?? this.vigenciaInicio,
       vigenciaFim: vigenciaFim ?? this.vigenciaFim,
+      situacaoVigencia: situacaoVigencia ?? this.situacaoVigencia,
+      diasParaVencimento: diasParaVencimento ?? this.diasParaVencimento,
+      alertaVigencia: alertaVigencia ?? this.alertaVigencia,
+      emAlertaRenovacao: emAlertaRenovacao ?? this.emAlertaRenovacao,
       cicloAtualId: cicloAtualId ?? this.cicloAtualId,
+      intencaoRenovacao: intencaoRenovacao ?? this.intencaoRenovacao,
+      cicloRenovacaoId: cicloRenovacaoId ?? this.cicloRenovacaoId,
+      programadoEncerramentoEm:
+          programadoEncerramentoEm ?? this.programadoEncerramentoEm,
       criadoEm: criadoEm ?? this.criadoEm,
       atualizadoEm: atualizadoEm ?? this.atualizadoEm,
     );
@@ -140,6 +213,10 @@ abstract interface class ParticipacaoGateway {
     required String equipeId,
     String? participacaoId,
     String? justificativa,
+    String? commandId,
+  });
+  Future<List<Map<String, dynamic>>> manifestarRenovacao({
+    required List<ManifestacaoEquipeInput> manifestacoes,
     String? commandId,
   });
 }
@@ -248,6 +325,23 @@ class FirebaseParticipacaoGateway implements ParticipacaoGateway {
       criadoEm: dados['criadoEm'] as String?,
     );
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> manifestarRenovacao({
+    required List<ManifestacaoEquipeInput> manifestacoes,
+    String? commandId,
+  }) async {
+    final cid = commandId ?? comandoOpaco();
+    final resposta = await _functions.httpsCallable('manifestarRenovacao').call({
+      'commandId': cid,
+      'manifestacoes': manifestacoes.map((m) => m.toMap()).toList(),
+    });
+    final dados = (resposta.data as Map).cast<String, dynamic>();
+    final itens = (dados['itens'] as List? ?? const [])
+        .map((item) => (item as Map).cast<String, dynamic>())
+        .toList(growable: false);
+    return itens;
+  }
 }
 
 /// Implementação em memória para testes e fallback.
@@ -353,6 +447,40 @@ class MemoriaParticipacaoGateway implements ParticipacaoGateway {
     _participacoes.add(nova);
     _participacoes.sort((a, b) => a.nomeEquipe.compareTo(b.nomeEquipe));
     return nova;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> manifestarRenovacao({
+    required List<ManifestacaoEquipeInput> manifestacoes,
+    String? commandId,
+  }) async {
+    final resultados = <Map<String, dynamic>>[];
+    for (final m in manifestacoes) {
+      final index = _participacoes.indexWhere((p) => p.id == m.participacaoId);
+      if (index != -1) {
+        final p = _participacoes[index];
+        if (m.decisao == 'CONTINUAR') {
+          _participacoes[index] = p.copyWith(
+            intencaoRenovacao: 'CONTINUAR',
+            cicloRenovacaoId: 'ciclo_${p.id}_2027',
+            proximaAcao: 'Aguardando avaliação do Pastor Local (Ciclo Anual)',
+          );
+        } else {
+          _participacoes[index] = p.copyWith(
+            intencaoRenovacao: 'NAO_CONTINUAR',
+            programadoEncerramentoEm: p.vigenciaFim,
+            proximaAcao: 'Encerramento programado ao término da vigência',
+          );
+        }
+        resultados.add({
+          'participacaoId': m.participacaoId,
+          'equipeId': p.equipeId,
+          'nomeEquipe': p.nomeEquipe,
+          'decisao': m.decisao,
+        });
+      }
+    }
+    return resultados;
   }
 }
 

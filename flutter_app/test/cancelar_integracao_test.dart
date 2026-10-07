@@ -110,6 +110,13 @@ class _ParticipacaoGatewayFake implements ParticipacaoGateway {
     String? commandId,
   }) async =>
       throw UnimplementedError();
+
+  @override
+  Future<List<Map<String, dynamic>>> manifestarRenovacao({
+    required List<ManifestacaoEquipeInput> manifestacoes,
+    String? commandId,
+  }) async =>
+      const [];
 }
 
 void main() {

@@ -142,6 +142,13 @@ class ParticipacaoMockGateway implements ParticipacaoGateway {
     participacoes.add(nova);
     return nova;
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> manifestarRenovacao({
+    required List<ManifestacaoEquipeInput> manifestacoes,
+    String? commandId,
+  }) async =>
+      const [];
 }
 
 class CatalogoMockGateway implements CatalogoGateway {

@@ -34,3 +34,6 @@ export { solicitarEquipeAdicional } from './commands/solicitarEquipeAdicional.js
 export { cancelarParticipacao } from './commands/cancelarParticipacao.js';
 export { cancelarVoluntariado } from './commands/cancelarVoluntariado.js';
 export { solicitarReativacao } from './commands/solicitarReativacao.js';
+export { expirarCiclosVencidos } from './commands/expirarCiclo.js';
+export { expirarCiclosScheduled } from './triggers/expirarCicloScheduled.js';
+export { manifestarRenovacao } from './commands/manifestarRenovacao.js';
