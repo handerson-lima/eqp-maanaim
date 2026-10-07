@@ -1,6 +1,7 @@
 import {
   FieldValue,
   Timestamp,
+  type DocumentSnapshot,
   type Firestore,
 } from 'firebase-admin/firestore';
 import {
@@ -16,6 +17,7 @@ import {
   type ResultadoDecidirParticipacaoResponsavelEquipe,
   type ResultadoFilaResponsavelEquipe,
 } from '../domain/decisaoResponsavelEquipe.js';
+import { reduzirEstadoFicha } from './decisaoCoordenador.js';
 
 export interface ContextoDecisaoResponsavel {
   commandId: string;
@@ -264,6 +266,20 @@ export async function decidirParticipacaoResponsavelEquipeRepo(
       ? String(responsavelPessoaSnap.data()?.nomeCompleto ?? 'Responsável de Equipe')
       : 'Responsável de Equipe';
 
+    // Pré-leitura da ficha e das participações para a redução de estado (AD-11).
+    // O SDK exige que toda leitura ocorra antes da primeira escrita da transação.
+    const fichaIdReducao = String(partData.fichaId ?? '');
+    const fichaRefReducao = db.collection('fichas').doc(fichaIdReducao);
+    const fichaSnapReducao = fichaIdReducao
+      ? await tx.get(fichaRefReducao)
+      : null;
+    const todasPartSnapReducao =
+      fichaSnapReducao?.exists
+        ? await tx.get(
+            db.collection('participacoes').where('fichaId', '==', fichaIdReducao),
+          )
+        : null;
+
     // 4. Determinação dos novos estados para a participação
     const novaVersao = versaoAtual + 1;
     const agora = FieldValue.serverTimestamp();
@@ -272,6 +288,7 @@ export async function decidirParticipacaoResponsavelEquipeRepo(
     let novoEstado: string;
     let proximaAcao: string;
     let atualizacaoParticipacao: Record<string, unknown>;
+    let cicloRejeitadoSnap: DocumentSnapshot | null = null;
 
     if (entrada.decisao === 'APROVADO') {
       novoEstado = 'AGUARDANDO_COORDENADOR';
@@ -312,6 +329,12 @@ export async function decidirParticipacaoResponsavelEquipeRepo(
       novoEstado = 'REJEITADA';
       proximaAcao = MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA;
 
+      // Pré-leitura do ciclo associado (antes de qualquer escrita) para encerrá-lo.
+      const cicloAtualId = String(partData.cicloAtualId ?? '');
+      if (cicloAtualId) {
+        cicloRejeitadoSnap = await tx.get(db.collection('ciclos').doc(cicloAtualId));
+      }
+
       atualizacaoParticipacao = {
         estado: novoEstado,
         proximaAcao,
@@ -350,52 +373,49 @@ export async function decidirParticipacaoResponsavelEquipeRepo(
     // Persiste atualização da participação individual (agregado isolado)
     tx.update(participacaoRef, atualizacaoParticipacao);
 
-    // 5. Redução e sincronização de estado da Ficha (AD-11)
-    const fichaId = String(partData.fichaId ?? '');
-    if (fichaId) {
-      const fichaRef = db.collection('fichas').doc(fichaId);
-      const fichaSnap = await tx.get(fichaRef);
-      if (fichaSnap.exists) {
-        const todasPartSnap = await tx.get(
-          db.collection('participacoes').where('fichaId', '==', fichaId),
-        );
-
-        // Considera o novo estado desta participação e o estado atual das demais
-        const estadosDasParticipacoes = (todasPartSnap.docs ?? []).map((doc) => {
-          if (doc.id === entrada.participacaoId) {
-            return novoEstado;
-          }
-          return String(doc.data()?.estado ?? '');
+    // Encerra o ciclo associado quando a decisão é desfavorável (AD-11),
+    // evitando ciclo não terminal órfão.
+    if (cicloRejeitadoSnap?.exists) {
+      const estadoCicloAtual = String(cicloRejeitadoSnap.data()?.estado ?? '');
+      if (estadoCicloAtual !== 'CANCELADA' && estadoCicloAtual !== 'REJEITADA') {
+        tx.update(cicloRejeitadoSnap.ref, {
+          estado: 'REJEITADA',
+          atualizadoEm: agora,
         });
+      }
+    }
 
-        const aindaPossuiPendencia = estadosDasParticipacoes.some(
-          (e) => e === 'AGUARDANDO_RESPONSAVEL_EQUIPE' || e === 'AGUARDANDO_PASTOR_LOCAL' || e === 'RASCUNHO',
-        );
-
-        if (!aindaPossuiPendencia) {
-          const temAprovada = estadosDasParticipacoes.some(
-            (e) => e === 'AGUARDANDO_COORDENADOR' || e === 'ATIVA',
-          );
-          const fichaVersao = Number(fichaSnap.data()?.versao ?? 1);
-
-          if (temAprovada) {
-            tx.update(fichaRef, {
-              estado: 'AGUARDANDO_COORDENADOR',
-              proximaAcao: 'Aguardando conclusão do Coordenador',
-              versao: fichaVersao + 1,
-              atualizadoEm: agora,
-            });
-          } else {
-            // Todas foram rejeitadas/canceladas
-            tx.update(fichaRef, {
-              estado: 'REJEITADA',
-              proximaAcao: MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
-              mensagemVoluntario: MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
-              versao: fichaVersao + 1,
-              atualizadoEm: agora,
-            });
-          }
+    // 5. Redução e sincronização de estado da Ficha (AD-11) — usa as leituras
+    // pré-transação para respeitar a ordem leitura-antes-de-escrita do SDK.
+    if (fichaSnapReducao?.exists && todasPartSnapReducao) {
+      // Considera o novo estado desta participação e o estado atual das demais
+      const estadosDasParticipacoes = (todasPartSnapReducao.docs ?? []).map((doc) => {
+        if (doc.id === entrada.participacaoId) {
+          return novoEstado;
         }
+        return String(doc.data()?.estado ?? '');
+      });
+
+      const aindaPossuiPendencia = estadosDasParticipacoes.some(
+        (e) => e === 'AGUARDANDO_RESPONSAVEL_EQUIPE' || e === 'AGUARDANDO_PASTOR_LOCAL' || e === 'RASCUNHO',
+      );
+
+      if (!aindaPossuiPendencia) {
+        const reducao = reduzirEstadoFicha(estadosDasParticipacoes);
+        const fichaVersao = Number(fichaSnapReducao.data()?.versao ?? 1);
+
+        // AD-11: a ficha permanece ATIVA quando já existe participação ativa,
+        // mesmo que uma equipe adicional aguarde a conclusão do Coordenador.
+        const atualizacaoFicha: Record<string, unknown> = {
+          estado: reducao.estado,
+          proximaAcao: reducao.proximaAcao,
+          versao: fichaVersao + 1,
+          atualizadoEm: agora,
+        };
+        if (reducao.estado === 'REJEITADA') {
+          atualizacaoFicha.mensagemVoluntario = MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA;
+        }
+        tx.update(fichaRefReducao, atualizacaoFicha);
       }
     }
 

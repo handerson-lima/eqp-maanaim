@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../ui/components/app_shell.dart';
 import '../../ui/components/layout_elements.dart';
@@ -38,6 +39,7 @@ class _ConsultaFichaAutorizadaScreenState
 
   bool _carregando = true;
   String? _erro;
+  String? _erroEventos;
   ResultadoConsultaFichaModel? _resultadoFicha;
   List<EventoLinhaDoTempoModel> _eventos = [];
 
@@ -52,35 +54,42 @@ class _ConsultaFichaAutorizadaScreenState
     setState(() {
       _carregando = true;
       _erro = null;
+      _erroEventos = null;
     });
 
+    ResultadoConsultaFichaModel? fichaRes;
+    List<EventoLinhaDoTempoModel> eventos = [];
+    String? erroFicha;
+    String? erroTimeline;
+
     try {
-      final fFuture = _service.consultarFichaAutorizada(fichaId: widget.fichaId);
-      final tFuture = _service.consultarLinhaDoTempoAutorizada(fichaId: widget.fichaId);
-
-      final results = await Future.wait([fFuture, tFuture]);
-      final fichaRes = results[0] as ResultadoConsultaFichaModel;
-      final timelineRes = results[1] as List<EventoLinhaDoTempoModel>;
-
-      if (mounted) {
-        setState(() {
-          _resultadoFicha = fichaRes;
-          _eventos = timelineRes;
-          _carregando = false;
-        });
-      }
+      fichaRes = await _service.consultarFichaAutorizada(fichaId: widget.fichaId);
     } catch (e) {
-      if (mounted) {
-        final msg = e.toString().contains('permission-denied') ||
-                e.toString().contains('não autorizado')
-            ? 'Acesso não autorizado para a ficha solicitada ou vínculo não vigente.'
-            : 'Falha ao carregar as informações da ficha. Tente novamente.';
-        setState(() {
-          _erro = msg;
-          _carregando = false;
-        });
-      }
+      erroFicha = _mensagemErro(e);
     }
+
+    try {
+      eventos =
+          await _service.consultarLinhaDoTempoAutorizada(fichaId: widget.fichaId);
+    } catch (e) {
+      erroTimeline = _mensagemErro(e);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _resultadoFicha = fichaRes;
+      _eventos = eventos;
+      _erro = erroFicha;
+      _erroEventos = erroTimeline;
+      _carregando = false;
+    });
+  }
+
+  String _mensagemErro(Object e) {
+    if (e is FirebaseFunctionsException && e.code == 'permission-denied') {
+      return 'Acesso não autorizado para a ficha solicitada ou vínculo não vigente.';
+    }
+    return 'Falha ao carregar as informações da ficha. Tente novamente.';
   }
 
   @override
@@ -162,7 +171,7 @@ class _ConsultaFichaAutorizadaScreenState
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints: const BoxConstraints(maxWidth: 1040),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -371,6 +380,8 @@ class _ConsultaFichaAutorizadaScreenState
                     : 'Registro imutável de eventos e evidências autorizadas.',
                 child: LinhaDoTempoWidget(
                   eventos: _eventos,
+                  errorMessage: _erroEventos,
+                  onRetry: _carregarDados,
                   tituloSecao: '',
                 ),
               ),
@@ -418,7 +429,7 @@ class _ConsultaFichaAutorizadaScreenState
   String _formatarDataApenas(String? iso) {
     if (iso == null || iso.trim().isEmpty) return '—';
     try {
-      final dt = DateTime.parse(iso).toUtc();
+      final dt = DateTime.parse(iso).toLocal();
       final dia = dt.day.toString().padLeft(2, '0');
       final mes = dt.month.toString().padLeft(2, '0');
       final ano = dt.year.toString();

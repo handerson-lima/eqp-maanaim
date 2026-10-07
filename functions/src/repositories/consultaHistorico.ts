@@ -2,6 +2,8 @@ import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import {
   AcessoNaoAutorizadoError,
   MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
+  ehEstadoNegativo,
+  estadoPublicoVoluntario,
   mascararCpf,
   sanitizarEventoParaVoluntario,
   type EscopoAtorConsulta,
@@ -22,6 +24,31 @@ function serializarTimestamp(valor: unknown): string | null {
   }
   if (typeof valor === 'string') return valor;
   return null;
+}
+
+function dentroDaVigencia(data: Record<string, unknown>): boolean {
+  const agora = Date.now();
+  const inicio = serializarTimestamp(data.inicioVigencia);
+  if (inicio) {
+    const ms = Date.parse(inicio);
+    if (!Number.isNaN(ms) && ms > agora) return false;
+  }
+  const fim = serializarTimestamp(data.fimVigencia);
+  if (fim) {
+    const ms = Date.parse(fim);
+    if (!Number.isNaN(ms) && ms <= agora) return false;
+  }
+  return true;
+}
+
+function vinculoPastoralValido(
+  data: Record<string, unknown> | null,
+  atorUid: string,
+): boolean {
+  if (!data) return false;
+  if (String(data.estado ?? '') !== 'VIGENTE') return false;
+  if (String(data.pessoaId ?? '') !== atorUid) return false;
+  return dentroDaVigencia(data);
 }
 
 /**
@@ -79,12 +106,10 @@ export async function determinarEscopoAtor(
         let vinculoAtivo = true;
         if (vinculoId) {
           const vDoc = await db.collection('vinculosPastorIgreja').doc(vinculoId).get();
-          if (vDoc.exists) {
-            const vData = vDoc.data() ?? {};
-            if (vData.estado !== 'VIGENTE' || vData.pessoaId !== atorUid) {
-              vinculoAtivo = false;
-            }
-          }
+          vinculoAtivo = vinculoPastoralValido(
+            vDoc.exists ? (vDoc.data() ?? {}) : null,
+            atorUid,
+          );
         }
         if (vinculoAtivo) {
           return {
@@ -97,22 +122,27 @@ export async function determinarEscopoAtor(
       }
     }
 
-    // Consulta alternativa direta em vinculosPastorIgreja para pastor com vínculo vigente
-    const vinculoPastoralSnap = await db
-      .collection('vinculosPastorIgreja')
-      .where('pessoaId', '==', atorUid)
-      .where('entidadeId', '==', igrejaId)
-      .where('estado', '==', 'VIGENTE')
-      .limit(1)
-      .get();
+    // Consulta alternativa direta em vinculosPastorIgreja para pastor com vínculo vigente e temporal
+    if (igrejaDoc.exists && igrejaDoc.data()?.ativo !== false) {
+      const vinculoPastoralSnap = await db
+        .collection('vinculosPastorIgreja')
+        .where('pessoaId', '==', atorUid)
+        .where('entidadeId', '==', igrejaId)
+        .where('estado', '==', 'VIGENTE')
+        .limit(1)
+        .get();
 
-    if (!vinculoPastoralSnap.empty) {
-      return {
-        atorUid,
-        papel: 'PASTOR_LOCAL',
-        igrejaId,
-        ehProprioVoluntario: false,
-      };
+      if (
+        !vinculoPastoralSnap.empty &&
+        vinculoPastoralValido(vinculoPastoralSnap.docs[0].data(), atorUid)
+      ) {
+        return {
+          atorUid,
+          papel: 'PASTOR_LOCAL',
+          igrejaId,
+          ehProprioVoluntario: false,
+        };
+      }
     }
   }
 
@@ -131,9 +161,9 @@ export async function determinarEscopoAtor(
     }
   }
 
-  // 5b. Vínculos vigentes em vinculosResponsavelEquipe
+  // 5b. Vínculos vigentes em vinculosPastorEquipe
   const vinculosEquipeSnap = await db
-    .collection('vinculosResponsavelEquipe')
+    .collection('vinculosPastorEquipe')
     .where('pessoaId', '==', atorUid)
     .where('estado', '==', 'VIGENTE')
     .get();
@@ -212,11 +242,16 @@ export async function consultarFichaAutorizadaRepo(
   // Sanitização de CPF: se for voluntário ou coordenador, expõe completo; se for responsável/pastor, mascara
   const rawCpf = String(fichaData.cpf ?? '');
   const cpfMascarado = mascararCpf(rawCpf);
-  const cpfCompleto = escopo.ehProprioVoluntario || escopo.papel === 'COORDENADOR_GERAL' || escopo.papel === 'ADMINISTRADOR'
-    ? rawCpf
-    : undefined;
+  const cpfCompleto =
+    rawCpf !== '' &&
+    (escopo.ehProprioVoluntario ||
+      escopo.papel === 'COORDENADOR_GERAL' ||
+      escopo.papel === 'ADMINISTRADOR')
+      ? rawCpf
+      : undefined;
 
-  const ehNegativaFicha = String(fichaData.estado ?? '') === 'REJEITADA';
+  const estadoFichaBruto = String(fichaData.estado ?? 'RASCUNHO');
+  const ehNegativaFicha = ehEstadoNegativo(estadoFichaBruto);
   const proximaAcaoFicha = ehNegativaFicha
     ? MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA
     : (fichaData.proximaAcao ? String(fichaData.proximaAcao) : null);
@@ -234,7 +269,9 @@ export async function consultarFichaAutorizadaRepo(
     cpfCompleto,
     igrejaId,
     nomeIgreja,
-    estado: String(fichaData.estado ?? 'RASCUNHO'),
+    estado: escopo.ehProprioVoluntario
+      ? estadoPublicoVoluntario(estadoFichaBruto)
+      : estadoFichaBruto,
     versao: Number(fichaData.versao ?? 1),
     proximaAcao: proximaAcaoFicha,
     mensagemVoluntario: mensagemVoluntarioFicha,
@@ -262,7 +299,7 @@ export async function consultarFichaAutorizadaRepo(
     .map((doc) => {
       const d = doc.data() ?? {};
       const estado = String(d.estado ?? 'RASCUNHO');
-      const ehNegativa = estado === 'REJEITADA' || d.decisao === 'DESFAVORAVEL';
+      const ehNegativa = ehEstadoNegativo(estado) || d.decisao === 'DESFAVORAVEL';
       const proximaAcao = ehNegativa
         ? MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA
         : String(d.proximaAcao ?? (estado === 'RASCUNHO' ? 'Aguardando envio da ficha' : 'Em análise'));
@@ -272,7 +309,7 @@ export async function consultarFichaAutorizadaRepo(
         fichaId: String(d.fichaId ?? fichaIdEfetivo),
         equipeId: String(d.equipeId ?? ''),
         nomeEquipe: String(d.nomeEquipe ?? ''),
-        estado,
+        estado: escopo.ehProprioVoluntario ? estadoPublicoVoluntario(estado) : estado,
         ciclo: String(d.ciclo ?? 'INICIAL'),
         proximaAcao,
         vigenciaInicio: serializarTimestamp(d.vigenciaInicio),
@@ -320,8 +357,9 @@ export async function consultarLinhaDoTempoAutorizadaRepo(
   const fichaData = fichaDoc.data() ?? {};
   const eventosBrutos: EventoLinhaDoTempo[] = [];
 
-  // 1. Marco de criação da ficha
-  if (fichaData.criadoEm) {
+  // 1. Marco de criação da ficha (timestamp persistido e imutável)
+  const criacaoTs = serializarTimestamp(fichaData.criadoEm);
+  if (criacaoTs) {
     eventosBrutos.push({
       id: `criacao-${fichaIdEfetivo}`,
       tipo: 'CRIACAO_FICHA',
@@ -329,25 +367,29 @@ export async function consultarLinhaDoTempoAutorizadaRepo(
       titulo: 'Ficha cadastral criada',
       descricao: 'Cadastro de dados permanente iniciado pelo voluntário.',
       estadoVisual: 'CONCLUIDO',
-      timestamp: serializarTimestamp(fichaData.criadoEm) ?? new Date().toISOString(),
+      timestamp: criacaoTs,
       ator: escopo.ehProprioVoluntario ? null : { nome: String(fichaData.nomeCompleto ?? 'Voluntário'), papel: 'VOLUNTARIO' },
       justificativaInterna: null,
     });
   }
 
-  // 2. Marco de envio para aprovação
+  // 2. Marco de envio para aprovação (usa enviadoEm persistido, não atualizadoEm mutável)
   if (fichaData.estado && fichaData.estado !== 'RASCUNHO') {
-    eventosBrutos.push({
-      id: `envio-${fichaIdEfetivo}`,
-      tipo: 'ENVIO_APROVACAO',
-      etapa: 'CADASTRO',
-      titulo: 'Ficha enviada para aprovação',
-      descricao: 'Termo de voluntariado aceito e solicitação encaminhada ao Pastor Local.',
-      estadoVisual: 'CONCLUIDO',
-      timestamp: serializarTimestamp(fichaData.atualizadoEm) ?? new Date().toISOString(),
-      ator: escopo.ehProprioVoluntario ? null : { nome: String(fichaData.nomeCompleto ?? 'Voluntário'), papel: 'VOLUNTARIO' },
-      justificativaInterna: null,
-    });
+    const envioTs =
+      serializarTimestamp(fichaData.enviadoEm) ?? serializarTimestamp(fichaData.criadoEm);
+    if (envioTs) {
+      eventosBrutos.push({
+        id: `envio-${fichaIdEfetivo}`,
+        tipo: 'ENVIO_APROVACAO',
+        etapa: 'CADASTRO',
+        titulo: 'Ficha enviada para aprovação',
+        descricao: 'Termo de voluntariado aceito e solicitação encaminhada ao Pastor Local.',
+        estadoVisual: 'CONCLUIDO',
+        timestamp: envioTs,
+        ator: escopo.ehProprioVoluntario ? null : { nome: String(fichaData.nomeCompleto ?? 'Voluntário'), papel: 'VOLUNTARIO' },
+        justificativaInterna: null,
+      });
+    }
   }
 
   // 3. Buscar evidências imutáveis de decisão em `evidenciasDecisao`
@@ -360,20 +402,21 @@ export async function consultarLinhaDoTempoAutorizadaRepo(
     const e = doc.data() ?? {};
     const etapa = String(e.etapa ?? '');
     const decisao = String(e.decisao ?? '');
-    const timestamp = serializarTimestamp(e.timestamp) ?? new Date().toISOString();
+    const timestamp = serializarTimestamp(e.timestamp);
+    if (!timestamp) continue;
     const equipeId = e.equipeId ? String(e.equipeId) : null;
     const partId = e.participacaoId ? String(e.participacaoId) : null;
+    const vinculoId = e.vinculoId ? String(e.vinculoId) : null;
 
-    // Se houver filtro de participação, ignora evidências de outras participações
-    if (participacaoIdFiltro && partId && partId !== participacaoIdFiltro) {
+    // Se houver filtro de participação, exige correspondência exata (evidências sem vínculo são excluídas)
+    if (participacaoIdFiltro && partId !== participacaoIdFiltro) {
       continue;
     }
 
-    // Se o ator for Responsável de Equipe, descarta evidências de outras equipes (AD-9, AD-12)
-    if (escopo.papel === 'RESPONSAVEL_EQUIPE' && equipeId) {
-      if (!escopo.equipeIdsAutorizadas?.includes(equipeId)) {
-        continue;
-      }
+    // Responsável de Equipe: isolamento estrito por equipe; eventos sem equipe autorizada são descartados
+    if (escopo.papel === 'RESPONSAVEL_EQUIPE') {
+      if (etapa !== 'RESPONSAVEL_EQUIPE') continue;
+      if (!equipeId || !escopo.equipeIdsAutorizadas?.includes(equipeId)) continue;
     }
 
     if (etapa === 'PASTOR_LOCAL') {
@@ -389,7 +432,7 @@ export async function consultarLinhaDoTempoAutorizadaRepo(
         estadoVisual: aprovado ? 'CONCLUIDO' : 'ORIENTACAO_PASTORAL',
         timestamp,
         ator: aprovado || !escopo.ehProprioVoluntario
-          ? { nome: String(e.atorNome ?? 'Pastor Local'), papel: 'PASTOR_LOCAL' }
+          ? { nome: String(e.atorNome ?? 'Pastor Local'), papel: 'PASTOR_LOCAL', vinculoId }
           : null,
         justificativaInterna: escopo.ehProprioVoluntario ? null : (e.justificativa ? String(e.justificativa) : null),
       });
@@ -417,25 +460,34 @@ export async function consultarLinhaDoTempoAutorizadaRepo(
         estadoVisual: aprovado ? 'CONCLUIDO' : 'ORIENTACAO_PASTORAL',
         timestamp,
         ator: aprovado || !escopo.ehProprioVoluntario
-          ? { nome: String(e.atorNome ?? 'Responsável de Equipe'), papel: 'RESPONSAVEL_EQUIPE' }
+          ? { nome: String(e.atorNome ?? 'Responsável de Equipe'), papel: 'RESPONSAVEL_EQUIPE', vinculoId }
           : null,
         equipeId,
         nomeEquipe,
         justificativaInterna: escopo.ehProprioVoluntario ? null : (e.justificativa ? String(e.justificativa) : null),
       });
     } else if (etapa === 'COORDENADOR_GERAL') {
+      const homologado = decisao === 'APROVADO';
+      const vigenciaInicio = serializarTimestamp(e.vigenciaInicio);
+      const vigenciaFim = serializarTimestamp(e.vigenciaFim);
       eventosBrutos.push({
         id: doc.id,
         tipo: 'HOMOLOGACAO_COORDENACAO',
         etapa: 'COORDENADOR_GERAL',
-        titulo: 'Homologação e ativação anual',
-        descricao: e.vigenciaInicio && e.vigenciaFim
-          ? `Voluntariado ativo homologado para vigência de ${e.vigenciaInicio} a ${e.vigenciaFim}.`
-          : 'Voluntariado homologado pelo Coordenador Geral pós-Reunião de Pastores.',
-        estadoVisual: 'CONCLUIDO',
+        titulo: homologado ? 'Homologação e ativação anual' : 'Avaliação da coordenação',
+        descricao: homologado
+          ? (vigenciaInicio && vigenciaFim
+              ? `Voluntariado ativo homologado para vigência de ${vigenciaInicio} a ${vigenciaFim}.`
+              : 'Voluntariado homologado pelo Coordenador Geral pós-Reunião de Pastores.')
+          : (escopo.ehProprioVoluntario ? MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA : 'Decisão da coordenação desfavorável registrada.'),
+        estadoVisual: homologado ? 'CONCLUIDO' : 'ORIENTACAO_PASTORAL',
         timestamp,
-        ator: { nome: String(e.atorNome ?? 'Coordenador Geral'), papel: 'COORDENADOR_GERAL' },
-        justificativaInterna: escopo.ehProprioVoluntario ? null : (e.observacao ? String(e.observacao) : null),
+        ator: homologado || !escopo.ehProprioVoluntario
+          ? { nome: String(e.atorNome ?? 'Coordenador Geral'), papel: 'COORDENADOR_GERAL', vinculoId }
+          : null,
+        justificativaInterna: escopo.ehProprioVoluntario
+          ? null
+          : (e.justificativa ?? e.justificativaInterna ?? e.observacao ?? null) as string | null,
       });
     }
   }

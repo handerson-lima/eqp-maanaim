@@ -233,7 +233,12 @@ export async function obterFilaCoordenadorRepo(
     if (!fichaDoc.exists) continue;
 
     const fData = fichaDoc.data() ?? {};
-    if (String(fData.estado ?? '') !== 'AGUARDANDO_COORDENADOR') continue;
+    const estadoFichaAtual = String(fData.estado ?? '');
+    // A elegibilidade da fila é determinada pelo estado da participação; uma
+    // ficha ATIVA pode ter equipes adicionais aguardando o Coordenador (Story 4.2).
+    if (estadoFichaAtual !== 'AGUARDANDO_COORDENADOR' && estadoFichaAtual !== 'ATIVA') {
+      continue;
+    }
 
     const igrejaId = String(fData.igrejaId ?? '');
 
@@ -404,6 +409,21 @@ export async function decidirAtivacaoCoordenadorRepo(
       return entrada.decisao === 'APROVADO' ? 'ATIVA' : 'REJEITADA';
     });
 
+    // Pré-leitura dos ciclos elegíveis (antes de qualquer escrita) para encerrá-los
+    // em caso de decisão desfavorável, evitando ciclo não terminal órfão.
+    const ciclosElegiveis = new Map<string, DocumentSnapshot>();
+    if (entrada.decisao !== 'APROVADO') {
+      for (const partDoc of participacoesElegiveis) {
+        const cicloId = String(partDoc.data()?.cicloAtualId ?? '');
+        if (cicloId) {
+          ciclosElegiveis.set(
+            partDoc.id,
+            await tx.get(db.collection('ciclos').doc(cicloId)),
+          );
+        }
+      }
+    }
+
     if (entrada.decisao === 'APROVADO') {
       // Vigência de exatamente um ano a partir da aprovação final (AD-7/AD-11)
       const dataFim = adicionarUmAno(agoraDate);
@@ -419,7 +439,9 @@ export async function decidirAtivacaoCoordenadorRepo(
         const versaoPart = Number(partData.versao ?? 1);
         participacoesAtivadas.push(partId);
 
-        const cicloId = `ciclo_${partId}_${anoVigencia}`;
+        // Reutiliza a chave determinística persistida na participação para não
+        // deixar o ciclo EM_APROVACAO órfão quando a aprovação cruza o ano (Story 4.2).
+        const cicloId = String(partData.cicloAtualId ?? '') || `ciclo_${partId}_${anoVigencia}`;
         const cicloRef = db.collection('ciclos').doc(cicloId);
 
         tx.set(cicloRef, {
@@ -502,6 +524,17 @@ export async function decidirAtivacaoCoordenadorRepo(
           },
           atualizadoEm: agora,
         });
+
+        const cicloRejeitadoSnap = ciclosElegiveis.get(partId);
+        if (cicloRejeitadoSnap?.exists) {
+          const estadoCicloAtual = String(cicloRejeitadoSnap.data()?.estado ?? '');
+          if (estadoCicloAtual !== 'CANCELADA' && estadoCicloAtual !== 'REJEITADA') {
+            tx.update(cicloRejeitadoSnap.ref, {
+              estado: 'REJEITADA',
+              atualizadoEm: agora,
+            });
+          }
+        }
       }
 
       // Evidência imutável com justificativa interna

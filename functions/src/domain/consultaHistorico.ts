@@ -16,6 +16,22 @@ export class FichaNaoEncontradaConsultaError extends Error {
   }
 }
 
+export const ESTADOS_NEGATIVOS = ['REJEITADA', 'CANCELADA', 'EXPIRADA'] as const;
+
+export function ehEstadoNegativo(estado: string): boolean {
+  return (ESTADOS_NEGATIVOS as readonly string[]).includes(
+    String(estado ?? '').trim().toUpperCase(),
+  );
+}
+
+/**
+ * Estado público exibível ao voluntário: nunca revela o termo de indeferimento.
+ * Decisões negativas são projetadas como orientação neutra.
+ */
+export function estadoPublicoVoluntario(estado: string): string {
+  return ehEstadoNegativo(estado) ? 'ORIENTACAO' : estado;
+}
+
 export type PapelConsulta =
   | 'VOLUNTARIO'
   | 'PASTOR_LOCAL'
@@ -80,6 +96,7 @@ export interface EventoLinhaDoTempo {
   ator?: {
     nome: string;
     papel: string;
+    vinculoId?: string | null;
   } | null;
   equipeId?: string | null;
   nomeEquipe?: string | null;

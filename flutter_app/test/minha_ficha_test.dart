@@ -79,6 +79,13 @@ class FichaFake implements FichaGateway {
       enviadoEm: '2026-10-06T12:00:00Z',
     );
   }
+
+  @override
+  Future<void> cancelarVoluntariado({
+    required String fichaId,
+    String? motivo,
+    String? commandId,
+  }) async {}
 }
 
 void main() {

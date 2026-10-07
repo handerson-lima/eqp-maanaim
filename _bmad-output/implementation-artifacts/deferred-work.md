@@ -79,3 +79,21 @@
 ## Deferred from: code review of story-3.4 (2026-10-06)
 
 - Campos/modelo introduzidos sem uso: `ParticipacaoModel.cicloAtualId` (`flutter_app/lib/features/voluntario/participacao_service.dart:31`) e `FichaModel.isAtiva`/`isRejeitada`/`proximaAcao` (`flutter_app/lib/features/voluntario/ficha_service.dart:76-77`) não são lidos por nenhuma tela; provavelmente consumidos nas Stories 4.x/5.x (deep link de ciclo/renovação). Diferido por não ter uso imediato e sem dano atual.
+
+## Deferred from: code review of spec-4-1-consultar-ficha-participacoes-e-historico-autorizado (2026-10-07)
+
+- Auditoria de leitura: `consultarFichaAutorizada`/`consultarLinhaDoTempoAutorizada` expõem CPF integral e histórico completo sem gravar `auditOutbox`/evidência de acesso; política de auditoria de leitura (finalidade/retenção) a definir antes de implementar.
+- Mensagem canônica duplicada: `functions/src/domain/mensagens.ts` declara `MENSAGEM_CANONICA_DECISAO_NEGATIVA`/`MENSAGEM_NEUTRA_CANONICA` como fonte única, mas `decisaoPastor.ts:10`, `decisaoResponsavelEquipe.ts:10` e `decisaoCoordenador.ts:10` mantêm o literal. Migrar as três cópias está fora do escopo da consulta (FR28).
+- Tipo de evento `CANCELAMENTO` declarado em `functions/src/domain/consultaHistorico.ts:73` e nunca produzido; pertence às Stories 4.3/4.4 (a decisão negativa do Coordenador foi corrigida no review 4.1).
+- Sanitização por heurística: `sanitizarEventoParaVoluntario` (`functions/src/domain/consultaHistorico.ts:124-127`) detecta negativa por `estadoVisual`/substring `'desfavor'`/`'rejeit'`; um novo tipo de evento sem esses marcadores poderia escapar da sanitização.
+- Código morto: `FichaNaoEncontradaConsultaError` nunca é lançado (`functions/src/domain/consultaHistorico.ts:12`); o repositório lança `AcessoNaoAutorizadoError`.
+- Leituras sem limite/paginação e N+1 em `consultarLinhaDoTempoAutorizadaRepo` (lê todas as `evidenciasDecisao`/`participacoes` e consulta `equipes` por evidência — `functions/src/repositories/consultaHistorico.ts:246,354,401`).
+- Formatos divergentes de mascaramento de CPF: `functions/src/domain/consultaHistorico.ts:109` (`***.456.789-**`) vs `functions/src/repositories/decisaoCoordenador.ts:63` (`123.***.***-01`); unificar é decisão de UX fora do escopo desta story.
+
+## Deferred from: code review of spec-4-2-solicitar-equipe-adicional (2026-10-07)
+
+- Callable `solicitarEquipeAdicional`: sucesso e mapeamento de erros de domínio não exercitados; os dois únicos testes cobrem `unauthenticated` e `permission-denied`, e o caminho feliz só é testado no repositório (`test/solicitarEquipeAdicional.test.ts:441`). Diferido: testes de repositório fixam os desfechos; contrato do callable pode ser pinado com emulator depois.
+- Cobertura de verificação ausente no repositório: recibo de outro uid (`PermissaoNegadaError`), bloqueio por estado não-terminal não-rejeitado, propagação de `correlationId` e corrida com `commandId` distinto para a mesma equipe. Diferido: reforço de suíte.
+- `SOLICITAR_EQUIPE_ADICIONAL` ausente de `MAPA_ACOES_NOTIFICAVEIS` (`functions/src/domain/notificacao.ts:60`): o evento de auditoria não notifica o responsável pela equipe. Diferido: notificar nova solicitação não está no escopo explícito da story; decisão de produto.
+- Concorrência sem garantia determinística: duas solicitações com `commandId` distintos para a mesma equipe não têm chave de unicidade determinística (`functions/src/repositories/solicitarEquipeAdicional.ts:122`); a isolação serializável do Firestore pode já impedir o duplo, mas não há teste que comprove. Marca maybe-false: um teste de concorrência no emulator (duas transações simultâneas) settle o caso.
+- Contrato de segurança/Rules não estendido para o novo endpoint: a lista de callables do cliente em `security-contract.test.ts:162` não inclui `solicitarEquipeAdicional`. Diferido: verificação de contrato, sem impacto funcional imediato.

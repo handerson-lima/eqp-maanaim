@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import '../../comando.dart';
 import '../auth/validadores.dart';
 
 /// Modelo representativo do aceite eletrônico registrado para a ficha.
@@ -214,6 +215,11 @@ abstract interface class FichaGateway {
     required String commandId,
     int? expectedVersion,
   });
+  Future<void> cancelarVoluntariado({
+    required String fichaId,
+    String? motivo,
+    String? commandId,
+  });
 }
 
 /// Implementação Firebase Cloud Functions do gateway da ficha.
@@ -268,6 +274,20 @@ class FirebaseFichaGateway implements FichaGateway {
       igrejaId: dados['igrejaId'] as String? ?? '',
       enviadoEm: dados['enviadoEm'] as String? ?? '',
     );
+  }
+
+  @override
+  Future<void> cancelarVoluntariado({
+    required String fichaId,
+    String? motivo,
+    String? commandId,
+  }) async {
+    final cid = commandId ?? comandoOpaco();
+    await _functions.httpsCallable('cancelarVoluntariado').call({
+      'commandId': cid,
+      'fichaId': fichaId,
+      if (motivo != null && motivo.trim().isNotEmpty) 'motivo': motivo.trim(),
+    });
   }
 }
 

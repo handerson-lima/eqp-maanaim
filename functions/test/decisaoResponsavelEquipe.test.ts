@@ -228,8 +228,14 @@ describe('Story 3.2: Repositório de Fila e Decisão do Responsável de Equipe',
         }),
       }),
       runTransaction: async (cb: (tx: any) => Promise<any>) => {
+        let jaEscrito = false;
         const tx = {
           get: async (ref: any) => {
+            if (jaEscrito) {
+              throw new Error(
+                'Firestore transactions require all reads to be executed before all writes.',
+              );
+            }
             if (ref.col === 'commands') {
               const d = cenario.recibos?.[ref.id];
               return { exists: !!d, id: ref.id, data: () => d };
@@ -260,15 +266,19 @@ describe('Story 3.2: Repositório de Fila e Decisão do Responsável de Equipe',
             return { exists: false, id: ref.id, data: () => undefined };
           },
           update: (ref: any, data: any) => {
+            jaEscrito = true;
             updates.push({ ref, data });
           },
           set: (ref: any, data: any) => {
+            jaEscrito = true;
             sets.push({ ref, data });
           },
           create: (ref: any, data: any) => {
+            jaEscrito = true;
             creates.push({ ref, data });
           },
           delete: (ref: any) => {
+            jaEscrito = true;
             deletes.push({ ref });
           },
         };
@@ -467,6 +477,76 @@ describe('Story 3.2: Repositório de Fila e Decisão do Responsável de Equipe',
     );
     expect(recibo).toBeDefined();
     expect(recibo.data.status).toBe('COMPLETO');
+  });
+
+  it('mantém a ficha ATIVA ao aprovar equipe adicional quando já existe participação ativa (AD-11)', async () => {
+    const equipeSomId = 'equipe-som';
+    const mockDb = criarMockDb({
+      equipes: {
+        [equipeSomId]: {
+          nome: 'Som e Mídia',
+          ativo: true,
+          responsavelVigentePessoaId: respUid,
+          responsavelVigenteVinculoId: 'vinc-som',
+        },
+      },
+      vinculosEquipe: {
+        'vinc-som': {
+          pessoaId: respUid,
+          entidadeId: equipeSomId,
+          estado: 'VIGENTE',
+        },
+      },
+      pessoas: {
+        [respUid]: { nomeCompleto: 'Pr. Carlos Santos' },
+      },
+      fichas: {
+        [fichaId]: {
+          estado: 'ATIVA',
+          versao: 4,
+        },
+      },
+      participacoes: [
+        {
+          id: 'part-recepcao',
+          fichaId,
+          equipeId: 'equipe-recepcao',
+          estado: 'ATIVA',
+          data: { nomeEquipe: 'Recepção', versao: 1, cicloAtualId: 'ciclo-recepcao' },
+        },
+        {
+          id: 'part-som',
+          fichaId,
+          equipeId: equipeSomId,
+          estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE',
+          data: { nomeEquipe: 'Som e Mídia', versao: 1, cicloAtualId: 'ciclo-som' },
+        },
+      ],
+    });
+
+    const entrada = validarDecidirParticipacaoResponsavel({
+      commandId: 'cmd-aprovacao-adicional-12345',
+      participacaoId: 'part-som',
+      decisao: 'APROVADO',
+      expectedVersion: 1,
+    });
+
+    await decidirParticipacaoResponsavelEquipeRepo(
+      mockDb,
+      { commandId: entrada.commandId, responsavelUid: respUid },
+      entrada,
+    );
+
+    // A participação adicional avança, mas a ficha permanece ATIVA (AD-11).
+    const partUpdate = mockDb._updates.find(
+      (u: any) => u.ref.col === 'participacoes' && u.ref.id === 'part-som',
+    );
+    expect(partUpdate.data.estado).toBe('AGUARDANDO_COORDENADOR');
+
+    const fichaUpdate = mockDb._updates.find((u: any) => u.ref.col === 'fichas');
+    expect(fichaUpdate).toBeDefined();
+    expect(fichaUpdate.data.estado).toBe('ATIVA');
+    expect(fichaUpdate.data.proximaAcao).toBe('Voluntariado ativo');
   });
 
   it('decidirParticipacaoResponsavelEquipeRepo recusa participação com mensagem neutra ao voluntário e justificativa interna', async () => {

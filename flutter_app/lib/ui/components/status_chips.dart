@@ -125,6 +125,15 @@ class StatusChip extends StatelessWidget {
           type: StatusType.inativa,
         );
 
+      case 'ORIENTACAO':
+      case 'ORIENTACAO_PASTORAL':
+        return const StatusConfig(
+          label: 'CONSULTE O PASTOR',
+          backgroundColor: AppColors.warningBg,
+          textColor: AppColors.warning,
+          type: StatusType.aguardando,
+        );
+
       default:
         return StatusConfig(
           label: statusRaw.toUpperCase(),

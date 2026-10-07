@@ -226,7 +226,7 @@ describe('Story 4.1: Consultar ficha, participações e histórico autorizado', 
           if (col === 'equipes') {
             return criarMockQuery([{ id: 'eq-musica', data: () => ({ ativo: true }) }]);
           }
-          if (col === 'vinculosResponsavelEquipe') {
+          if (col === 'vinculosPastorEquipe') {
             return criarMockQuery([]);
           }
           if (col === 'participacoes') {
@@ -273,7 +273,7 @@ describe('Story 4.1: Consultar ficha, participações e histórico autorizado', 
           if (col === 'equipes') {
             return criarMockQuery([{ id: 'eq-musica', data: () => ({ ativo: true }) }]);
           }
-          if (col === 'vinculosResponsavelEquipe') {
+          if (col === 'vinculosPastorEquipe') {
             return criarMockQuery([]);
           }
           if (col === 'participacoes') {
@@ -386,7 +386,7 @@ describe('Story 4.1: Consultar ficha, participações e histórico autorizado', 
               doc: () => ({ get: async () => ({ exists: true, data: () => ({ nome: 'Louvor' }) }) }),
             };
           }
-          if (col === 'vinculosResponsavelEquipe') {
+          if (col === 'vinculosPastorEquipe') {
             return criarMockQuery([]);
           }
           if (col === 'participacoes') {
@@ -468,6 +468,75 @@ describe('Story 4.1: Consultar ficha, participações e histórico autorizado', 
       expect(resultado.participacoes[0].proximaAcao).toBe(MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA);
       // CPF do próprio voluntário é mantido completo para conferência própria
       expect(resultado.ficha?.cpfCompleto).toBe('98765432100');
+    });
+
+    it('mascara CPF para Pastor Local e expõe completo para Coordenador', async () => {
+      const dadosFicha = {
+        ownerUid: 'vol-1',
+        nomeCompleto: 'Carlos Souza',
+        profissao: 'Pedreiro',
+        cpf: '12345678901',
+        igrejaId: 'igreja-1',
+        estado: 'AGUARDANDO_PASTOR_LOCAL',
+        versao: 1,
+      };
+
+      const criarDb = (autoridade: boolean, pastorUid: string): any => ({
+        collection: (col: string) => {
+          if (col === 'autoridadesAdministrativas') {
+            return {
+              doc: () => ({
+                get: async () =>
+                  autoridade
+                    ? {
+                        exists: true,
+                        data: () => ({ ativa: true, papeis: ['COORDENADOR'], revisao: 1 }),
+                      }
+                    : { exists: false },
+              }),
+            };
+          }
+          if (col === 'fichas') {
+            return {
+              doc: () => ({
+                get: async () => ({ exists: true, id: 'vol-1', data: () => dadosFicha }),
+              }),
+            };
+          }
+          if (col === 'igrejas') {
+            return {
+              doc: () => ({
+                get: async () => ({
+                  exists: true,
+                  data: () => ({
+                    nome: 'Igreja Central',
+                    ativo: true,
+                    pastorLocalVigentePessoaId: pastorUid,
+                  }),
+                }),
+              }),
+            };
+          }
+          return criarMockQuery([]);
+        },
+      });
+
+      const pastor = await consultarFichaAutorizadaRepo(
+        criarDb(false, 'pastor-sede'),
+        'pastor-sede',
+        'vol-1',
+      );
+      expect(pastor.escopo.papel).toBe('PASTOR_LOCAL');
+      expect(pastor.ficha?.cpfMascarado).toBe('***.456.789-**');
+      expect(pastor.ficha?.cpfCompleto).toBeUndefined();
+
+      const coord = await consultarFichaAutorizadaRepo(
+        criarDb(true, 'outro-pastor'),
+        'coord-uid',
+        'vol-1',
+      );
+      expect(coord.escopo.papel).toBe('COORDENADOR_GERAL');
+      expect(coord.ficha?.cpfCompleto).toBe('12345678901');
     });
   });
 
@@ -584,6 +653,174 @@ describe('Story 4.1: Consultar ficha, participações e histórico autorizado', 
       expect(eventoPastoral.ator?.nome).toBe('Pastor Severino');
       expect(eventoPastoral.justificativaInterna).toBe('Falta carta de recomendação');
     });
+
+    it('filtra a linha do tempo por participacaoId excluindo evidências de outras participações', async () => {
+      const mockEvidencias = [
+        {
+          id: 'ev-a',
+          data: () => ({
+            fichaId: 'vol-1',
+            participacaoId: 'p-1',
+            etapa: 'RESPONSAVEL_EQUIPE',
+            decisao: 'APROVADO',
+            equipeId: 'eq-1',
+            atorNome: 'Líder A',
+            timestamp: '2026-10-06T10:00:00Z',
+          }),
+        },
+        {
+          id: 'ev-b',
+          data: () => ({
+            fichaId: 'vol-1',
+            participacaoId: 'p-2',
+            etapa: 'RESPONSAVEL_EQUIPE',
+            decisao: 'APROVADO',
+            equipeId: 'eq-1',
+            atorNome: 'Líder B',
+            timestamp: '2026-10-06T11:00:00Z',
+          }),
+        },
+        {
+          id: 'ev-sem-part',
+          data: () => ({
+            fichaId: 'vol-1',
+            etapa: 'PASTOR_LOCAL',
+            decisao: 'APROVADO',
+            atorNome: 'Pastor',
+            timestamp: '2026-10-06T12:00:00Z',
+          }),
+        },
+      ];
+
+      const mockDb: any = {
+        collection: (col: string) => {
+          if (col === 'fichas') {
+            return {
+              doc: () => ({
+                get: async () => ({
+                  exists: true,
+                  data: () => ({
+                    nomeCompleto: 'Membro',
+                    criadoEm: '2026-10-05T08:00:00Z',
+                    estado: 'ATIVA',
+                  }),
+                }),
+              }),
+            };
+          }
+          if (col === 'evidenciasDecisao') {
+            return criarMockQuery(mockEvidencias);
+          }
+          if (col === 'equipes') {
+            return { doc: () => ({ get: async () => ({ exists: false }) }) };
+          }
+          return criarMockQuery([]);
+        },
+      };
+
+      const todas = await consultarLinhaDoTempoAutorizadaRepo(mockDb, 'vol-1', 'vol-1');
+      expect(todas.eventos.some((e) => e.id === 'ev-a')).toBe(true);
+      expect(todas.eventos.some((e) => e.id === 'ev-b')).toBe(true);
+
+      const filtrado = await consultarLinhaDoTempoAutorizadaRepo(mockDb, 'vol-1', 'vol-1', 'p-1');
+      const ids = filtrado.eventos.map((e) => e.id);
+      expect(ids).toContain('ev-a');
+      expect(ids).not.toContain('ev-b');
+      expect(ids).not.toContain('ev-sem-part');
+    });
+
+    it('isola a linha do tempo do Responsável de Equipe (sem eventos de outras equipes nem pastorais)', async () => {
+      const mockEvidencias = [
+        {
+          id: 'ev-louvor',
+          data: () => ({
+            fichaId: 'vol-1',
+            participacaoId: 'p-1',
+            etapa: 'RESPONSAVEL_EQUIPE',
+            decisao: 'APROVADO',
+            equipeId: 'eq-louvor',
+            atorNome: 'Líder Louvor',
+            timestamp: '2026-10-06T10:00:00Z',
+          }),
+        },
+        {
+          id: 'ev-seguranca',
+          data: () => ({
+            fichaId: 'vol-1',
+            participacaoId: 'p-2',
+            etapa: 'RESPONSAVEL_EQUIPE',
+            decisao: 'DESFAVORAVEL',
+            equipeId: 'eq-seguranca',
+            atorNome: 'Líder Segurança',
+            justificativa: 'nota interna de outra equipe',
+            timestamp: '2026-10-06T11:00:00Z',
+          }),
+        },
+        {
+          id: 'ev-pastor',
+          data: () => ({
+            fichaId: 'vol-1',
+            etapa: 'PASTOR_LOCAL',
+            decisao: 'DESFAVORAVEL',
+            atorNome: 'Pastor Sigiloso',
+            justificativa: 'sigilo pastoral',
+            timestamp: '2026-10-06T12:00:00Z',
+          }),
+        },
+      ];
+
+      const mockDb: any = {
+        collection: (col: string) => {
+          if (col === 'autoridadesAdministrativas') {
+            return { doc: () => ({ get: async () => ({ exists: false }) }) };
+          }
+          if (col === 'fichas') {
+            return {
+              doc: () => ({
+                get: async () => ({
+                  exists: true,
+                  data: () => ({
+                    nomeCompleto: 'Membro',
+                    igrejaId: 'igreja-1',
+                    criadoEm: '2026-10-05T08:00:00Z',
+                  }),
+                }),
+              }),
+            };
+          }
+          if (col === 'igrejas') {
+            return {
+              doc: () => ({
+                get: async () => ({
+                  exists: true,
+                  data: () => ({ pastorLocalVigentePessoaId: 'pastor-x' }),
+                }),
+              }),
+            };
+          }
+          if (col === 'equipes') {
+            return {
+              where: () => criarMockQuery([{ id: 'eq-louvor', data: () => ({ ativo: true }) }]),
+              doc: () => ({ get: async () => ({ exists: true, data: () => ({ nome: 'Louvor' }) }) }),
+            };
+          }
+          if (col === 'participacoes') {
+            return criarMockQuery([{ data: () => ({ equipeId: 'eq-louvor' }) }]);
+          }
+          if (col === 'evidenciasDecisao') {
+            return criarMockQuery(mockEvidencias);
+          }
+          return criarMockQuery([]);
+        },
+      };
+
+      const resultado = await consultarLinhaDoTempoAutorizadaRepo(mockDb, 'lider-louvor', 'vol-1');
+      const ids = resultado.eventos.map((e) => e.id);
+      expect(ids).toContain('ev-louvor');
+      expect(ids).not.toContain('ev-seguranca');
+      expect(ids).not.toContain('ev-pastor');
+      expect(resultado.eventos.every((e) => e.justificativaInterna == null)).toBe(true);
+    });
   });
 
   describe('Callables HTTP (consultarFichaAutorizada e consultarLinhaDoTempoAutorizada)', () => {
@@ -597,6 +834,19 @@ describe('Story 4.1: Consultar ficha, participações e histórico autorizado', 
       await expect(
         (consultarLinhaDoTempoAutorizada as any).run({ auth: null, data: {} }),
       ).rejects.toThrow('É necessário entrar na conta.');
+    });
+
+    it('rejeita payload com tipo inválido antes de acessar o Firestore', async () => {
+      await expect(
+        (consultarFichaAutorizada as any).run({ auth: { uid: 'u' }, data: { fichaId: 123 } }),
+      ).rejects.toThrow('Parâmetros de consulta inválidos.');
+
+      await expect(
+        (consultarLinhaDoTempoAutorizada as any).run({
+          auth: { uid: 'u' },
+          data: { participacaoId: 5 },
+        }),
+      ).rejects.toThrow('Parâmetros de consulta inválidos.');
     });
   });
 });

@@ -35,7 +35,16 @@ class ParticipacaoModel {
   bool get isRascunho => estado == 'RASCUNHO';
   bool get isAtiva => estado == 'ATIVA';
   bool get isRejeitada => estado == 'REJEITADA';
-  bool get isPendente => !isRascunho && !isAtiva && !isRejeitada;
+  bool get isCancelada => estado == 'CANCELADA';
+  bool get isExpirada => estado == 'EXPIRADA';
+  bool get isInativa => estado == 'INATIVA';
+
+  /// Estados terminais não bloqueiam uma nova solicitação (AD-11). Deve manter
+  /// paridade com `ESTADOS_TERMINAIS_PARTICIPACAO` no backend.
+  bool get isTerminal =>
+      isRejeitada || isCancelada || isExpirada || isInativa;
+
+  bool get isPendente => !isRascunho && !isAtiva && !isTerminal;
 
   factory ParticipacaoModel.fromMap(Map<String, dynamic> map) {
     return ParticipacaoModel(
@@ -107,6 +116,16 @@ abstract interface class ParticipacaoGateway {
     List<String> equipeIds, {
     String? commandId,
   });
+  Future<ParticipacaoModel> solicitarEquipeAdicional(
+    String equipeId, {
+    String? commandId,
+  });
+  Future<void> cancelarParticipacao({
+    required String participacaoId,
+    String? motivo,
+    int? expectedVersion,
+    String? commandId,
+  });
 }
 
 /// Implementação Firebase Cloud Functions do gateway de participações.
@@ -140,6 +159,47 @@ class FirebaseParticipacaoGateway implements ParticipacaoGateway {
         .map((p) => ParticipacaoModel.fromMap((p as Map).cast<String, dynamic>()))
         .toList(growable: false);
     return lista;
+  }
+
+  @override
+  Future<ParticipacaoModel> solicitarEquipeAdicional(
+    String equipeId, {
+    String? commandId,
+  }) async {
+    final cid = commandId ?? comandoOpaco();
+    final resposta = await _functions.httpsCallable('solicitarEquipeAdicional').call({
+      'commandId': cid,
+      'equipeId': equipeId,
+    });
+    final dados = (resposta.data as Map).cast<String, dynamic>();
+    return ParticipacaoModel(
+      id: dados['participacaoId'] as String? ?? '',
+      fichaId: '',
+      equipeId: dados['equipeId'] as String? ?? equipeId,
+      nomeEquipe: dados['nomeEquipe'] as String? ?? '',
+      estado: dados['estado'] as String? ?? 'AGUARDANDO_RESPONSAVEL_EQUIPE',
+      ciclo: 'INICIAL',
+      proximaAcao: dados['proximaAcao'] as String? ??
+          'Aguardando avaliação do Responsável de Equipe',
+      cicloAtualId: dados['cicloId'] as String?,
+      criadoEm: dados['criadoEm'] as String?,
+    );
+  }
+
+  @override
+  Future<void> cancelarParticipacao({
+    required String participacaoId,
+    String? motivo,
+    int? expectedVersion,
+    String? commandId,
+  }) async {
+    final cid = commandId ?? comandoOpaco();
+    await _functions.httpsCallable('cancelarParticipacao').call({
+      'commandId': cid,
+      'participacaoId': participacaoId,
+      if (motivo != null && motivo.trim().isNotEmpty) 'motivo': motivo.trim(),
+      if (expectedVersion != null) 'expectedVersion': expectedVersion,
+    });
   }
 }
 
@@ -184,4 +244,45 @@ class MemoriaParticipacaoGateway implements ParticipacaoGateway {
     _participacoes.sort((a, b) => a.nomeEquipe.compareTo(b.nomeEquipe));
     return List.unmodifiable(_participacoes);
   }
+
+  @override
+  Future<ParticipacaoModel> solicitarEquipeAdicional(
+    String equipeId, {
+    String? commandId,
+  }) async {
+    final nova = ParticipacaoModel(
+      id: 'mem-$equipeId-${_participacoes.length}',
+      fichaId: 'mem-uid',
+      equipeId: equipeId,
+      nomeEquipe: nomesEquipes[equipeId] ?? equipeId,
+      estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE',
+      ciclo: 'INICIAL',
+      proximaAcao: 'Aguardando avaliação do Responsável de Equipe',
+      cicloAtualId: 'ciclo-mem-$equipeId',
+      criadoEm: DateTime.now().toIso8601String(),
+    );
+    _participacoes.add(nova);
+    _participacoes.sort((a, b) => a.nomeEquipe.compareTo(b.nomeEquipe));
+    return nova;
+  }
+
+  @override
+  Future<void> cancelarParticipacao({
+    required String participacaoId,
+    String? motivo,
+    int? expectedVersion,
+    String? commandId,
+  }) async {
+    final index = _participacoes.indexWhere((p) => p.id == participacaoId);
+    if (index != -1) {
+      final p = _participacoes[index];
+      _participacoes[index] = p.copyWith(
+        estado: 'CANCELADA',
+        proximaAcao: motivo != null && motivo.trim().isNotEmpty
+            ? 'Procure o Pastor da igreja local para mais informações'
+            : 'Participação cancelada pelo voluntário',
+      );
+    }
+  }
 }
+

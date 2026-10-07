@@ -10,9 +10,13 @@ import '../admin/catalogo_service.dart';
 import '../auth/validadores.dart';
 import '../termo/termo_service.dart';
 import 'ficha_service.dart';
+import 'consulta_ficha_screen.dart';
 import 'historico_service.dart';
 import 'linha_tempo_widget.dart';
 import 'participacao_service.dart';
+import 'solicitar_equipe_modal.dart';
+import 'cancelar_participacao_dialog.dart';
+import 'cancelar_voluntariado_dialog.dart';
 
 /// Tela responsiva mobile-first para o voluntário preencher e manter sua ficha cadastral permanente.
 class MinhaFichaScreen extends StatefulWidget {
@@ -409,6 +413,21 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           : widget.userName,
       userRole: 'Voluntário',
       userStatus: estadoExibicao,
+      topBarActions: [
+        IconButton(
+          tooltip: 'Consulta autorizada da ficha e histórico',
+          icon: const Icon(Icons.manage_search_outlined),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ConsultaFichaAutorizadaScreen(
+                historicoService: _historicoService,
+                userName: widget.userName,
+                onVoltar: () => Navigator.of(context).maybePop(),
+              ),
+            ),
+          ),
+        ),
+      ],
       body: _carregando
           ? SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
@@ -828,8 +847,20 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 : 'Cada equipe selecionada gera uma participação independente.',
             style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
           ),
+          if (_ficha?.estado == 'ATIVA') ...[
+            const SizedBox(height: AppSpacing.s12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: PrimaryButton(
+                key: const Key('btn_solicitar_nova_equipe'),
+                label: 'Solicitar Nova Equipe',
+                icon: Icons.add_circle_outline,
+                onPressed: _abrirModalSolicitarEquipe,
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.s12),
-          if (_isBloqueadoParaEdicao && _participacoes.isNotEmpty)
+          if (_isBloqueadoParaEdicao && _participacoes.isNotEmpty) ...[
             Column(
               children: _participacoes.map((p) {
                 final eqId = p.equipeId;
@@ -916,6 +947,27 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                             ],
                           ),
                         ],
+                        const SizedBox(height: AppSpacing.s8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            key: Key('btn_cancelar_participacao_${p.id}'),
+                            onPressed: () => _abrirModalCancelarParticipacao(p),
+                            icon: const Icon(Icons.cancel_outlined, size: 16, color: AppColors.danger),
+                            label: const Text(
+                              'Cancelar Participação',
+                              style: TextStyle(
+                                color: AppColors.danger,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(44, 44),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -1050,12 +1102,57 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           ),
                         ],
                       ),
+                      if (p.estado != 'CANCELADA' && p.estado != 'REJEITADA') ...[
+                        const SizedBox(height: AppSpacing.s8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            key: Key('btn_cancelar_participacao_${p.id}'),
+                            onPressed: () => _abrirModalCancelarParticipacao(p),
+                            icon: const Icon(Icons.cancel_outlined, size: 16, color: AppColors.danger),
+                            label: const Text(
+                              'Cancelar Solicitação',
+                              style: TextStyle(
+                                color: AppColors.danger,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(44, 44),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 );
               }).toList(),
-            )
-          else if (_equipesSelecionadasIds.isEmpty)
+            ),
+            if (_ficha?.estado == 'ATIVA' || (_isBloqueadoParaEdicao && _ficha?.estado != 'CANCELADA')) ...[
+              const SizedBox(height: AppSpacing.s12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  key: const Key('btn_cancelar_voluntariado'),
+                  onPressed: _abrirModalCancelarVoluntariado,
+                  icon: const Icon(Icons.person_off_outlined, size: 18, color: AppColors.danger),
+                  label: const Text(
+                    'Encerrar Voluntariado',
+                    style: TextStyle(
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.danger),
+                    minimumSize: const Size(160, 44),
+                  ),
+                ),
+              ),
+            ],
+          ] else if (_equipesSelecionadasIds.isEmpty)
             Container(
               padding: const EdgeInsets.all(AppSpacing.s16),
               decoration: BoxDecoration(
@@ -1781,6 +1878,109 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _abrirModalSolicitarEquipe() {
+    final gateway = widget.participacaoGateway;
+    if (gateway == null) return;
+
+    SolicitarEquipeModal.exibir(
+      context: context,
+      equipesCatalogo: _equipes,
+      participacoesAtuais: _participacoes,
+      participacaoGateway: gateway,
+      onSucesso: (novaPart) async {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.success,
+            content: Row(
+              children: [
+                Icon(Icons.check_circle_outline, color: AppColors.surface),
+                SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: Text('Solicitação enviada com sucesso! A equipe está em análise.'),
+                ),
+              ],
+            ),
+          ),
+        );
+        await _carregarDados();
+      },
+    );
+  }
+
+  void _abrirModalCancelarParticipacao(ParticipacaoModel participacao) {
+    final gateway = widget.participacaoGateway;
+    if (gateway == null) return;
+
+    CancelarParticipacaoDialog.show(
+      context,
+      participacao: participacao,
+      isLideranca: false,
+      onConfirmar: (motivo) async {
+        await gateway.cancelarParticipacao(
+          participacaoId: participacao.id,
+          motivo: motivo,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.navy900,
+            content: Row(
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.surface),
+                const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: Text(
+                    'Participação na equipe ${participacao.nomeEquipe} foi cancelada.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        await _carregarDados();
+      },
+    );
+  }
+
+  void _abrirModalCancelarVoluntariado() {
+    final fichaId = _ficha?.id;
+    if (fichaId == null || fichaId.isEmpty) return;
+
+    final participacoesAfetadas = _participacoes
+        .where((p) => p.estado != 'CANCELADA' && p.estado != 'REJEITADA')
+        .toList();
+
+    CancelarVoluntariadoDialog.show(
+      context,
+      fichaId: fichaId,
+      participacoesAfetadas: participacoesAfetadas,
+      isLideranca: false,
+      onConfirmar: (motivo) async {
+        await widget.fichaGateway.cancelarVoluntariado(
+          fichaId: fichaId,
+          motivo: motivo,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.navy900,
+            content: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: AppColors.surface),
+                SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: Text('Voluntariado cancelado com sucesso.'),
+                ),
+              ],
+            ),
+          ),
+        );
+        await _carregarDados();
+      },
     );
   }
 

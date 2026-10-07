@@ -4,7 +4,7 @@ import 'historico_service.dart';
 
 /// Componente de Linha do Tempo Auditável e Segura (WCAG 2.2 AA).
 /// Desenvolvido conforme DESIGN-RULES-FOR-AGENTS.md e arquitetura canônica (AD-9, AD-12).
-class LinhaDoTempoWidget extends StatelessWidget {
+class LinhaDoTempoWidget extends StatefulWidget {
   const LinhaDoTempoWidget({
     super.key,
     required this.eventos,
@@ -21,27 +21,36 @@ class LinhaDoTempoWidget extends StatelessWidget {
   final String tituloSecao;
 
   @override
+  State<LinhaDoTempoWidget> createState() => _LinhaDoTempoWidgetState();
+}
+
+class _LinhaDoTempoWidgetState extends State<LinhaDoTempoWidget> {
+  int _selecionado = 0;
+
+  @override
   Widget build(BuildContext context) {
-    if (isLoading) {
+    if (widget.isLoading) {
       return _buildLoadingState();
     }
 
-    if (errorMessage != null) {
+    if (widget.errorMessage != null) {
       return _buildErrorState();
     }
 
-    if (eventos.isEmpty) {
+    if (widget.eventos.isEmpty) {
       return _buildEmptyState();
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 600;
+        final isDesktop = constraints.maxWidth >= 900;
+        final indice = _selecionado.clamp(0, widget.eventos.length - 1);
+        final lista = _buildLista(isDesktop, indice);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (tituloSecao.isNotEmpty) ...[
+            if (widget.tituloSecao.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.s16),
                 child: Row(
@@ -53,7 +62,7 @@ class LinhaDoTempoWidget extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.s8),
                     Text(
-                      tituloSecao,
+                      widget.tituloSecao,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -65,23 +74,42 @@ class LinhaDoTempoWidget extends StatelessWidget {
                 ),
               ),
             ],
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: eventos.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 0),
-              itemBuilder: (context, index) {
-                final evento = eventos[index];
-                final isLast = index == eventos.length - 1;
-
-                return _ItemLinhaDoTempo(
-                  evento: evento,
-                  isLast: isLast,
-                  isDesktop: isDesktop,
-                );
-              },
-            ),
+            if (isDesktop)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 3, child: lista),
+                  const SizedBox(width: AppSpacing.s16),
+                  Expanded(
+                    flex: 2,
+                    child: _PainelDetalheEvento(evento: widget.eventos[indice]),
+                  ),
+                ],
+              )
+            else
+              lista,
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLista(bool isDesktop, int indice) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: widget.eventos.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 0),
+      itemBuilder: (context, index) {
+        final evento = widget.eventos[index];
+        final isLast = index == widget.eventos.length - 1;
+
+        return _ItemLinhaDoTempo(
+          evento: evento,
+          isLast: isLast,
+          isDesktop: isDesktop,
+          isSelected: isDesktop && index == indice,
+          onTap: isDesktop ? () => setState(() => _selecionado = index) : null,
         );
       },
     );
@@ -164,7 +192,7 @@ class LinhaDoTempoWidget extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.s8),
           Text(
-            errorMessage ?? 'Não foi possível carregar a linha do tempo.',
+            widget.errorMessage ?? 'Não foi possível carregar a linha do tempo.',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 14,
@@ -172,12 +200,12 @@ class LinhaDoTempoWidget extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          if (onRetry != null) ...[
+          if (widget.onRetry != null) ...[
             const SizedBox(height: AppSpacing.s12),
             ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 44),
               child: OutlinedButton.icon(
-                onPressed: onRetry,
+                onPressed: widget.onRetry,
                 icon: const Icon(Icons.refresh, size: 18),
                 label: const Text('Tentar novamente'),
                 style: OutlinedButton.styleFrom(
@@ -201,256 +229,395 @@ class _ItemLinhaDoTempo extends StatelessWidget {
     required this.evento,
     required this.isLast,
     required this.isDesktop,
+    this.isSelected = false,
+    this.onTap,
   });
 
   final EventoLinhaDoTempoModel evento;
   final bool isLast;
   final bool isDesktop;
+  final bool isSelected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final statusConfig = _resolveStatusConfig(evento);
 
-    return Semantics(
-      label: 'Evento: ${evento.titulo}. Status: ${statusConfig.label}. Em: ${_formatarData(evento.timestamp)}',
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Coluna do Conector e Ícone
-            SizedBox(
-              width: 40,
-              child: Column(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: statusConfig.backgroundColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: statusConfig.borderColor,
-                        width: 1.5,
+    final cartao = Semantics(
+      container: true,
+      selected: isSelected,
+      label:
+          'Evento: ${evento.titulo}. Status: ${statusConfig.label}. Em: ${_formatarData(evento.timestamp)}',
+      child: ExcludeSemantics(
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Coluna do Conector e Ícone
+              SizedBox(
+                width: 40,
+                child: Column(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: statusConfig.backgroundColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.blue600
+                              : statusConfig.borderColor,
+                          width: isSelected ? 2.5 : 1.5,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        statusConfig.icon,
+                        size: 16,
+                        color: statusConfig.iconColor,
                       ),
                     ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      statusConfig.icon,
-                      size: 16,
-                      color: statusConfig.iconColor,
-                    ),
-                  ),
-                  if (!isLast)
-                    Expanded(
-                      child: Container(
-                        width: 2,
-                        color: AppColors.border,
-                        margin: const EdgeInsets.symmetric(vertical: 4),
+                    if (!isLast)
+                      Expanded(
+                        child: Container(
+                          width: 2,
+                          color: AppColors.border,
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.s12),
-            // Cartão de Conteúdo do Evento
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.s16),
-                child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.s12),
-                  decoration: BoxDecoration(
-                    color: statusConfig.cardColor,
-                    borderRadius: AppGeometry.cardBorderRadius,
-                    border: Border.all(
-                      color: statusConfig.cardBorderColor,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Linha de Cabeçalho: Título + Chip de Status
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              evento.titulo,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.navy900,
-                                letterSpacing: -0.1,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.s8),
-                          _ChipStatus(
-                            label: statusConfig.label,
-                            textColor: statusConfig.chipTextColor,
-                            bgColor: statusConfig.chipBgColor,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.s4),
-                      // Descrição
-                      Text(
-                        evento.descricao,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textPrimary,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.s8),
-                      // Linha de Metadados: Data/Hora + Ator Responsável (se houver)
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: AppSpacing.s12,
-                        runSpacing: AppSpacing.s4,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.access_time,
-                                size: 14,
-                                color: AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  _formatarData(evento.timestamp),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (evento.atorNome != null && evento.atorNome!.isNotEmpty)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.person_outline,
-                                  size: 14,
-                                  color: AppColors.textSecondary,
-                                ),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    evento.atorNome!,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          if (evento.nomeEquipe != null && evento.nomeEquipe!.isNotEmpty)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.groups_outlined,
-                                  size: 14,
-                                  color: AppColors.textSecondary,
-                                ),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    evento.nomeEquipe!,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                      // Justificativa Interna Autorizada (somente visível para papéis permitidos)
-                      if (evento.justificativaInterna != null &&
-                          evento.justificativaInterna!.trim().isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.s8),
-                        Container(
-                          padding: const EdgeInsets.all(AppSpacing.s8),
-                          decoration: BoxDecoration(
-                            color: AppColors.neutral100,
-                            borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Justificativa interna (autorizada):',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                evento.justificativaInterna!,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
+              const SizedBox(width: AppSpacing.s12),
+              // Cartão de Conteúdo do Evento
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.s16),
+                  child: _CartaoEvento(
+                    evento: evento,
+                    statusConfig: statusConfig,
+                    destacado: isSelected,
                   ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (onTap == null) return cartao;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppGeometry.cardBorderRadius,
+      child: cartao,
+    );
+  }
+}
+
+class _CartaoEvento extends StatelessWidget {
+  const _CartaoEvento({
+    required this.evento,
+    required this.statusConfig,
+    this.destacado = false,
+  });
+
+  final EventoLinhaDoTempoModel evento;
+  final _StatusConfig statusConfig;
+  final bool destacado;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.s12),
+      decoration: BoxDecoration(
+        color: statusConfig.cardColor,
+        borderRadius: AppGeometry.cardBorderRadius,
+        border: Border.all(
+          color: destacado ? AppColors.blue600 : statusConfig.cardBorderColor,
+          width: destacado ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  evento.titulo,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.navy900,
+                    letterSpacing: -0.1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              _ChipStatus(
+                label: statusConfig.label,
+                textColor: statusConfig.chipTextColor,
+                bgColor: statusConfig.chipBgColor,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s4),
+          Text(
+            evento.descricao,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textPrimary,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          _MetaEvento(evento: evento),
+          _JustificativaInterna(evento: evento),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaEvento extends StatelessWidget {
+  const _MetaEvento({required this.evento});
+
+  final EventoLinhaDoTempoModel evento;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.s12,
+      runSpacing: AppSpacing.s4,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.access_time,
+              size: 14,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                _formatarData(evento.timestamp),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
+        if (evento.atorNome != null && evento.atorNome!.isNotEmpty)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.person_outline,
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  evento.atorNome!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (evento.atorPapel != null && evento.atorPapel!.isNotEmpty) ...[
+                const SizedBox(width: 4),
+                Text(
+                  evento.atorPapel!,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+              if (evento.atorVinculoId != null && evento.atorVinculoId!.isNotEmpty) ...[
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.verified_outlined,
+                  size: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ],
+            ],
+          ),
+        if (evento.nomeEquipe != null && evento.nomeEquipe!.isNotEmpty)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.groups_outlined,
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  evento.nomeEquipe!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _JustificativaInterna extends StatelessWidget {
+  const _JustificativaInterna({required this.evento});
+
+  final EventoLinhaDoTempoModel evento;
+
+  @override
+  Widget build(BuildContext context) {
+    if (evento.justificativaInterna == null ||
+        evento.justificativaInterna!.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.s8),
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.s8),
+          decoration: BoxDecoration(
+            color: AppColors.neutral100,
+            borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Justificativa interna (autorizada):',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                evento.justificativaInterna!,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Painel de detalhe exibido no desktop (>= 600px) ao lado da lista.
+class _PainelDetalheEvento extends StatelessWidget {
+  const _PainelDetalheEvento({required this.evento});
+
+  final EventoLinhaDoTempoModel evento;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusConfig = _resolveStatusConfig(evento);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppGeometry.cardBorderRadius,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Detalhe do evento',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  evento.titulo,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy900,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              _ChipStatus(
+                label: statusConfig.label,
+                textColor: statusConfig.chipTextColor,
+                bgColor: statusConfig.chipBgColor,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          Text(
+            evento.descricao,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textPrimary,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          _MetaEvento(evento: evento),
+          _JustificativaInterna(evento: evento),
+        ],
       ),
     );
   }
+}
 
-  _StatusConfig _resolveStatusConfig(EventoLinhaDoTempoModel evento) {
-    if (evento.isOrientacaoPastoral) {
-      return const _StatusConfig(
-        label: 'Orientações',
-        icon: Icons.info_outline,
-        iconColor: AppColors.textSecondary,
-        backgroundColor: AppColors.neutral100,
-        borderColor: AppColors.border,
-        cardColor: AppColors.neutral50,
-        cardBorderColor: AppColors.border,
-        chipTextColor: AppColors.textSecondary,
-        chipBgColor: AppColors.neutral100,
-      );
-    }
+_StatusConfig _resolveStatusConfig(EventoLinhaDoTempoModel evento) {
+  if (evento.isOrientacaoPastoral) {
+    return const _StatusConfig(
+      label: 'Orientações',
+      icon: Icons.info_outline,
+      iconColor: AppColors.textSecondary,
+      backgroundColor: AppColors.neutral100,
+      borderColor: AppColors.border,
+      cardColor: AppColors.neutral50,
+      cardBorderColor: AppColors.border,
+      chipTextColor: AppColors.textSecondary,
+      chipBgColor: AppColors.neutral100,
+    );
+  }
 
-    if (evento.isEmAndamento) {
-      return const _StatusConfig(
-        label: 'Em análise',
-        icon: Icons.hourglass_top,
-        iconColor: AppColors.blue600,
-        backgroundColor: AppColors.blue50,
-        borderColor: AppColors.blue600,
-        cardColor: AppColors.surface,
-        cardBorderColor: AppColors.border,
-        chipTextColor: AppColors.blue600,
-        chipBgColor: AppColors.blue50,
-      );
-    }
-
-    // Default: CONCLUIDO
+  if (evento.isConcluido) {
     return const _StatusConfig(
       label: 'Concluído',
       icon: Icons.check,
@@ -464,19 +631,32 @@ class _ItemLinhaDoTempo extends StatelessWidget {
     );
   }
 
-  String _formatarData(String isoString) {
-    if (isoString.isEmpty) return '';
-    try {
-      final dt = DateTime.parse(isoString).toLocal();
-      final dia = dt.day.toString().padLeft(2, '0');
-      final mes = dt.month.toString().padLeft(2, '0');
-      final ano = dt.year.toString();
-      final hora = dt.hour.toString().padLeft(2, '0');
-      final minuto = dt.minute.toString().padLeft(2, '0');
-      return '$dia/$mes/$ano às $hora:$minuto';
-    } catch (_) {
-      return isoString;
-    }
+  // Default seguro: estado desconhecido/em andamento nunca é exibido como concluído.
+  return const _StatusConfig(
+    label: 'Em análise',
+    icon: Icons.hourglass_top,
+    iconColor: AppColors.blue600,
+    backgroundColor: AppColors.blue50,
+    borderColor: AppColors.blue600,
+    cardColor: AppColors.surface,
+    cardBorderColor: AppColors.border,
+    chipTextColor: AppColors.blue600,
+    chipBgColor: AppColors.blue50,
+  );
+}
+
+String _formatarData(String isoString) {
+  if (isoString.isEmpty) return '';
+  try {
+    final dt = DateTime.parse(isoString).toLocal();
+    final dia = dt.day.toString().padLeft(2, '0');
+    final mes = dt.month.toString().padLeft(2, '0');
+    final ano = dt.year.toString();
+    final hora = dt.hour.toString().padLeft(2, '0');
+    final minuto = dt.minute.toString().padLeft(2, '0');
+    return '$dia/$mes/$ano às $hora:$minuto';
+  } catch (_) {
+    return isoString;
   }
 }
 

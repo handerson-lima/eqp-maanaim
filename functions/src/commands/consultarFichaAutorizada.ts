@@ -19,6 +19,9 @@ export const consultarFichaAutorizada = onCall(
     }
 
     const payload = (request.data ?? {}) as EntradaConsultarFichaAutorizadaPayload;
+    if (payload.fichaId !== undefined && typeof payload.fichaId !== 'string') {
+      throw new HttpsError('invalid-argument', 'Parâmetros de consulta inválidos.');
+    }
     const db = getFirestore();
 
     try {
@@ -36,10 +39,7 @@ export const consultarFichaAutorizada = onCall(
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError(
-        'internal',
-        error instanceof Error ? error.message : 'Falha ao consultar a ficha autorizada.',
-      );
+      throw new HttpsError('internal', 'Falha ao consultar a ficha autorizada.');
     }
   },
 );

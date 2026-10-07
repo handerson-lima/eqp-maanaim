@@ -30,4 +30,6 @@ export { obterDetalheSolicitacao } from './commands/obterDetalheSolicitacao.js';
 export { notificarEventoAuditOutbox } from './triggers/notificacoes.js';
 export { consultarFichaAutorizada } from './commands/consultarFichaAutorizada.js';
 export { consultarLinhaDoTempoAutorizada } from './commands/consultarLinhaDoTempoAutorizada.js';
-
+export { solicitarEquipeAdicional } from './commands/solicitarEquipeAdicional.js';
+export { cancelarParticipacao } from './commands/cancelarParticipacao.js';
+export { cancelarVoluntariado } from './commands/cancelarVoluntariado.js';

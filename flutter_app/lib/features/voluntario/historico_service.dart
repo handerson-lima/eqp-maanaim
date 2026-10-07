@@ -12,6 +12,7 @@ class EventoLinhaDoTempoModel {
     required this.timestamp,
     this.atorNome,
     this.atorPapel,
+    this.atorVinculoId,
     this.equipeId,
     this.nomeEquipe,
     this.justificativaInterna,
@@ -26,6 +27,7 @@ class EventoLinhaDoTempoModel {
   final String timestamp;
   final String? atorNome;
   final String? atorPapel;
+  final String? atorVinculoId;
   final String? equipeId;
   final String? nomeEquipe;
   final String? justificativaInterna;
@@ -42,10 +44,11 @@ class EventoLinhaDoTempoModel {
       etapa: map['etapa'] as String? ?? 'CADASTRO',
       titulo: map['titulo'] as String? ?? 'Evento',
       descricao: map['descricao'] as String? ?? '',
-      estadoVisual: map['estadoVisual'] as String? ?? 'CONCLUIDO',
+      estadoVisual: map['estadoVisual'] as String? ?? '',
       timestamp: map['timestamp'] as String? ?? '',
       atorNome: atorMap?['nome'] as String?,
       atorPapel: atorMap?['papel'] as String?,
+      atorVinculoId: atorMap?['vinculoId'] as String?,
       equipeId: map['equipeId'] as String?,
       nomeEquipe: map['nomeEquipe'] as String?,
       justificativaInterna: map['justificativaInterna'] as String?,
@@ -197,7 +200,7 @@ class HistoricoService {
   final FirebaseFunctions? _functions;
 
   FirebaseFunctions get _resolvedFunctions =>
-      _functions ?? FirebaseFunctions.instanceFor(region: 'southamerica-east1');
+      _functions ?? FirebaseFunctions.instance;
 
   /// Consulta a ficha cadastral e participações autorizadas no escopo do ator.
   Future<ResultadoConsultaFichaModel> consultarFichaAutorizada({String? fichaId}) async {

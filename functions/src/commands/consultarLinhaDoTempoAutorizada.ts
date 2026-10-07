@@ -20,6 +20,12 @@ export const consultarLinhaDoTempoAutorizada = onCall(
     }
 
     const payload = (request.data ?? {}) as EntradaConsultarLinhaDoTempoPayload;
+    if (payload.fichaId !== undefined && typeof payload.fichaId !== 'string') {
+      throw new HttpsError('invalid-argument', 'Parâmetros de consulta inválidos.');
+    }
+    if (payload.participacaoId !== undefined && typeof payload.participacaoId !== 'string') {
+      throw new HttpsError('invalid-argument', 'Parâmetros de consulta inválidos.');
+    }
     const db = getFirestore();
 
     try {
@@ -38,10 +44,7 @@ export const consultarLinhaDoTempoAutorizada = onCall(
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError(
-        'internal',
-        error instanceof Error ? error.message : 'Falha ao consultar a linha do tempo autorizada.',
-      );
+      throw new HttpsError('internal', 'Falha ao consultar a linha do tempo autorizada.');
     }
   },
 );

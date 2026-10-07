@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:eqp_maanaim/features/voluntario/consulta_ficha_screen.dart';
 import 'package:eqp_maanaim/features/voluntario/historico_service.dart';
 import 'package:eqp_maanaim/features/voluntario/linha_tempo_widget.dart';
@@ -15,10 +16,18 @@ class FakeHistoricoService extends HistoricoService {
   final List<EventoLinhaDoTempoModel> eventos;
   final bool simularErro;
 
+  Never _erroAutenticacao() {
+    // ignore: invalid_use_of_protected_member
+    throw FirebaseFunctionsException(
+      code: 'permission-denied',
+      message: 'Acesso não autorizado.',
+    );
+  }
+
   @override
   Future<ResultadoConsultaFichaModel> consultarFichaAutorizada({String? fichaId}) async {
     if (simularErro) {
-      throw Exception('permission-denied: Acesso não autorizado.');
+      _erroAutenticacao();
     }
     return resultadoFicha ??
         const ResultadoConsultaFichaModel(
@@ -59,7 +68,7 @@ class FakeHistoricoService extends HistoricoService {
     String? participacaoId,
   }) async {
     if (simularErro) {
-      throw Exception('permission-denied: Histórico não autorizado.');
+      _erroAutenticacao();
     }
     return eventos;
   }
@@ -220,6 +229,39 @@ void main() {
       await tester.tap(botaoRetry);
       await tester.pump();
       expect(tentouNovamente, isTrue);
+    });
+
+    testWidgets('em desktop (>=900px) exibe painel de detalhe ao lado da lista', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final eventos = [
+        const EventoLinhaDoTempoModel(
+          id: 'ev-1',
+          tipo: 'HOMOLOGACAO_COORDENACAO',
+          etapa: 'COORDENADOR_GERAL',
+          titulo: 'Homologação e ativação anual',
+          descricao: 'Voluntariado ativo homologado.',
+          estadoVisual: 'CONCLUIDO',
+          timestamp: '2026-10-06T15:30:00Z',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LinhaDoTempoWidget(eventos: eventos),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Detalhe do evento'), findsOneWidget);
+      expect(find.text('Homologação e ativação anual'), findsNWidgets(2));
     });
   });
 

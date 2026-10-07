@@ -69,6 +69,13 @@ class FichaMockGateway implements FichaGateway {
       enviadoEm: '2026-10-06T12:00:00Z',
     );
   }
+
+  @override
+  Future<void> cancelarVoluntariado({
+    required String fichaId,
+    String? motivo,
+    String? commandId,
+  }) async {}
 }
 
 class ParticipacaoMockGateway implements ParticipacaoGateway {
@@ -88,6 +95,32 @@ class ParticipacaoMockGateway implements ParticipacaoGateway {
   }) async {
     return participacoes;
   }
+
+  @override
+  Future<ParticipacaoModel> solicitarEquipeAdicional(
+    String equipeId, {
+    String? commandId,
+  }) async {
+    final nova = ParticipacaoModel(
+      id: 'mock-$equipeId',
+      fichaId: 'mock-ficha',
+      equipeId: equipeId,
+      nomeEquipe: equipeId,
+      estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE',
+      ciclo: 'INICIAL',
+      proximaAcao: 'Aguardando avaliação do Responsável de Equipe',
+    );
+    participacoes.add(nova);
+    return nova;
+  }
+
+  @override
+  Future<void> cancelarParticipacao({
+    required String participacaoId,
+    String? motivo,
+    int? expectedVersion,
+    String? commandId,
+  }) async {}
 }
 
 class CatalogoMockGateway implements CatalogoGateway {
