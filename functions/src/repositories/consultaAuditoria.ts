@@ -13,6 +13,7 @@ import {
   type VoluntarioItemRelatorio,
 } from '../domain/consultaAuditoria.js';
 import { sanitizarDadoAuditoria } from '../domain/auditoria.js';
+import { calcularRetencaoAte } from '../domain/privacidade.js';
 import { avaliarAutoridadeCoordenador } from './decisaoCoordenador.js';
 
 interface EscopoAtorAuditoria {
@@ -223,6 +224,7 @@ export async function consultarAuditoriaAutorizadaRepo(
         materializadoEm: FieldValue.serverTimestamp(),
         versaoSchema: 1,
         sanitizado: true,
+        retencaoAte: calcularRetencaoAte(new Date()),
       });
     } catch (auditErr) {
       logger.warn('Não foi possível gravar auditoria da consulta global:', auditErr);
@@ -451,6 +453,7 @@ export async function consultarRelatorioOperacionalRepo(
         materializadoEm: FieldValue.serverTimestamp(),
         versaoSchema: 1,
         sanitizado: true,
+        retencaoAte: calcularRetencaoAte(new Date()),
       });
     } catch (auditErr) {
       logger.warn('Não foi possível registrar auditoria da consulta de relatório:', auditErr);

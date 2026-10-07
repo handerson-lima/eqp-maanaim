@@ -326,6 +326,7 @@ describe('Story 6.2: Repositório de Auditoria e Isolamento de Escopo (AD-8, AD-
     );
     expect(eventosGravados.length).toBe(1);
     expect(eventosGravados[0].data.atorUid).toBe('coord_geral');
+    expect(eventosGravados[0].data.retencaoAte).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
   it('paginação por cursor determinístico funciona ordenando descendente com desempate', async () => {
@@ -377,6 +378,7 @@ describe('Story 6.2: Repositório de Auditoria e Isolamento de Escopo (AD-8, AD-
 
 describe('Story 6.2: Relatórios Operacionais Consolidados', () => {
   it('gera relatório operacional agregando métricas e mascarando CPF', async () => {
+    const auditoriaColecao: any[] = [];
     const db = criarDbMock({
       autoridadesAdministrativas: [
         {
@@ -421,7 +423,7 @@ describe('Story 6.2: Relatórios Operacionais Consolidados', () => {
           },
         },
       ],
-      auditoria: [],
+      auditoria: auditoriaColecao,
     });
 
     const relatorio = await consultarRelatorioOperacionalRepo(
@@ -439,6 +441,13 @@ describe('Story 6.2: Relatórios Operacionais Consolidados', () => {
     // CPF rigorosamente mascarado
     expect(relatorio.voluntarios[0].cpfMascarado).toBe('123.***.***-00');
     expect(relatorio.voluntarios[1].cpfMascarado).toBe('987.***.***-00');
+
+    // Auditoria probatória do relatório carrega retenção de 5 anos (AD-12/AC1)
+    const eventoRelatorio = auditoriaColecao.find(
+      (e) => e.data.acao === 'CONSULTA_RELATORIO_OPERACIONAL',
+    );
+    expect(eventoRelatorio).toBeDefined();
+    expect(eventoRelatorio!.data.retencaoAte).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
   it('Pastor Local gera relatório restrito à sua igreja', async () => {

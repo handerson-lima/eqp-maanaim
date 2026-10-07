@@ -25,6 +25,32 @@ describe('Story 6.4: Sanitizador canônico de PII (AD-12)', () => {
     expect(chaveContemPii('estado')).toBe(false);
   });
 
+  it('remove chaves compostas de PII preservando chaves institucionais', () => {
+    expect(chaveContemPii('voluntarioNome')).toBe(true);
+    expect(chaveContemPii('nomeVoluntario')).toBe(true);
+    expect(chaveContemPii('profissaoVoluntario')).toBe(true);
+    expect(chaveContemPii('nacionalidadeVoluntario')).toBe(true);
+    expect(chaveContemPii('nomeCoordenador')).toBe(true);
+    expect(chaveContemPii('nomeEquipe')).toBe(false);
+    expect(chaveContemPii('nomeIgreja')).toBe(false);
+
+    const sanitizado = sanitizarPii({
+      voluntarioNome: 'Maria Souza',
+      profissaoVoluntario: 'Professora',
+      nacionalidadeVoluntario: 'Brasileira',
+      nomeCoordenador: 'Pastor João',
+      nomeEquipe: 'Louvor',
+      nomeIgreja: 'Central',
+    }) as Record<string, unknown>;
+
+    expect(sanitizado.voluntarioNome).toBeUndefined();
+    expect(sanitizado.profissaoVoluntario).toBeUndefined();
+    expect(sanitizado.nacionalidadeVoluntario).toBeUndefined();
+    expect(sanitizado.nomeCoordenador).toBeUndefined();
+    expect(sanitizado.nomeEquipe).toBe('Louvor');
+    expect(sanitizado.nomeIgreja).toBe('Central');
+  });
+
   it('remove recursivamente chaves de PII e segredos preservando o schema permitido', () => {
     const entrada = {
       id: 'cmd-1',

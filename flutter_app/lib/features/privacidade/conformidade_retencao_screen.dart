@@ -234,6 +234,10 @@ class _ConformidadeRetencaoScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_erro != null) ...[
+          _buildBannerErro(),
+          const SizedBox(height: AppSpacing.s16),
+        ],
         _buildPolitica(indicadores),
         const SizedBox(height: AppSpacing.s20),
         Text('Indicadores de Retenção', style: AppTypography.h2),
@@ -244,6 +248,51 @@ class _ConformidadeRetencaoScreenState
         const SizedBox(height: AppSpacing.s20),
         _buildAcoes(indicadores),
       ],
+    );
+  }
+
+  Widget _buildBannerErro() {
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        key: const Key('retencao_erro_banner'),
+        padding: const EdgeInsets.all(AppSpacing.s12),
+        decoration: BoxDecoration(
+          color: AppColors.dangerBg,
+          borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+          border: Border.all(color: AppColors.danger),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: Text(
+                    'Não foi possível atualizar os indicadores',
+                    style: AppTypography.label.copyWith(color: AppColors.danger),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s4),
+            Text(
+              _erro!,
+              style: AppTypography.caption.copyWith(color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: AppSpacing.s8),
+            SecondaryButton(
+              key: const Key('retencao_banner_retry'),
+              label: 'Tentar novamente',
+              icon: Icons.refresh,
+              onPressed: _carregar,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

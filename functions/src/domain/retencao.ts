@@ -71,6 +71,11 @@ export interface EntradaExecutarRetencao {
   agoraIso?: string;
   /** Ator autenticado (preenchido pela Cloud Function, não pelo cliente). */
   atorUid?: string;
+  /**
+   * Restringe a rotina ao expurgo de rascunhos. Usado apenas pelo job agendado,
+   * que não executa anonimização (essa é acionada por autoridade humana).
+   */
+  somenteExpurgo?: boolean;
   payloadHash: string;
 }
 
@@ -316,7 +321,7 @@ export function fichaElegivelParaExpurgo(
     return { elegivel: false, motivoExclusao: 'DENTRO_DO_PRAZO' };
   }
 
-  return { elegivel: true, retencaoAte: new Date(limiteMs).toISOString() };
+  return { elegivel: true };
 }
 
 /** Valores canônicos mascarados aplicados à ficha na anonimização (AD-12). */

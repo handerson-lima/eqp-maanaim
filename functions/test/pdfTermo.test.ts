@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   DadosPdfIncompletosError,
+  FichaAnonimizadaParaPdfError,
   ParticipacaoNaoAprovadaParaPdfError,
   comporTextoPrincipal,
   formatarDataExtenso,
@@ -115,6 +116,7 @@ describe('Story 6.3 - Repositório e Permissões de PDF (Repository)', () => {
   function criarMockFirestore(opcoes: {
     fichaExiste?: boolean;
     fichaOwnerUid?: string;
+    fichaAnonimizada?: boolean;
     participacaoExiste?: boolean;
     participacaoFichaId?: string;
     participacaoEstado?: string;
@@ -138,6 +140,14 @@ describe('Story 6.3 - Repositório e Permissões de PDF (Repository)', () => {
                   profissao: 'Arquiteto',
                   cpf: '111.222.333-44',
                   igrejaId: opcoes.igrejaId ?? 'igreja-1',
+                  ...(opcoes.fichaAnonimizada
+                    ? {
+                        nomeCompleto: 'Nome Anonimizado',
+                        cpf: '***.***.***-**',
+                        profissao: '',
+                        anonimizadaEm: '2026-10-07T12:00:00.000Z',
+                      }
+                    : {}),
                   decisaoPastorLocal: { pastorNome: 'Pastor Local Bento' },
                   termoAceito: {
                     hashSha256: 'abc123hash',
@@ -262,6 +272,27 @@ describe('Story 6.3 - Repositório e Permissões de PDF (Repository)', () => {
     );
   });
 
+  it('recusa geração de PDF para ficha anonimizada (AD-12)', async () => {
+    const { db } = criarMockFirestore({
+      fichaExiste: true,
+      fichaAnonimizada: true,
+      participacaoExiste: true,
+      participacaoFichaId: 'ficha-123',
+      participacaoEstado: 'ATIVA',
+    });
+    const { bucket } = criarMockStorage();
+
+    await expect(
+      gerarPdfParticipacaoRepo(
+        db,
+        { atorUid: 'voluntario-proprietario' },
+        'ficha-123',
+        'part-1',
+        bucket,
+      ),
+    ).rejects.toThrow(FichaAnonimizadaParaPdfError);
+  });
+
   it('rejeita geração de PDF por usuário sem escopo sobre a ficha', async () => {
     const { db } = criarMockFirestore({
       fichaExiste: true,
@@ -313,6 +344,13 @@ describe('Story 6.3 - Repositório e Permissões de PDF (Repository)', () => {
     expect(savedFiles.has('pdfs/voluntario-proprietario/part-1.pdf')).toBe(true);
     const arquivoSalvo = savedFiles.get('pdfs/voluntario-proprietario/part-1.pdf');
     expect(arquivoSalvo?.options?.contentType).toBe('application/pdf');
+
+    // Retenção probatória de 5 anos gravada em customMetadata (AD-12).
+    const custom = (arquivoSalvo?.options?.metadata as any)?.metadata;
+    expect(typeof custom?.retencaoAte).toBe('string');
+    expect(new Date(custom.retencaoAte).getUTCFullYear()).toBe(
+      new Date().getUTCFullYear() + 5,
+    );
 
     // Valida registro de auditoria probatória
     expect(auditoriaDocs.has('cmd-gerar-pdf-001')).toBe(true);

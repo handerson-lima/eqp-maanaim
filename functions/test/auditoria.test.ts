@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { logger } from 'firebase-functions/v2';
 import {
   montarRegistroAuditoriaImutavel,
   sanitizarDadoAuditoria,
@@ -387,6 +388,48 @@ describe('Story 6.1: Repositório de Auditoria e Consumidor Idempotente de Outbo
     expect(alertas[alertaChave].tipo).toBe('OUTBOX_FALHA_PROCESSAMENTO');
     expect(alertas[alertaChave].severidade).toBe('ALTA');
     expect(alertas[alertaChave].detalhes.tentativas).toBe(3);
+  });
+
+  it('sanitiza alerta operacional com PII em motivo e detalhes (AD-12)', async () => {
+    const db = criarMockFirestoreAuditoria();
+    const logs: unknown[] = [];
+    const spy = vi
+      .spyOn(logger, 'warn')
+      .mockImplementation((...args: unknown[]) => {
+        logs.push(args);
+      });
+
+    try {
+      await emitirAlertaOperacionalRepo(db, {
+        id: 'ALERTA_PII_1',
+        tipo: 'AUDITORIA_INCONSISTENTE',
+        severidade: 'ALTA',
+        commandId: 'cmd-pii',
+        motivo: 'Falha para maria.souza@exemplo.com CPF 123.456.789-00',
+        detalhes: {
+          dadosComando: {
+            cpf: '123.456.789-00',
+            nomeCompleto: 'Maria Souza',
+            email: 'maria.souza@exemplo.com',
+          },
+        },
+        resolvido: false,
+      });
+    } finally {
+      spy.mockRestore();
+    }
+
+    const alerta = db._state.alertasOperacionais['ALERTA_PII_1'];
+    expect(alerta).toBeDefined();
+    const alertaStr = JSON.stringify(alerta);
+    expect(alertaStr).not.toContain('Maria Souza');
+    expect(alertaStr).not.toContain('123.456.789-00');
+    expect(alertaStr).not.toContain('maria.souza@exemplo.com');
+
+    const logsStr = JSON.stringify(logs);
+    expect(logsStr).not.toContain('Maria Souza');
+    expect(logsStr).not.toContain('123.456.789-00');
+    expect(logsStr).not.toContain('maria.souza@exemplo.com');
   });
 
   it('consulta registro de auditoria por commandId', async () => {

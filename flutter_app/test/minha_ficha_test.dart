@@ -133,6 +133,8 @@ void main() {
     expect(find.textContaining('Profissão'), findsWidgets);
     expect(find.textContaining('CPF válido'), findsOneWidget);
     expect(find.textContaining('Igreja Local'), findsWidgets);
+    // Aviso de privacidade/retenção (AD-12) visível na ficha do voluntário.
+    expect(find.byKey(const Key('politica_privacidade_card')), findsOneWidget);
   });
 
   testWidgets(

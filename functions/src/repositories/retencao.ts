@@ -45,23 +45,21 @@ export interface ConfiguracaoRetencao {
 }
 
 /**
- * Lê a configuração operacional de retenção. Ausente/inválida → padrões seguros
- * (180 dias; expurgo automático desabilitado).
+ * Lê a configuração operacional de retenção. Quando o documento não existe,
+ * usa os padrões seguros (180 dias; expurgo automático desabilitado). Falhas
+ * de leitura são propagadas: um erro transitório não pode rebaixar o prazo
+ * configurado (30–730 dias) e expurgar rascunhos antes do tempo.
  */
 export async function obterConfiguracaoRetencao(db: Firestore): Promise<ConfiguracaoRetencao> {
-  try {
-    const snap = await db.collection(COLECAO_CONFIGURACOES).doc(DOC_CONFIG_RETENCAO).get();
-    if (!snap.exists) {
-      return { diasRascunho: DIAS_RASCUNHO_PADRAO, expurgoAutomaticoHabilitado: false };
-    }
-    const dados = snap.data() ?? {};
-    return {
-      diasRascunho: normalizarDiasRascunho(dados.diasRascunho),
-      expurgoAutomaticoHabilitado: dados.expurgoAutomaticoHabilitado === true,
-    };
-  } catch {
+  const snap = await db.collection(COLECAO_CONFIGURACOES).doc(DOC_CONFIG_RETENCAO).get();
+  if (!snap.exists) {
     return { diasRascunho: DIAS_RASCUNHO_PADRAO, expurgoAutomaticoHabilitado: false };
   }
+  const dados = snap.data() ?? {};
+  return {
+    diasRascunho: normalizarDiasRascunho(dados.diasRascunho),
+    expurgoAutomaticoHabilitado: dados.expurgoAutomaticoHabilitado === true,
+  };
 }
 
 function iso(valor: unknown): string {
@@ -121,6 +119,7 @@ function entradaAuditoria(
   motivo: string,
   retencaoAte?: string,
 ): Record<string, unknown> {
+  const anonimizacao = acao === ACAO_ANONIMIZAR_FICHA;
   return {
     commandId: commandIdItem,
     correlationId,
@@ -134,6 +133,18 @@ function entradaAuditoria(
     motivo,
     politica: POLITICA_RETENCAO_ID,
     ...(retencaoAte ? { retencaoAte } : {}),
+    antes: { estado },
+    depois: anonimizacao
+      ? { estado, anonimizada: true }
+      : { estado: 'EXPURGADO', expurgada: true },
+    // `metadados` é o único campo arbitrário propagado à auditoria imutável:
+    // aqui carrega estado, motivo e política — nunca PII.
+    metadados: {
+      estado,
+      motivo,
+      politica: POLITICA_RETENCAO_ID,
+      ...(retencaoAte ? { retencaoAte } : {}),
+    },
     criadoEm: FieldValue.serverTimestamp(),
   };
 }
@@ -168,10 +179,9 @@ export async function executarRotinaRetencaoRepo(
   const reciboSnap = await reciboRef.get();
   if (reciboSnap.exists) {
     const dadosRecibo = reciboSnap.data() ?? {};
-    if (
-      typeof dadosRecibo.payloadHash === 'string' &&
-      dadosRecibo.payloadHash !== entrada.payloadHash
-    ) {
+    // Ausência de `payloadHash` indica recibo legado/estranho: trata como divergente
+    // em vez de reportar "já processado" para um comando não relacionado.
+    if (dadosRecibo.payloadHash !== entrada.payloadHash) {
       throw new ComandoDivergenteError();
     }
     return lerResultadoRecibo({ ...dadosRecibo, commandId: entrada.commandId });
@@ -186,7 +196,8 @@ export async function executarRotinaRetencaoRepo(
   const configuracao = await obterConfiguracaoRetencao(db);
   const limite = Math.min(entrada.limite, LIMITE_MAXIMO_ANALISE);
 
-  // 2. Levanta candidatos: rascunhos abandonados + fichas terminais.
+  // 2. Levanta candidatos: rascunhos abandonados + fichas terminais (se aplicável).
+  const incluirAnonimizacao = !entrada.somenteExpurgo;
   const [snapRascunhos, snapTerminais] = await Promise.all([
     db
       .collection('fichas')
@@ -194,12 +205,14 @@ export async function executarRotinaRetencaoRepo(
       .orderBy('atualizadoEm', 'asc')
       .limit(limite)
       .get(),
-    db
-      .collection('fichas')
-      .where('estado', 'in', [...ESTADOS_FICHA_TERMINAIS])
-      .orderBy('atualizadoEm', 'asc')
-      .limit(limite)
-      .get(),
+    incluirAnonimizacao
+      ? db
+          .collection('fichas')
+          .where('estado', 'in', [...ESTADOS_FICHA_TERMINAIS])
+          .orderBy('atualizadoEm', 'asc')
+          .limit(limite)
+          .get()
+      : Promise.resolve({ docs: [] as Array<{ id: string; data: () => unknown }> }),
   ]);
 
   const candidatos = new Map<string, { data: Record<string, unknown> }>();
@@ -217,20 +230,22 @@ export async function executarRotinaRetencaoRepo(
     const participacoes = await lerParticipacoes(db, fichaId);
     const participacoesView = participacoes.map((p) => ({ estado: p.data.estado }));
 
-    const anonimizacao = fichaElegivelParaAnonimizacao(data, participacoesView, {
-      agoraMs,
-      motivo: entrada.motivo,
-    });
-    if (anonimizacao.elegivel) {
-      itens.push({
-        fichaId,
-        estado: String(data.estado ?? ''),
-        acao: 'ANONIMIZAR',
+    if (incluirAnonimizacao) {
+      const anonimizacao = fichaElegivelParaAnonimizacao(data, participacoesView, {
+        agoraMs,
         motivo: entrada.motivo,
-        retencaoAte: anonimizacao.retencaoAte,
       });
-      totalAnonimizadas += 1;
-      continue;
+      if (anonimizacao.elegivel) {
+        itens.push({
+          fichaId,
+          estado: String(data.estado ?? ''),
+          acao: 'ANONIMIZAR',
+          motivo: entrada.motivo,
+          retencaoAte: anonimizacao.retencaoAte,
+        });
+        totalAnonimizadas += 1;
+        continue;
+      }
     }
 
     const expurgo = fichaElegivelParaExpurgo(data, participacoesView, {

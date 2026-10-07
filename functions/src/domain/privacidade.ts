@@ -21,6 +21,11 @@ const CHAVES_PII_EXATAS = new Set([
   'nomecompleto',
   'nomevoluntario',
   'nomecivil',
+  'nomecoordenador',
+  'coordenadornome',
+  'voluntarionome',
+  'profissaovoluntario',
+  'nacionalidadevoluntario',
   'cpf',
   'rg',
   'profissao',
@@ -53,6 +58,33 @@ const CHAVES_PII_PARCIAIS = [
   'segredo',
   'assinatura',
   'cpf',
+  'profissao',
+  'nacionalidade',
+  'nascimento',
+  'endereco',
+  'telefone',
+  'celular',
+  'whatsapp',
+  'email',
+  'documento',
+  'rg',
+];
+
+/**
+ * Trechos que, combinados com `nome`, denotam nome de pessoa. Permite remover
+ * chaves compostas (`voluntarioNome`, `nomeCoordenador`) sem afetar chaves
+ * institucionais como `nomeEquipe` e `nomeIgreja`.
+ */
+const TRECHOS_NOME_PESSOAL = [
+  'voluntario',
+  'civil',
+  'completo',
+  'coordenador',
+  'pastor',
+  'responsavel',
+  'pessoa',
+  'usuario',
+  'beneficiario',
 ];
 
 const REGEX_CPF = /\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g;
@@ -70,7 +102,18 @@ function normalizarChave(chave: string): string {
 export function chaveContemPii(chave: string): boolean {
   const normalizada = normalizarChave(chave);
   if (CHAVES_PII_EXATAS.has(normalizada)) return true;
-  return CHAVES_PII_PARCIAIS.some((trecho) => normalizada.includes(trecho));
+  // Nome de pessoa em chave composta; preserva `nomeEquipe`/`nomeIgreja`.
+  if (
+    normalizada.includes('nome') &&
+    TRECHOS_NOME_PESSOAL.some((trecho) => normalizada.includes(trecho))
+  ) {
+    return true;
+  }
+  return CHAVES_PII_PARCIAIS.some((trecho) =>
+    trecho.length < 3
+      ? normalizada.startsWith(trecho) || normalizada.endsWith(trecho)
+      : normalizada.includes(trecho),
+  );
 }
 
 /** Mascara CPF, e-mail e telefone presentes em texto livre. */

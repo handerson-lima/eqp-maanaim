@@ -70,7 +70,10 @@ export function construirComandos(opcoes = {}) {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')}.json`;
     const caminhoPolicy = join(dirTemp, nome);
-    writeFileSync(caminhoPolicy, JSON.stringify(policy, null, 2), 'utf8');
+    // O campo `categoria` é metadado de governança do repositório, não parte do
+    // schema da política do Cloud Monitoring: é removido antes de aplicar.
+    const { categoria: _categoria, ...policyCloud } = policy;
+    writeFileSync(caminhoPolicy, JSON.stringify(policyCloud, null, 2), 'utf8');
     comandos.push({
       descricao: `Criar alerta de monitoramento (${policy.categoria ?? policy.displayName})`,
       comando: 'gcloud',

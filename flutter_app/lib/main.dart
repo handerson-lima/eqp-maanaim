@@ -93,7 +93,7 @@ Future<void> main() async {
       responsavelEquipe: FirebaseResponsavelEquipeGateway(functions),
       coordenador: FirebaseCoordenadorGateway(functions),
       dashboardRenovacao: FirebaseDashboardRenovacaoGateway(functions),
-      auditoria: FirebaseAuditoriaGateway(functions),
+      auditoria: CloudFunctionsAuditoriaGateway(functions: functions),
       retencao: CloudFunctionsRetencaoGateway(functions: functions),
     ),
   );

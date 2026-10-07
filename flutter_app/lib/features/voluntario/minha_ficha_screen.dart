@@ -1717,6 +1717,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const PoliticaPrivacidadeCard(),
+          const SizedBox(height: AppSpacing.s16),
           if (!aptoParaTermo)
             Container(
               padding: const EdgeInsets.all(AppSpacing.s16),

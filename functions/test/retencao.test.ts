@@ -352,9 +352,36 @@ describe('Story 6.4: Repositório da Rotina de Retenção (AD-12)', () => {
     expect(resultado.dryRun).toBe(true);
     expect(resultado.totalAnonimizadas).toBe(1);
     expect(resultado.totalExpurgadas).toBe(1);
+    expect(resultado.ignoradas).toBe(1);
     expect(resultado.itens.map((i) => i.fichaId).sort()).toEqual(['ficha-anon', 'ficha-rasc']);
     expect(db._updates.length).toBe(0);
     expect(db._sets.length).toBe(0);
+    expect(db._deletes.length).toBe(0);
+  });
+
+  it('ficha com participação ativa não é anonimizada e é contabilizada como ignorada', async () => {
+    const db = criarMockDb({
+      fichas: {
+        'ficha-com-vinculo': {
+          id: 'ficha-com-vinculo',
+          estado: 'EXPIRADA',
+          atualizadoEm: '2010-01-01T00:00:00.000Z',
+          versao: 2,
+        },
+      },
+      participacoes: [{ id: 'part-ativa', fichaId: 'ficha-com-vinculo', estado: 'ATIVA' }],
+    });
+    const entrada = validarRotinaRetencao({
+      commandId: 'cmd-retencao-ativa',
+      agoraIso: AGORA,
+      motivo: 'ROTINA_AGENDADA',
+      dryRun: true,
+    });
+    const resultado = await executarRotinaRetencaoRepo(db, entrada);
+
+    expect(resultado.totalAnonimizadas).toBe(0);
+    expect(resultado.ignoradas).toBe(1);
+    expect(db._updates.length).toBe(0);
     expect(db._deletes.length).toBe(0);
   });
 
@@ -438,6 +465,41 @@ describe('Story 6.4: Repositório da Rotina de Retenção (AD-12)', () => {
     expect(db._deletes.length).toBe(0);
   });
 
+  it('recusa recibo sem payloadHash (comando não relacionado) como divergente', async () => {
+    const db = criarMockDb({
+      commands: {
+        'cmd-retencao-legado': {
+          commandId: 'cmd-retencao-legado',
+          resultado: { totalAnonimizadas: 0 },
+        },
+      },
+    });
+    const entrada = validarRotinaRetencao({
+      commandId: 'cmd-retencao-legado',
+      agoraIso: AGORA,
+      motivo: 'ROTINA_AGENDADA',
+      dryRun: false,
+    });
+    await expect(executarRotinaRetencaoRepo(db, entrada)).rejects.toThrow(
+      ComandoDivergenteError,
+    );
+  });
+
+  it('propaga falha de leitura da configuração em vez de rebaixar o prazo', async () => {
+    const dbErro = {
+      collection: () => ({
+        doc: () => ({
+          get: async () => {
+            throw new Error('configuracao indisponivel');
+          },
+        }),
+      }),
+    } as any;
+    await expect(obterConfiguracaoRetencao(dbErro)).rejects.toThrow(
+      'configuracao indisponivel',
+    );
+  });
+
   it('recusa mesmo commandId com payload divergente', async () => {
     const db = criarMockDb({
       commands: {
@@ -457,6 +519,47 @@ describe('Story 6.4: Repositório da Rotina de Retenção (AD-12)', () => {
     await expect(executarRotinaRetencaoRepo(db, entrada)).rejects.toThrow(
       ComandoDivergenteError,
     );
+  });
+
+  it('modo somenteExpurgo ignora fichas terminais (job agendado)', async () => {
+    const db = cenario();
+    const entrada = validarRotinaRetencao({
+      commandId: 'cmd-retencao-expurgo',
+      agoraIso: AGORA,
+      motivo: 'ROTINA_AGENDADA',
+      dryRun: true,
+    });
+    const resultado = await executarRotinaRetencaoRepo(db, {
+      ...entrada,
+      somenteExpurgo: true,
+    });
+    expect(resultado.totalAnonimizadas).toBe(0);
+    expect(resultado.totalExpurgadas).toBe(1);
+    expect(resultado.itens.map((i) => i.acao)).toEqual(['EXPURGAR']);
+  });
+
+  it('auditoria do procedimento carrega metadados sem PII (motivo, política, retenção)', async () => {
+    const db = cenario();
+    const entrada = validarRotinaRetencao({
+      commandId: 'cmd-retencao-meta',
+      agoraIso: AGORA,
+      motivo: 'ROTINA_AGENDADA',
+      dryRun: false,
+    });
+    await executarRotinaRetencaoRepo(db, { ...entrada, atorUid: 'uid-coordenador' });
+
+    const auditAnon = db._sets.find(
+      (s: any) => s.col === 'auditOutbox' && s.id === 'cmd-retencao-meta__ficha-anon',
+    );
+    expect(auditAnon.data.metadados.motivo).toBe('ROTINA_AGENDADA');
+    expect(auditAnon.data.metadados.politica).toBe('AD-12_V1');
+    expect(auditAnon.data.retencaoAte).toBeDefined();
+    expect(JSON.stringify(auditAnon.data)).not.toContain('Maria Souza');
+
+    const auditExpurgo = db._sets.find(
+      (s: any) => s.col === 'auditOutbox' && s.id === 'cmd-retencao-meta__ficha-rasc',
+    );
+    expect(auditExpurgo.data.depois.expurgada).toBe(true);
   });
 
   it('obterConfiguracaoRetencao aplica padrões seguros', async () => {

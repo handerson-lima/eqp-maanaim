@@ -2,7 +2,7 @@
 title: 'Story 6.4: Aplicar retenção, minimização e controles operacionais de dados'
 type: 'feature'
 created: '2026-10-07'
-status: 'in-progress'
+status: 'done'
 baseline_commit: 'c683025313927e4f79f7dcee37ff2ce3dc0cd759'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -66,16 +66,16 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `functions/src/domain/privacidade.ts` -- sanitizador (`sanitizarPii`, `sanitizarErro`, `mascararTexto`), lista de negação de chaves, máscaras de CPF/e-mail/telefone, `calcularRetencaoAte(base, anos=5)`, política de elegibilidade e máscara de ficha -- fonte única do AD-12.
-- [ ] `functions/src/domain/auditoria.ts`, `repositories/auditoria.ts`, `domain/ficha.ts`, `repositories/ficha.ts` -- aplicar o sanitizador; trocar `diff` por `camposAlterados`; `retencaoAte` nos registros.
-- [ ] `functions/src/domain/retencao.ts`, `repositories/retencao.ts` -- validação, hash, expurgo, anonimização, indicadores de conformidade.
-- [ ] `functions/src/commands/executarRotinaRetencao.ts`, `consultarConformidadeRetencao.ts`, `triggers/expurgarRascunhosScheduled.ts`, `index.ts` -- callables (Coordenador/Admin, App Check) e scheduler com chave de ativação.
-- [ ] `functions/src/repositories/pdfTermo.ts` -- metadado de retenção e recusa para ficha anonimizada.
-- [ ] `infra/storage-lifecycle.json`, `infra/alertas-monitoramento.json`, `infra/README.md`, `scripts/aplicar-controles-operacionais.mjs` -- retenção de 5 anos no bucket (sem lock), lifecycle, alertas de IAM/Rules/conta de serviço/deleção/falha de backup; script imprime comandos `gcloud` e só executa com `--executar`.
-- [ ] `firestore.indexes.json` -- índice composto `fichas(estado, atualizadoEm)`.
-- [ ] `flutter_app/lib/features/privacidade/` (`politica_privacidade_card.dart`, `retencao_service.dart`, `conformidade_retencao_screen.dart`) -- aviso institucional, gateway Cloud/Memória e painel (contagens, simular, executar com confirmação).
-- [ ] `admin_shell.dart`, `main.dart`, `minha_ficha_screen.dart`, `termo_dialog.dart` -- aba "Retenção e Privacidade" e aviso nas telas do voluntário.
-- [ ] Testes: `functions/test/privacidade.test.ts`, `retencao.test.ts`, `controlesOperacionais.test.ts`; ajuste de `ficha.test.ts`/`auditoria`; `flutter_app/test/retencao_privacidade_test.dart`.
+- [x] `functions/src/domain/privacidade.ts` -- sanitizador (`sanitizarPii`, `sanitizarErro`, `mascararTexto`), lista de negação de chaves, máscaras de CPF/e-mail/telefone, `calcularRetencaoAte(base, anos=5)`, política de elegibilidade e máscara de ficha -- fonte única do AD-12.
+- [x] `functions/src/domain/auditoria.ts`, `repositories/auditoria.ts`, `domain/ficha.ts`, `repositories/ficha.ts` -- aplicar o sanitizador; trocar `diff` por `camposAlterados`; `retencaoAte` nos registros.
+- [x] `functions/src/domain/retencao.ts`, `repositories/retencao.ts` -- validação, hash, expurgo, anonimização, indicadores de conformidade.
+- [x] `functions/src/commands/executarRotinaRetencao.ts`, `consultarConformidadeRetencao.ts`, `triggers/expurgarRascunhosScheduled.ts`, `index.ts` -- callables (Coordenador/Admin, App Check) e scheduler com chave de ativação.
+- [x] `functions/src/repositories/pdfTermo.ts` -- metadado de retenção e recusa para ficha anonimizada.
+- [x] `infra/storage-lifecycle.json`, `infra/alertas-monitoramento.json`, `infra/README.md`, `scripts/aplicar-controles-operacionais.mjs` -- retenção de 5 anos no bucket (sem lock), lifecycle, alertas de IAM/Rules/conta de serviço/deleção/falha de backup; script imprime comandos `gcloud` e só executa com `--executar`.
+- [x] `firestore.indexes.json` -- índice composto `fichas(estado, atualizadoEm)`.
+- [x] `flutter_app/lib/features/privacidade/` (`politica_privacidade_card.dart`, `retencao_service.dart`, `conformidade_retencao_screen.dart`) -- aviso institucional, gateway Cloud/Memória e painel (contagens, simular, executar com confirmação).
+- [x] `admin_shell.dart`, `main.dart`, `minha_ficha_screen.dart`, `termo_dialog.dart` -- aba "Retenção e Privacidade" e aviso nas telas do voluntário.
+- [x] Testes: `functions/test/privacidade.test.ts`, `retencao.test.ts`, `controlesOperacionais.test.ts`; ajuste de `ficha.test.ts`/`auditoria`; `flutter_app/test/retencao_privacidade_test.dart`.
 
 **Acceptance Criteria:**
 - Given um registro de auditoria ou PDF novo, when é persistido, then recebe `retencaoAte` = criação + 5 anos UTC e nenhuma regra, TTL ou lifecycle permite exclusão antes disso.
@@ -93,3 +93,37 @@ context:
 - `cd functions && npm test` -- expected: typecheck e Vitest verdes.
 - `cd functions && npm run build` -- expected: compila sem erros.
 - `cd flutter_app && flutter analyze && flutter test` -- expected: sem alertas, testes verdes.
+
+## Review Triage Log
+
+| Finding | Verdict | Evidence / Route |
+|---------|---------|------------------|
+| BH1 sem guarda de profundidade (`contemPii` sem uso) | false | Nenhum caminho de escrita demonstra PII persistida; o sanitizador é aplicado em todos os sites. O guarda extra é *nice-to-have*, não defeito. |
+| BH2 sanitização de alerta parcial (`...alerta`) | false | `AlertaOperacional` só expõe texto livre em `motivo`/`detalhes`, ambos tratados; os demais campos são controlados. |
+| BH3 nomes em texto livre não removidos | low | Detecção de nomes arbitrários é inviável; a correção adiciona complexidade e o caso é raro em uso diário. Rejeitado. |
+| BH4 regex de telefone ignora números sem máscara | low | Uso diário improvável e um regex mais amplo mascararia sequências numéricas legítimas. Rejeitado. |
+| BH5 `retencaoAte` enganoso no expurgo | low | `fichaElegivelParaExpurgo` devolve `atualizadoEm+dias` sob o nome `retencaoAte` e o chamador o descarta. Correção direta (deixar de devolver). Patch. |
+| BH6 `retencaoAte` do registro de auditoria a partir de `new Date()` | low | `materializadoEm`/`timestampOriginal` ocorrem no mesmo instante da criação; desvio irrelevante. Rejeitado. |
+| BH7/E2 indicadores limitados a 500 sem paginação | low | Painel indicador; o teto respeita o orçamento de leitura (AD-9). Correção não trivial e cenário não cotidiano. Rejeitado. |
+| BH8 consulta N+1 de participações | low | Desempenho; correção não trivial (batching). Rejeitado. |
+| BH9 `tx.get` de participações sem limite | low | Ficha com centenas de participações não é alcançável na prática; orçamento de 500 folgado. Rejeitado. |
+| BH10 coerção de `dryRun` e `agoraIso` do cliente | false | A callable sobrescreve `agoraIso` com relógio do servidor; a coerção de booleano falha na direção segura (simulação). |
+| BH11 hash/chave de idempotência subespecificados | low | Recibo sem `payloadHash` string é tratado como processado. Endurecer para divergência é correção direta. Patch. |
+| BH12 IDs de fichas devolvidos ao cliente | false | Resposta a Coordenador/Admin autenticado; a UI nunca os renderiza e o intent restringe a exposição à UI. |
+| BH13 sizing do job agendado | low | Boa prática operacional, sem defeito funcional. Rejeitado. |
+| BH14 filtros de monitoramento possivelmente incorretos | maybe-false | Não é possível confirmar os nomes de método de audit log sem o ambiente GCP; se verdadeiro seria medium/high. Deferido com severidade não verificada. |
+| BH15 fontSize hardcoded / canal LGPD não acionável | low | Cosmético; sem dano funcional demonstrado. Rejeitado. |
+| BH16 `semanaIso` sem teste (bordas de ano) | medium | Função exportada sem cobertura; chave semanal errada pode pular/duplicar o expurgo. Patch (teste + correção se necessário). |
+| BH17 risco de overflow no diálogo do termo | low | Testes existentes passam; cenário de tela muito baixa, correção adiciona complexidade. Rejeitado. |
+| BH18 expurgo físico sem snapshot verificável | false | Expurgo apaga apenas rascunho sem aceite (por design); auditoria preserva ID/estado e não há evidência/PDF órfãos. |
+| E1 lifecycle `age=1825` apaga até 1 dia antes de 5 anos | medium | 5 anos civis podem ter 1826/1827 dias (bissexto); `calcularRetencaoAte` usa `setUTCFullYear(+5)`. Violação direta de "nenhum lifecycle permite exclusão antes". Patch. |
+| E2 >500 fichas subconta | low | Ver BH7. Rejeitado. |
+| E3 chaves PII compostas (`voluntarioNome`, `profissaoVoluntario`) não removidas | medium | No próprio sanitizador, `sanitizarPii({voluntarioNome:'X'})` mantém o nome; contrário ao contrato AD-12. Patch. |
+| E4 falha de leitura da config engolida → padrão 180 | medium | `obterConfiguracaoRetencao` captura qualquer erro e devolve 180, podendo expurgar rascunhos antes do prazo configurado (até 730). Patch. |
+| E5 erro de refresh ocultado com indicadores antigos | medium | `_erro != null && _indicadores == null` ignora falha de recarga e mostra dados obsoletos como atuais. Patch. |
+| V1 escritas diretas em `auditoria` (consulta/relatório) sem `retencaoAte` | medium | `consultaAuditoria.ts:208` e `:440` gravam sem `retencaoAte`, embora o tipo o exija e a AC1 o mande. Patch. |
+| V2 minimização de alerta sem teste | medium | Remover as linhas de sanitização mantém `auditoria.test.ts` verde (só checa `tentativas`). Patch (teste). |
+| V3 callable `obterUrlDownloadPdf` sem teste do mapeamento anonimizada | medium | Apenas `gerarPdfParticipacao` é coberto; o download pode regredir para `internal`. Patch (teste). |
+| V4 gate do job semanal sem teste | medium | Nenhum teste invoca `expurgarRascunhosScheduled`; gate invertido passaria despercebido. Patch (teste). |
+| V5 aviso de privacidade nas telas do voluntário sem teste | medium | Apenas o card isolado é testado; remover a inserção não quebra testes. Patch (testes). |
+| V-Outros `consultaAuditoria.ts` loga erro cru | low | Caminho com PII não estabelecido; o padrão já foi corrigido no repositório de auditoria. Rejeitado. |

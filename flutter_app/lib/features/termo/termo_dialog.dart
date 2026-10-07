@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../privacidade/politica_privacidade_card.dart';
 import 'termo_adesao_model.dart';
 import 'termo_adesao_widget.dart';
 
@@ -22,9 +23,18 @@ Future<void> exibirTermoAdesaoDialog(
               onPressed: () => Navigator.of(dialogContext).pop(),
             ),
           ),
-          body: TermoAdesaoWidget(
-            model: model,
-            onFechar: () => Navigator.of(dialogContext).pop(),
+          body: SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: TermoAdesaoWidget(
+                    model: model,
+                    onFechar: () => Navigator.of(dialogContext).pop(),
+                  ),
+                ),
+                const PoliticaPrivacidadeCard(compacto: true),
+              ],
+            ),
           ),
         ),
       );

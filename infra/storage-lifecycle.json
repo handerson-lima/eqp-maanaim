@@ -5,7 +5,7 @@
         "type": "Delete"
       },
       "condition": {
-        "age": 1825,
+        "age": 1830,
         "matchesPrefix": ["pdfs/"]
       }
     }

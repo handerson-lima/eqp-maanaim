@@ -101,6 +101,8 @@ void main() {
 
       expect(find.text('Termo de Adesão de Voluntário'), findsOneWidget);
       expect(find.text('MAANAIM DO RIO GRANDE DO NORTE'), findsOneWidget);
+      // Aviso de privacidade/retenção (AD-12) presente no diálogo do termo.
+      expect(find.byKey(const Key('politica_privacidade_card')), findsOneWidget);
 
       // Fechar modal
       await tester.tap(find.byTooltip('Fechar'));
