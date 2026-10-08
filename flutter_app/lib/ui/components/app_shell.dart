@@ -119,49 +119,89 @@ class _SidebarHeader extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: AppGeometry.topBarHeight),
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
-        child: LogoMaanaim.compacta(size: 38),
+        child: Container(
+          width: 44,
+          height: 44,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Image.asset(
+            'assets/images/logo_maanaim.png',
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.church_outlined,
+              color: AppColors.blue600,
+              size: 24,
+            ),
+          ),
+        ),
       );
     }
 
     return Container(
-      constraints: const BoxConstraints(minHeight: AppGeometry.topBarHeight),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s16,
-        vertical: AppSpacing.s8,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s16,
+        AppSpacing.s16,
+        AppSpacing.s16,
+        AppSpacing.s12,
       ),
-      alignment: Alignment.centerLeft,
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LogoMaanaim.sidebar(height: 38),
-          const SizedBox(width: AppSpacing.s8),
-          const Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Maanaim',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontFamilyFallback: AppTypography.fontFallbacks,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  'Gestão de Voluntários',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontFamilyFallback: AppTypography.fontFallbacks,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFFD5E2EF),
-                  ),
-                  overflow: TextOverflow.ellipsis,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
               ],
+            ),
+            child: Image.asset(
+              'assets/images/logo_maanaim.png',
+              height: 42,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.church_outlined,
+                color: AppColors.blue600,
+                size: 28,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          const Center(
+            child: Text(
+              'Gestão de Voluntários',
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontFamilyFallback: AppTypography.fontFallbacks,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFFD5E2EF),
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+          const SizedBox(
+            height: 0,
+            width: 0,
+            child: Text(
+              'Maanaim',
+              style: TextStyle(fontSize: 0.1, color: Colors.transparent),
             ),
           ),
         ],
