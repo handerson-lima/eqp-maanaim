@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'tokens.dart';
+import 'components/components.dart';
 
 export 'components/components.dart';
 export 'theme.dart';
@@ -35,33 +36,8 @@ class PainelAcesso extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.blue600,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.church_outlined,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.s20),
-            const Text(
-              'Maanaim',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontFamilyFallback: AppTypography.fontFallbacks,
-                color: Colors.white,
-                fontSize: 38,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.s8),
+            LogoMaanaim.painel(width: 250),
+            const SizedBox(height: AppSpacing.s16),
             const Text(
               'Gestão de Voluntários',
               style: TextStyle(
@@ -115,34 +91,11 @@ class PainelAcesso extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.blue600,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.church_outlined,
-                color: Colors.white,
-                size: 24,
-              ),
+            const LogoMaanaim(
+              height: 48,
+              transparente: true,
             ),
             const SizedBox(height: AppSpacing.s8),
-            const Text(
-              'Maanaim',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontFamilyFallback: AppTypography.fontFallbacks,
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: AppColors.navy900,
-                letterSpacing: -0.3,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.s4),
             const Text(
               'Gestão de Voluntários',
               textAlign: TextAlign.center,

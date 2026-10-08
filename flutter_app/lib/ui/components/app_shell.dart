@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens.dart';
 import 'status_chips.dart';
+import 'logo_maanaim.dart';
 
 /// Item de navegação padronizado para a sidebar e gaveta (Drawer).
 class AppNavItem {
@@ -118,11 +119,7 @@ class _SidebarHeader extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: AppGeometry.topBarHeight),
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
-        child: const Icon(
-          Icons.church_outlined,
-          color: Colors.white,
-          size: 26,
-        ),
+        child: LogoMaanaim.compacta(size: 38),
       );
     }
 
@@ -135,21 +132,8 @@ class _SidebarHeader extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.blue600,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.church_outlined,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.s12),
+          LogoMaanaim.sidebar(height: 38),
+          const SizedBox(width: AppSpacing.s8),
           const Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -160,10 +144,9 @@ class _SidebarHeader extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: AppTypography.fontFamily,
                     fontFamilyFallback: AppTypography.fontFallbacks,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
-                    letterSpacing: -0.3,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -424,6 +407,13 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
 
           if (title != null)
             Expanded(child: title!)
+          else if (showMenuButton)
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: LogoMaanaim.topBar(height: 28),
+              ),
+            )
           else
             const Spacer(),
 
