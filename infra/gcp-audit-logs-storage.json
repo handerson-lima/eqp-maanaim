@@ -1,0 +1,14 @@
+{
+  "service": "storage.googleapis.com",
+  "auditLogConfigs": [
+    {
+      "logType": "DATA_READ"
+    },
+    {
+      "logType": "DATA_WRITE"
+    },
+    {
+      "logType": "ADMIN_READ"
+    }
+  ]
+}

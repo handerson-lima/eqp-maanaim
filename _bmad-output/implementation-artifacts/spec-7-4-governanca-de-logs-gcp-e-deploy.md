@@ -2,7 +2,7 @@
 title: 'Story 7.4: Governança de Logs GCP & Deploy (action item epic-6-retro-item-1-gcp-data-access-logs)'
 type: 'feature'
 created: '2026-10-08'
-status: 'ready-for-dev'
+status: 'done'
 baseline_commit: 'd5146701f9d01fc5943667b22a8926e9c65655c1'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -72,18 +72,18 @@ No sistema Maanaim, os termos de adesão assinados contendo dados pessoais de vo
 ## Tasks & Acceptance
 
 **Planejamento & Arquitetura (Winston):**
-- [ ] Definir a especificação técnica formal do GCP Cloud Audit Logs para `storage.googleapis.com` e sua retenção de 5 anos no Cloud Logging.
-- [ ] Validar a compatibilidade entre a ativação de `DATA_WRITE` no Storage e o filtro de alerta `storage.objects.delete` em `infra/alertas-monitoramento.json`.
-- [ ] Redigir o checklist formal de homologação e portões de promoção de ambiente (`dev` -> `staging` -> `prod`).
+- [x] Definir a especificação técnica formal do GCP Cloud Audit Logs para `storage.googleapis.com` e sua retenção de 5 anos no Cloud Logging.
+- [x] Validar a compatibilidade entre a ativação de `DATA_WRITE` no Storage e o filtro de alerta `storage.objects.delete` em `infra/alertas-monitoramento.json`.
+- [x] Redigir o checklist formal de homologação e portões de promoção de ambiente (`dev` -> `staging` -> `prod`).
 
 **Implementação & Engenharia (Amelia):**
-- [ ] Criar `infra/gcp-audit-logs-storage.json` com o bloco canônico de `auditConfigs`.
-- [ ] Implementar `scripts/setup-gcp-data-access-logs.sh` com suporte a `--dry-run`, `--project`, flags de ajuda e mesclagem idempotente.
-- [ ] Implementar `scripts/verificar-governanca-gcp.sh` para auditoria do ambiente GCP.
-- [ ] Criar `functions/test/governancaLogsGcp.test.ts` e validar execução com `npm test --prefix functions`.
-- [ ] Criar `docs/checklist-homologacao-deploy.md` com o checklist detalhado de pré e pós deploy.
-- [ ] Atualizar `infra/README.md` documentando o script e a governança de logs.
-- [ ] Atualizar `_bmad-output/implementation-artifacts/sprint-status.yaml` refletindo o status da Story 7.4 e do action item `epic-6-retro-item-1-gcp-data-access-logs`.
+- [x] Criar `infra/gcp-audit-logs-storage.json` com o bloco canônico de `auditConfigs`.
+- [x] Implementar `scripts/setup-gcp-data-access-logs.sh` com suporte a `--dry-run`, `--project`, flags de ajuda e mesclagem idempotente.
+- [x] Implementar `scripts/verificar-governanca-gcp.sh` para auditoria do ambiente GCP.
+- [x] Criar `functions/test/governancaLogsGcp.test.ts` e validar execução com `npm test --prefix functions`.
+- [x] Criar `docs/checklist-homologacao-deploy.md` com o checklist detalhado de pré e pós deploy.
+- [x] Atualizar `infra/README.md` documentando o script e a governança de logs.
+- [x] Atualizar `_bmad-output/implementation-artifacts/sprint-status.yaml` refletindo o status da Story 7.4 e do action item `epic-6-retro-item-1-gcp-data-access-logs`.
 
 ---
 

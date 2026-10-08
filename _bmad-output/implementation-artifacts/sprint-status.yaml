@@ -78,6 +78,12 @@ development_status:
   6-5-acesso-inclusivo-e-responsivo-às-superfícies-do-voluntariado: done
   6-6-verificar-segurança-índices-e-ambientes-firebase: done
   epic-6-retrospective: done
+
+  epic-7: in-progress
+  7-1-pipeline-de-ci-cd-automatizado: done
+  7-2-inativacao-logica-de-igrejas-e-equipes-no-catalogo: done
+  7-3-centralizacao-de-mascara-e-formatacao-de-cpf: done
+  7-4-governanca-de-logs-gcp-e-deploy: done
 action_items:
   - id: "epic-1-retro-item-1-configurar-runner-de-integracao-automati"
     epic: 1
@@ -112,7 +118,7 @@ action_items:
     action: "Documentar e validar a ativacao de Data Access audit logs no projeto
       GCP de producao para alertas de Cloud Storage"
     owner: "dev"
-    status: open
+    status: done
     ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-6-retro-2026-10-07.md"
   - id: "epic-6-retro-item-2-ci-emulator-pipeline"
     epic: 6
