@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
 
@@ -112,8 +113,25 @@ class PerfilService implements IPerfilService {
     FirebaseStorage? storage,
     FirebaseFirestore? firestore,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _storage = storage ?? FirebaseStorage.instance,
+        _storage = storage ?? _obterStorageSeguro(),
         _firestore = firestore ?? FirebaseFirestore.instance;
+
+  static FirebaseStorage _obterStorageSeguro() {
+    try {
+      final app = Firebase.app();
+      final bucket = app.options.storageBucket;
+      if (bucket != null && bucket.isNotEmpty) {
+        return FirebaseStorage.instanceFor(app: app, bucket: bucket);
+      }
+      return FirebaseStorage.instance;
+    } catch (_) {
+      try {
+        return FirebaseStorage.instanceFor(bucket: 'eqp-maanaim.appspot.com');
+      } catch (_) {
+        return FirebaseStorage.instance;
+      }
+    }
+  }
 
   final FirebaseAuth _auth;
   final FirebaseStorage _storage;

@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../ui/tokens.dart';
+import 'web_image_picker.dart';
 
 /// Callback disparado quando uma imagem válida é selecionada pelo usuário.
 typedef OnImageSelectedCallback = void Function(
@@ -42,8 +42,6 @@ class AvatarPickerWidget extends StatefulWidget {
 }
 
 class _AvatarPickerWidgetState extends State<AvatarPickerWidget> {
-  final ImagePicker _picker = ImagePicker();
-
   String _extrairIniciais(String nome) {
     final partes = nome.trim().split(RegExp(r'\s+'));
     if (partes.isEmpty || partes.first.isEmpty) return 'U';
@@ -55,16 +53,10 @@ class _AvatarPickerWidgetState extends State<AvatarPickerWidget> {
     if (widget.carregando) return;
 
     try {
-      final XFile? arquivo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
+      final resultado = await pickImageWeb();
+      if (resultado == null) return;
 
-      if (arquivo == null) return;
-
-      final bytes = await arquivo.readAsBytes();
+      final bytes = resultado.bytes;
       if (bytes.lengthInBytes > AvatarPickerWidget.limiteMaximoBytes) {
         if (widget.onImageTooLarge != null) {
           widget.onImageTooLarge!();
@@ -79,12 +71,7 @@ class _AvatarPickerWidgetState extends State<AvatarPickerWidget> {
         return;
       }
 
-      final nomeArquivo = arquivo.name;
-      final extensao = nomeArquivo.contains('.')
-          ? nomeArquivo.split('.').last.toLowerCase()
-          : 'jpg';
-
-      widget.onImageSelected(bytes, extensao);
+      widget.onImageSelected(bytes, resultado.extensao);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

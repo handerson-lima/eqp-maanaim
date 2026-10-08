@@ -3,6 +3,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'comando.dart';
@@ -51,6 +52,9 @@ Future<void> main() async {
     return;
   }
   try {
+    final storageBucket = const String.fromEnvironment('FIREBASE_STORAGE_BUCKET').isNotEmpty
+        ? const String.fromEnvironment('FIREBASE_STORAGE_BUCKET')
+        : (projectId.isNotEmpty ? '$projectId.appspot.com' : 'eqp-maanaim.appspot.com');
     await Firebase.initializeApp(
       options: FirebaseOptions(
         apiKey: apiKey,
@@ -58,6 +62,7 @@ Future<void> main() async {
         messagingSenderId: messagingSenderId,
         projectId: projectId,
         authDomain: authDomain,
+        storageBucket: storageBucket,
       ),
     );
     await FirebaseAppCheck.instance.activate(
@@ -72,6 +77,7 @@ Future<void> main() async {
       await FirebaseAuth.instance.useAuthEmulator(host, 9099);
       FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
       FirebaseFunctions.instance.useFunctionsEmulator(host, 5001);
+      FirebaseStorage.instance.useStorageEmulator(host, 9199);
     }
   } catch (_) {
     runApp(const ConfiguracaoAusente());
