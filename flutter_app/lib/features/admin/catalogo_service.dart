@@ -37,9 +37,23 @@ class CatalogoResposta {
   final List<EquipeCatalogo> equipes;
 }
 
-/// Consulta read-only autorizada do catálogo no backend.
+/// Operações autorizadas do catálogo no backend.
 abstract interface class CatalogoGateway {
   Future<CatalogoResposta> consultar({String? termo});
+
+  Future<void> alternarStatusIgreja({
+    required String commandId,
+    required String igrejaId,
+    required bool ativo,
+    String? correlationId,
+  });
+
+  Future<void> alternarStatusEquipe({
+    required String commandId,
+    required String equipeId,
+    required bool ativo,
+    String? correlationId,
+  });
 }
 
 const Map<String, String> _semAcento = {
@@ -106,6 +120,36 @@ class FirebaseCatalogoGateway implements CatalogoGateway {
           .map((item) => _mapearEquipe((item as Map).cast<String, dynamic>()))
           .toList(growable: false),
     );
+  }
+
+  @override
+  Future<void> alternarStatusIgreja({
+    required String commandId,
+    required String igrejaId,
+    required bool ativo,
+    String? correlationId,
+  }) async {
+    await _functions.httpsCallable('alternarStatusIgreja').call({
+      'commandId': commandId,
+      'igrejaId': igrejaId,
+      'ativo': ativo,
+      if (correlationId != null) 'correlationId': correlationId,
+    });
+  }
+
+  @override
+  Future<void> alternarStatusEquipe({
+    required String commandId,
+    required String equipeId,
+    required bool ativo,
+    String? correlationId,
+  }) async {
+    await _functions.httpsCallable('alternarStatusEquipe').call({
+      'commandId': commandId,
+      'equipeId': equipeId,
+      'ativo': ativo,
+      if (correlationId != null) 'correlationId': correlationId,
+    });
   }
 
   IgrejaCatalogo _mapearIgreja(Map<String, dynamic> dados) => IgrejaCatalogo(

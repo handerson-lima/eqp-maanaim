@@ -369,5 +369,28 @@ describe('contratos de segurança executáveis', () => {
     expect(cmdReconciliar).toContain('if (!request.auth)');
     expect(cmdReconciliar).toContain('validarAutoridadeCoordenador');
   });
+
+  it('impõe App Check, autoridade maanaimAdmin e inativação lógica sem exclusão física (Story 7.2)', () => {
+    const cmdIgreja = readFileSync(join(raiz, 'functions', 'src', 'commands', 'alternarStatusIgreja.ts'), 'utf8');
+    const cmdEquipe = readFileSync(join(raiz, 'functions', 'src', 'commands', 'alternarStatusEquipe.ts'), 'utf8');
+    const repoStatusCatalogo = readFileSync(join(raiz, 'functions', 'src', 'repositories', 'statusCatalogo.ts'), 'utf8');
+
+    expect(cmdIgreja).toContain('enforceAppCheck: true');
+    expect(cmdIgreja).toContain('if (!request.auth)');
+    expect(cmdIgreja).toContain('podeAdministrar(atorSnap.data())');
+
+    expect(cmdEquipe).toContain('enforceAppCheck: true');
+    expect(cmdEquipe).toContain('if (!request.auth)');
+    expect(cmdEquipe).toContain('podeAdministrar(atorSnap.data())');
+
+    expect(index).toContain('export { alternarStatusIgreja }');
+    expect(index).toContain('export { alternarStatusEquipe }');
+
+    // Repositório usa update atômico de status sem delete físico
+    expect(repoStatusCatalogo).toContain('alternarStatusIgrejaRepo');
+    expect(repoStatusCatalogo).toContain('alternarStatusEquipeRepo');
+    expect(repoStatusCatalogo).toContain('tx.update(igrejaRef, {');
+    expect(repoStatusCatalogo).toContain('tx.update(equipeRef, {');
+  });
 });
 

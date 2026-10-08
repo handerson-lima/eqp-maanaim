@@ -11,6 +11,8 @@ import {
 import { DATASET_CATALOGO } from '../src/domain/seedCatalogo.js';
 import { consultarCatalogo } from '../src/commands/consultarCatalogo.js';
 import { semearCatalogoInicial } from '../src/commands/semearCatalogoInicial.js';
+import { alternarStatusIgreja } from '../src/commands/alternarStatusIgreja.js';
+import { alternarStatusEquipe } from '../src/commands/alternarStatusEquipe.js';
 import { lerCatalogo, semearCatalogo } from '../src/repositories/catalogo.js';
 
 // Executa o handler cru da callable (`.run`), sem o middleware de App Check/Auth.
@@ -180,4 +182,94 @@ describe.skipIf(!habilitado)('seed do catálogo no Emulator', () => {
     expect(resposta.igrejas).toHaveLength(DATASET_CATALOGO.igrejas.length);
     expect(resposta.igrejas[0].rotulo).toMatch(/ - \d{6}$/);
   });
+
+  it('Story 7.2: inativa e reativa igreja mantendo documento e gerando recibo e auditoria', async () => {
+    const db = getFirestore(app);
+    const snap = await db.collection('igrejas').limit(1).get();
+    const igrejaId = snap.docs[0].id;
+
+    const cmdInativar = 'i'.repeat(32);
+    const resInativar = (await requisitar(
+      alternarStatusIgreja,
+      { commandId: cmdInativar, igrejaId, ativo: false },
+      { uid: ADMIN_UID },
+    )) as { concluido: boolean; repetido: boolean; igrejaId: string; ativo: boolean };
+
+    expect(resInativar.concluido).toBe(true);
+    expect(resInativar.ativo).toBe(false);
+    expect(resInativar.repetido).toBe(false);
+
+    const docInativo = await db.collection('igrejas').doc(igrejaId).get();
+    expect(docInativo.exists).toBe(true);
+    expect(docInativo.data()?.ativo).toBe(false);
+
+    const outboxInativar = await db.collection('auditOutbox').doc(cmdInativar).get();
+    expect(outboxInativar.exists).toBe(true);
+    expect(outboxInativar.data()?.action).toBe('IGREJA_STATUS_ALTERADO');
+    expect(outboxInativar.data()?.antes).toEqual({ ativo: true });
+    expect(outboxInativar.data()?.depois).toEqual({ ativo: false });
+
+    // Replay idempotente
+    const resReplay = (await requisitar(
+      alternarStatusIgreja,
+      { commandId: cmdInativar, igrejaId, ativo: false },
+      { uid: ADMIN_UID },
+    )) as { concluido: boolean; repetido: boolean };
+    expect(resReplay.repetido).toBe(true);
+
+    // Reativação
+    const cmdReativar = 'r'.repeat(32);
+    const resReativar = (await requisitar(
+      alternarStatusIgreja,
+      { commandId: cmdReativar, igrejaId, ativo: true },
+      { uid: ADMIN_UID },
+    )) as { concluido: boolean; ativo: boolean };
+    expect(resReativar.ativo).toBe(true);
+
+    const docReativo = await db.collection('igrejas').doc(igrejaId).get();
+    expect(docReativo.data()?.ativo).toBe(true);
+  });
+
+  it('Story 7.2: inativa e reativa equipe mantendo documento e gerando recibo e auditoria', async () => {
+    const db = getFirestore(app);
+    const snap = await db.collection('equipes').limit(1).get();
+    const equipeId = snap.docs[0].id;
+
+    const cmdInativar = 'j'.repeat(32);
+    const resInativar = (await requisitar(
+      alternarStatusEquipe,
+      { commandId: cmdInativar, equipeId, ativo: false },
+      { uid: ADMIN_UID },
+    )) as { concluido: boolean; ativo: boolean };
+
+    expect(resInativar.ativo).toBe(false);
+
+    const docInativo = await db.collection('equipes').doc(equipeId).get();
+    expect(docInativo.exists).toBe(true);
+    expect(docInativo.data()?.ativo).toBe(false);
+
+    const outbox = await db.collection('auditOutbox').doc(cmdInativar).get();
+    expect(outbox.exists).toBe(true);
+    expect(outbox.data()?.action).toBe('EQUIPE_STATUS_ALTERADO');
+  });
+
+  it('Story 7.2: recusa alteração para chamador não autorizado ou entidade inexistente', async () => {
+    const cmd = 'k'.repeat(32);
+    await expect(
+      requisitar(
+        alternarStatusIgreja,
+        { commandId: cmd, igrejaId: 'ig_inexistente', ativo: false },
+        { uid: 'usuario-comum' },
+      ),
+    ).rejects.toMatchObject({ code: 'permission-denied' });
+
+    await expect(
+      requisitar(
+        alternarStatusIgreja,
+        { commandId: cmd, igrejaId: 'ig_inexistente', ativo: false },
+        { uid: ADMIN_UID },
+      ),
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
 });
+

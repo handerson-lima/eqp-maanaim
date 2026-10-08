@@ -76,12 +76,112 @@ export class DatasetInvalidoError extends Error {
   }
 }
 
+export type TipoEntidadeCatalogo = 'IGREJA' | 'EQUIPE';
+
+export type EntradaAlternarStatusIgreja = {
+  commandId: string;
+  igrejaId: string;
+  ativo: boolean;
+  correlationId?: string;
+};
+
+export type EntradaAlternarStatusEquipe = {
+  commandId: string;
+  equipeId: string;
+  ativo: boolean;
+  correlationId?: string;
+};
+
+export type ResultadoAlternarStatus = {
+  repetido: boolean;
+  id: string;
+  ativo: boolean;
+};
+
+export class EntidadeInexistenteError extends Error {
+  constructor(public readonly entidade: TipoEntidadeCatalogo, public readonly id: string) {
+    super(`ENTIDADE_INEXISTENTE: ${entidade} ${id}`);
+    this.name = 'EntidadeInexistenteError';
+  }
+}
+
+export class EntradaInvalidaError extends Error {
+  constructor(motivo: string) {
+    super(`ENTRADA_INVALIDA: ${motivo}`);
+    this.name = 'EntradaInvalidaError';
+  }
+}
+
 export type ProblemaDataset = { motivo: string; referencia: string };
 
 const REGEX_COMMAND_ID = /^[A-Za-z0-9_-]{16,128}$/;
 
 export function validarCommandId(commandId: string): boolean {
   return REGEX_COMMAND_ID.test(commandId);
+}
+
+export function validarAlternarStatusIgreja(dados: unknown): EntradaAlternarStatusIgreja {
+  if (!dados || typeof dados !== 'object') {
+    throw new EntradaInvalidaError('Dados devem ser um objeto');
+  }
+  const d = dados as Record<string, unknown>;
+  const commandId = typeof d.commandId === 'string' ? d.commandId.trim() : '';
+  if (!validarCommandId(commandId)) {
+    throw new EntradaInvalidaError('commandId inválido');
+  }
+  const igrejaId = typeof d.igrejaId === 'string' ? d.igrejaId.trim() : '';
+  if (!igrejaId || igrejaId.length > 128) {
+    throw new EntradaInvalidaError('igrejaId inválido');
+  }
+  if (typeof d.ativo !== 'boolean') {
+    throw new EntradaInvalidaError('ativo deve ser booleano');
+  }
+  const correlationId =
+    typeof d.correlationId === 'string' && d.correlationId.trim()
+      ? d.correlationId.trim()
+      : undefined;
+  return {
+    commandId,
+    igrejaId,
+    ativo: d.ativo,
+    correlationId,
+  };
+}
+
+export function validarAlternarStatusEquipe(dados: unknown): EntradaAlternarStatusEquipe {
+  if (!dados || typeof dados !== 'object') {
+    throw new EntradaInvalidaError('Dados devem ser um objeto');
+  }
+  const d = dados as Record<string, unknown>;
+  const commandId = typeof d.commandId === 'string' ? d.commandId.trim() : '';
+  if (!validarCommandId(commandId)) {
+    throw new EntradaInvalidaError('commandId inválido');
+  }
+  const equipeId = typeof d.equipeId === 'string' ? d.equipeId.trim() : '';
+  if (!equipeId || equipeId.length > 128) {
+    throw new EntradaInvalidaError('equipeId inválido');
+  }
+  if (typeof d.ativo !== 'boolean') {
+    throw new EntradaInvalidaError('ativo deve ser booleano');
+  }
+  const correlationId =
+    typeof d.correlationId === 'string' && d.correlationId.trim()
+      ? d.correlationId.trim()
+      : undefined;
+  return {
+    commandId,
+    equipeId,
+    ativo: d.ativo,
+    correlationId,
+  };
+}
+
+export function hashAlternarStatus(
+  tipo: TipoEntidadeCatalogo,
+  id: string,
+  ativo: boolean,
+): string {
+  return createHash('sha256').update(`${tipo}:${id}:${ativo ? 'ATIVO' : 'INATIVO'}`).digest('hex');
 }
 
 function nomeValido(nome: string): boolean {

@@ -112,7 +112,12 @@ class CatalogoFake implements CatalogoGateway {
   CatalogoFake({this.resposta});
   CatalogoResposta? resposta;
   bool falhar = false;
+  bool alternarFalhar = false;
   int chamadas = 0;
+  int alternadasIgreja = 0;
+  int alternadasEquipe = 0;
+  String? ultimoAlvoId;
+  bool? ultimoAtivo;
   Completer<void>? pendente;
 
   @override
@@ -125,6 +130,63 @@ class CatalogoFake implements CatalogoGateway {
           igrejas: <IgrejaCatalogo>[],
           equipes: <EquipeCatalogo>[],
         );
+  }
+
+  @override
+  Future<void> alternarStatusIgreja({
+    required String commandId,
+    required String igrejaId,
+    required bool ativo,
+    String? correlationId,
+  }) async {
+    if (alternarFalhar) throw Exception('falha ao alternar status da igreja');
+    alternadasIgreja++;
+    ultimoAlvoId = igrejaId;
+    ultimoAtivo = ativo;
+    if (resposta != null) {
+      resposta = CatalogoResposta(
+        igrejas: resposta!.igrejas.map((i) {
+          if (i.id == igrejaId) {
+            return IgrejaCatalogo(
+              id: i.id,
+              nome: i.nome,
+              codigo: i.codigo,
+              ativo: ativo,
+            );
+          }
+          return i;
+        }).toList(growable: false),
+        equipes: resposta!.equipes,
+      );
+    }
+  }
+
+  @override
+  Future<void> alternarStatusEquipe({
+    required String commandId,
+    required String equipeId,
+    required bool ativo,
+    String? correlationId,
+  }) async {
+    if (alternarFalhar) throw Exception('falha ao alternar status da equipe');
+    alternadasEquipe++;
+    ultimoAlvoId = equipeId;
+    ultimoAtivo = ativo;
+    if (resposta != null) {
+      resposta = CatalogoResposta(
+        igrejas: resposta!.igrejas,
+        equipes: resposta!.equipes.map((e) {
+          if (e.id == equipeId) {
+            return EquipeCatalogo(
+              id: e.id,
+              nome: e.nome,
+              ativo: ativo,
+            );
+          }
+          return e;
+        }).toList(growable: false),
+      );
+    }
   }
 }
 

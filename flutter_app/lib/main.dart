@@ -527,6 +527,22 @@ class _CatalogoMemoriaFallback implements CatalogoGateway {
   @override
   Future<CatalogoResposta> consultar({String? termo}) async =>
       const CatalogoResposta(igrejas: [], equipes: []);
+
+  @override
+  Future<void> alternarStatusIgreja({
+    required String commandId,
+    required String igrejaId,
+    required bool ativo,
+    String? correlationId,
+  }) async {}
+
+  @override
+  Future<void> alternarStatusEquipe({
+    required String commandId,
+    required String equipeId,
+    required bool ativo,
+    String? correlationId,
+  }) async {}
 }
 
 class Inicio extends StatelessWidget {

@@ -12,6 +12,9 @@ import {
   rotuloIgreja,
   validarCommandId,
   validarDataset,
+  validarAlternarStatusIgreja,
+  validarAlternarStatusEquipe,
+  hashAlternarStatus,
   type DatasetCatalogo,
   type EquipeCatalogo,
   type IgrejaCatalogo,
@@ -151,3 +154,84 @@ describe('apresentação e pesquisa do catálogo', () => {
     ]);
   });
 });
+
+describe('Story 7.2: validação e hash de alternar status de catálogo', () => {
+  const commandIdValido = 'a'.repeat(32);
+
+  it('valida entrada correta para alternar status de igreja', () => {
+    const res = validarAlternarStatusIgreja({
+      commandId: commandIdValido,
+      igrejaId: 'ig_123',
+      ativo: false,
+    });
+    expect(res).toEqual({
+      commandId: commandIdValido,
+      igrejaId: 'ig_123',
+      ativo: false,
+      correlationId: undefined,
+    });
+  });
+
+  it('rejeita commandId ou igrejaId inválidos e ativo não booleano', () => {
+    expect(() =>
+      validarAlternarStatusIgreja({
+        commandId: 'curto',
+        igrejaId: 'ig_123',
+        ativo: false,
+      }),
+    ).toThrowError(/commandId inválido/);
+
+    expect(() =>
+      validarAlternarStatusIgreja({
+        commandId: commandIdValido,
+        igrejaId: '',
+        ativo: false,
+      }),
+    ).toThrowError(/igrejaId inválido/);
+
+    expect(() =>
+      validarAlternarStatusIgreja({
+        commandId: commandIdValido,
+        igrejaId: 'ig_123',
+        ativo: 'nao' as unknown as boolean,
+      }),
+    ).toThrowError(/ativo deve ser booleano/);
+  });
+
+  it('valida entrada correta para alternar status de equipe', () => {
+    const res = validarAlternarStatusEquipe({
+      commandId: commandIdValido,
+      equipeId: 'eq_apoio',
+      ativo: true,
+      correlationId: 'corr_1',
+    });
+    expect(res).toEqual({
+      commandId: commandIdValido,
+      equipeId: 'eq_apoio',
+      ativo: true,
+      correlationId: 'corr_1',
+    });
+  });
+
+  it('rejeita equipeId inválido', () => {
+    expect(() =>
+      validarAlternarStatusEquipe({
+        commandId: commandIdValido,
+        equipeId: '   ',
+        ativo: false,
+      }),
+    ).toThrowError(/equipeId inválido/);
+  });
+
+  it('gera hash determinístico e sensível ao tipo, id e estado ativo', () => {
+    const h1 = hashAlternarStatus('IGREJA', 'ig_1', false);
+    const h2 = hashAlternarStatus('IGREJA', 'ig_1', false);
+    const h3 = hashAlternarStatus('IGREJA', 'ig_1', true);
+    const h4 = hashAlternarStatus('EQUIPE', 'ig_1', false);
+
+    expect(h1).toBe(h2);
+    expect(h1).not.toBe(h3);
+    expect(h1).not.toBe(h4);
+  });
+});
+

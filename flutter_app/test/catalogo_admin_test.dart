@@ -120,4 +120,156 @@ void main() {
     expect(find.byType(ConsultaCatalogo), findsOneWidget);
     expect(find.text('Igapó - 240001'), findsOneWidget);
   });
+
+  group('Story 7.2: Inativação e reativação com modal acessível', () {
+    testWidgets('exibe modal de confirmação e inativa igreja com sucesso',
+        (tester) async {
+      final gateway = CatalogoFake(
+          resposta: const CatalogoResposta(
+              igrejas: _igrejas, equipes: _equipes));
+      await _abrir(tester, gateway);
+      await tester.pumpAndSettle();
+
+      // Igreja 1 (Goianinha) está ATIVA. Deve ter botão "Inativar".
+      final botaoInativar = find.widgetWithText(OutlinedButton, 'Inativar').first;
+      expect(botaoInativar, findsOneWidget);
+
+      await tester.tap(botaoInativar);
+      await tester.pumpAndSettle();
+
+      // Diálogo de confirmação aberto
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Inativar Igreja'), findsOneWidget);
+      expect(find.textContaining('Ela deixará de ser exibida em novos cadastros'), findsOneWidget);
+
+      // Confirmar inativação
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Inativar'));
+      await tester.pumpAndSettle();
+
+      expect(gateway.alternadasIgreja, 1);
+      expect(gateway.ultimoAlvoId, '1');
+      expect(gateway.ultimoAtivo, false);
+      expect(find.textContaining('inativada com sucesso'), findsOneWidget);
+    });
+
+    testWidgets('cancelar no modal não altera o status', (tester) async {
+      final gateway = CatalogoFake(
+          resposta: const CatalogoResposta(
+              igrejas: _igrejas, equipes: _equipes));
+      await _abrir(tester, gateway);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Inativar').first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Cancelar'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(gateway.alternadasIgreja, 0);
+    });
+
+    testWidgets('reativa igreja inativa pelo modal de confirmação',
+        (tester) async {
+      final gateway = CatalogoFake(
+          resposta: const CatalogoResposta(
+              igrejas: _igrejas, equipes: _equipes));
+      await _abrir(tester, gateway);
+      await tester.pumpAndSettle();
+
+      // Mossoró está inativa, deve ter botão Reativar
+      final botaoReativar = find.widgetWithText(OutlinedButton, 'Reativar');
+      expect(botaoReativar, findsOneWidget);
+
+      await tester.tap(botaoReativar);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reativar Igreja'), findsOneWidget);
+      expect(find.textContaining('Ela voltará a ficar disponível para novos cadastros'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Reativar'));
+      await tester.pumpAndSettle();
+
+      expect(gateway.alternadasIgreja, 1);
+      expect(gateway.ultimoAlvoId, '3');
+      expect(gateway.ultimoAtivo, true);
+      expect(find.textContaining('reativada com sucesso'), findsOneWidget);
+    });
+
+    testWidgets('inativa equipe pelo modal de confirmação', (tester) async {
+      final gateway = CatalogoFake(
+          resposta: const CatalogoResposta(
+              igrejas: _igrejas, equipes: _equipes));
+      await _abrir(tester, gateway);
+      await tester.pumpAndSettle();
+
+      // Equipe Apoio (e1) é a última lista
+      final botaoInativarEquipe = find.widgetWithText(OutlinedButton, 'Inativar').last;
+      await tester.tap(botaoInativarEquipe);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Inativar Equipe'), findsOneWidget);
+      expect(find.textContaining('Ela deixará de ser exibida em novas seleções'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Inativar'));
+      await tester.pumpAndSettle();
+
+      expect(gateway.alternadasEquipe, 1);
+      expect(gateway.ultimoAlvoId, 'e1');
+      expect(gateway.ultimoAtivo, false);
+      expect(find.textContaining('Equipe "Apoio" inativada com sucesso'), findsOneWidget);
+    });
+
+    testWidgets('garante alvos de toque >= 44px e rotulagem semântica acessível',
+        (tester) async {
+      final gateway = CatalogoFake(
+          resposta: const CatalogoResposta(
+              igrejas: _igrejas, equipes: _equipes));
+      await _abrir(tester, gateway);
+      await tester.pumpAndSettle();
+
+      final botoes = find.byType(OutlinedButton);
+      for (final elemento in botoes.evaluate()) {
+        final box = elemento.renderObject as RenderBox?;
+        if (box != null && box.hasSize) {
+          expect(box.size.height, greaterThanOrEqualTo(44.0));
+          expect(box.size.width, greaterThanOrEqualTo(44.0));
+        }
+      }
+
+      // Abre diálogo e valida botões do diálogo também
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Inativar').first);
+      await tester.pumpAndSettle();
+
+      final botaoCancelar = find.widgetWithText(OutlinedButton, 'Cancelar');
+      final botaoConfirmar = find.widgetWithText(ElevatedButton, 'Inativar');
+
+      final sizeCancelar = tester.getSize(botaoCancelar);
+      final sizeConfirmar = tester.getSize(botaoConfirmar);
+
+      expect(sizeCancelar.height, greaterThanOrEqualTo(44.0));
+      expect(sizeCancelar.width, greaterThanOrEqualTo(44.0));
+      expect(sizeConfirmar.height, greaterThanOrEqualTo(44.0));
+      expect(sizeConfirmar.width, greaterThanOrEqualTo(44.0));
+    });
+
+    testWidgets('exibe mensagem de erro acessível se a alternância falhar',
+        (tester) async {
+      final gateway = CatalogoFake(
+          resposta: const CatalogoResposta(
+              igrejas: _igrejas, equipes: _equipes))
+        ..alternarFalhar = true;
+      await _abrir(tester, gateway);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Inativar').first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Inativar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Não foi possível alterar o status da igreja.'), findsOneWidget);
+    });
+  });
 }

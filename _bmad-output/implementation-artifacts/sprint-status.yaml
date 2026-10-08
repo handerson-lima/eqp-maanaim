@@ -91,7 +91,7 @@ action_items:
     action: "Implementar endpoint e UI para inativacao logica de igrejas e equipes
       sem exclusao fisica"
     owner: "dev"
-    status: open
+    status: done
     ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-1-retro-2026-09-30.md"
   - id: "epic-1-retro-item-3-modelar-trigger-worker-para-consumo-de-a"
     epic: 1
