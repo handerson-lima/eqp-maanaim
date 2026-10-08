@@ -117,7 +117,6 @@ class PerfilService implements IPerfilService {
     FirebaseFunctions? functions,
   })  : _auth = auth ?? FirebaseAuth.instance,
         _storage = storage ?? _obterStorageSeguro(),
-        _firestore = firestore ?? FirebaseFirestore.instance,
         _functions = functions ?? FirebaseFunctions.instance;
 
   static FirebaseStorage _obterStorageSeguro() {
@@ -139,7 +138,6 @@ class PerfilService implements IPerfilService {
 
   final FirebaseAuth _auth;
   final FirebaseStorage _storage;
-  final FirebaseFirestore _firestore;
   final FirebaseFunctions _functions;
 
   static const int limiteMaximoBytes = 2 * 1024 * 1024; // 2 MB
@@ -160,34 +158,32 @@ class PerfilService implements IPerfilService {
     String telefone = '';
     String? fotoUrl = user.photoURL;
 
-    // Se o nome não estiver no Auth ou for "Voluntário", busca a Ficha oficial
-    if (nome.isEmpty || nome.toLowerCase() == 'voluntário') {
-      try {
-        final callable = _functions.httpsCallable('obterMinhaFicha');
-        final res = await callable.call().timeout(const Duration(seconds: 8));
-        final dados = (res.data as Map?)?.cast<String, dynamic>();
-        if (dados != null && dados['existe'] == true && dados['ficha'] != null) {
-          final fichaMap = (dados['ficha'] as Map).cast<String, dynamic>();
-          final nomeFicha = fichaMap['nomeCompleto'] as String?;
-          if (nomeFicha != null &&
-              nomeFicha.trim().isNotEmpty &&
-              !nomeFicha.contains('@') &&
-              nomeFicha.trim().toLowerCase() != 'voluntário') {
-            nome = nomeFicha.trim();
-            user.updateDisplayName(nome).catchError((_) {});
-          }
-          final telFicha = fichaMap['telefone'] as String?;
-          if (telFicha != null && telFicha.trim().isNotEmpty) {
-            telefone = telFicha.trim();
-          }
-          final fotoFicha = fichaMap['fotoUrl'] as String?;
-          if (fotoFicha != null && fotoFicha.trim().isNotEmpty) {
-            fotoUrl = fotoFicha.trim();
-          }
+    // Consulta a Ficha cadastral no backend para obter telefone e dados atualizados
+    try {
+      final callable = _functions.httpsCallable('obterMinhaFicha');
+      final res = await callable.call().timeout(const Duration(seconds: 8));
+      final dados = (res.data as Map?)?.cast<String, dynamic>();
+      if (dados != null && dados['existe'] == true && dados['ficha'] != null) {
+        final fichaMap = (dados['ficha'] as Map).cast<String, dynamic>();
+        final nomeFicha = fichaMap['nomeCompleto'] as String?;
+        if (nomeFicha != null &&
+            nomeFicha.trim().isNotEmpty &&
+            !nomeFicha.contains('@') &&
+            nomeFicha.trim().toLowerCase() != 'voluntário') {
+          nome = nomeFicha.trim();
+          user.updateDisplayName(nome).catchError((_) {});
         }
-      } catch (_) {
-        // Fallback silencioso se a function falhar
+        final telFicha = fichaMap['telefone'] as String?;
+        if (telFicha != null && telFicha.trim().isNotEmpty) {
+          telefone = telFicha.trim();
+        }
+        final fotoFicha = fichaMap['fotoUrl'] as String?;
+        if (fotoFicha != null && fotoFicha.trim().isNotEmpty && (fotoUrl == null || fotoUrl.isEmpty)) {
+          fotoUrl = fotoFicha.trim();
+        }
       }
+    } catch (_) {
+      // Fallback silencioso se a function falhar (ex: sem conexão)
     }
 
     if (nome.isEmpty || nome.contains('@')) {
@@ -273,15 +269,14 @@ class PerfilService implements IPerfilService {
     final telefoneFormatado = TelefoneFormatter.formatar(telefone);
 
     try {
-      await _firestore.collection('fichas').doc(user.uid).set(
-        {
-          'telefone': telefoneFormatado,
-          'atualizadoEm': DateTime.now().toUtc().toIso8601String(),
-        },
-        SetOptions(merge: true),
-      ).timeout(const Duration(seconds: 3));
-    } catch (_) {
-      // Ignora erro de escrita direta para não bloquear a conclusão
+      final callable = _functions.httpsCallable('atualizarTelefonePerfil');
+      await callable.call({'telefone': telefoneFormatado}).timeout(
+        const Duration(seconds: 10),
+      );
+    } on FirebaseFunctionsException catch (e) {
+      throw StateError(e.message ?? 'Não foi possível atualizar o telefone.');
+    } catch (e) {
+      throw StateError('Erro ao atualizar o telefone: $e');
     }
   }
 

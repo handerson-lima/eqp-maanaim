@@ -40,6 +40,7 @@ export const obterMinhaFicha = onCall(
         profissao: ficha.profissao,
         cpf: ficha.cpf,
         igrejaId: ficha.igrejaId,
+        telefone: ficha.telefone ?? null,
         estado: ficha.estado,
         versao: ficha.versao,
         termoAceito: ficha.termoAceito ?? null,

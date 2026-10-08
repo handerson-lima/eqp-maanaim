@@ -53,6 +53,7 @@ class FichaModel {
     required this.profissao,
     required this.cpf,
     required this.igrejaId,
+    this.telefone,
     required this.estado,
     required this.versao,
     this.termoAceito,
@@ -66,6 +67,7 @@ class FichaModel {
   final String profissao;
   final String cpf;
   final String igrejaId;
+  final String? telefone;
   final String estado;
   final int versao;
   final TermoAceitoModel? termoAceito;
@@ -89,6 +91,7 @@ class FichaModel {
       profissao: map['profissao'] as String? ?? '',
       cpf: map['cpf'] as String? ?? '',
       igrejaId: map['igrejaId'] as String? ?? '',
+      telefone: map['telefone'] as String?,
       estado: map['estado'] as String? ?? 'RASCUNHO',
       versao: (map['versao'] as num?)?.toInt() ?? 1,
       termoAceito: termoAceito,
@@ -104,6 +107,7 @@ class FichaModel {
         'profissao': profissao,
         'cpf': cpf,
         'igrejaId': igrejaId,
+        if (telefone != null) 'telefone': telefone,
         'estado': estado,
         'versao': versao,
         if (termoAceito != null) 'termoAceito': termoAceito!.toMap(),
@@ -118,6 +122,7 @@ class FichaModel {
     String? profissao,
     String? cpf,
     String? igrejaId,
+    String? telefone,
     String? estado,
     int? versao,
     TermoAceitoModel? termoAceito,
@@ -131,6 +136,7 @@ class FichaModel {
       profissao: profissao ?? this.profissao,
       cpf: cpf ?? this.cpf,
       igrejaId: igrejaId ?? this.igrejaId,
+      telefone: telefone ?? this.telefone,
       estado: estado ?? this.estado,
       versao: versao ?? this.versao,
       termoAceito: termoAceito ?? this.termoAceito,

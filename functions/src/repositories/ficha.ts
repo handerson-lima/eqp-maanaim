@@ -59,6 +59,7 @@ function montarFicha(id: string, dados: Record<string, unknown>): FichaPermanent
     profissao: String(dados.profissao ?? ''),
     cpf: String(dados.cpf ?? ''),
     igrejaId: String(dados.igrejaId ?? ''),
+    telefone: dados.telefone ? String(dados.telefone) : null,
     estado: String(dados.estado ?? 'RASCUNHO'),
     versao: Number(dados.versao ?? 1),
     termoAceito,
@@ -223,3 +224,59 @@ export async function salvarMinhaFichaRepo(
     };
   });
 }
+
+/**
+ * Atualiza o telefone do voluntário de forma transacional e segura.
+ * Registra evento de auditoria no auditOutbox sem conter dados PII (AD-12).
+ */
+export async function atualizarTelefoneRepo(
+  db: Firestore,
+  uid: string,
+  telefoneFormatado: string,
+): Promise<{ telefone: string; fichaId: string }> {
+  const fichaRef = db.collection('fichas').doc(uid);
+  const auditoriaRef = db.collection('auditOutbox').doc();
+
+  await db.runTransaction(async (tx) => {
+    const fichaSnap = await tx.get(fichaRef);
+
+    if (fichaSnap.exists) {
+      tx.set(
+        fichaRef,
+        {
+          telefone: telefoneFormatado,
+          atualizadoEm: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    } else {
+      tx.set(
+        fichaRef,
+        {
+          id: uid,
+          ownerUid: uid,
+          telefone: telefoneFormatado,
+          estado: 'RASCUNHO',
+          versao: 1,
+          criadoEm: FieldValue.serverTimestamp(),
+          atualizadoEm: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    }
+
+    // AD-12: Auditoria em auditOutbox SEM PII (telefone nunca vai no payload da auditoria)
+    tx.set(auditoriaRef, {
+      commandId: auditoriaRef.id,
+      correlationId: auditoriaRef.id,
+      actorUid: uid,
+      action: 'TELEFONE_PERFIL_ATUALIZADO',
+      fichaId: uid,
+      camposAlterados: ['telefone'],
+      criadoEm: FieldValue.serverTimestamp(),
+    });
+  });
+
+  return { telefone: telefoneFormatado, fichaId: uid };
+}
+

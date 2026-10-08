@@ -447,6 +447,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             MaterialPageRoute(
               builder: (_) => EditarPerfilScreen(
                 nomeInicial: nomeValidoFicha ?? nomeValidoWidget,
+                telefoneInicial: _ficha?.telefone,
                 onVoltar: () => Navigator.of(context).maybePop(),
               ),
             ),

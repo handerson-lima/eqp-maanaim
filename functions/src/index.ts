@@ -24,6 +24,7 @@ export { consultarTermos } from './commands/consultarTermos.js';
 export { obterTermoVigente } from './commands/obterTermoVigente.js';
 export { obterMinhaFicha } from './commands/obterMinhaFicha.js';
 export { salvarMinhaFicha } from './commands/salvarMinhaFicha.js';
+export { atualizarTelefonePerfil } from './commands/atualizarTelefonePerfil.js';
 export { obterMinhasParticipacoes } from './commands/obterMinhasParticipacoes.js';
 export { salvarParticipacoesRascunho } from './commands/salvarParticipacoesRascunho.js';
 export { aceitarTermoVigente } from './commands/aceitarTermoVigente.js';

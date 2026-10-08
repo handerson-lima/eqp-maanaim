@@ -53,6 +53,7 @@ export interface FichaPermanente {
   profissao: string;
   cpf: string; // normalizado (somente dígitos)
   igrejaId: string;
+  telefone?: string | null;
   estado: string; // 'RASCUNHO', etc.
   versao: number;
   termoAceito?: TermoAceitoResumo | null;
