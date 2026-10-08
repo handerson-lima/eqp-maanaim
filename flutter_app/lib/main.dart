@@ -25,6 +25,7 @@ import 'features/coordenador/fila_coordenador_screen.dart';
 import 'features/renovacao/dashboard_renovacao_service.dart';
 import 'features/auditoria/auditoria_service.dart';
 import 'features/privacidade/retencao_service.dart';
+import 'features/admin/solicitacoes_pendentes_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -95,6 +96,8 @@ Future<void> main() async {
       dashboardRenovacao: FirebaseDashboardRenovacaoGateway(functions),
       auditoria: CloudFunctionsAuditoriaGateway(functions: functions),
       retencao: CloudFunctionsRetencaoGateway(functions: functions),
+      solicitacoesPendentes:
+          FirebaseSolicitacoesPendentesGateway(functions: functions),
     ),
   );
 }
@@ -118,6 +121,7 @@ class MaanaimApp extends StatelessWidget {
     this.pessoas,
     this.vinculos,
     this.termos,
+    this.solicitacoesPendentes,
     this.ficha,
     this.participacao,
     this.termoVoluntario,
@@ -134,6 +138,7 @@ class MaanaimApp extends StatelessWidget {
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
+  final SolicitacoesPendentesGateway? solicitacoesPendentes;
   final FichaGateway? ficha;
   final ParticipacaoGateway? participacao;
   final TermoGateway? termoVoluntario;
@@ -154,6 +159,7 @@ class MaanaimApp extends StatelessWidget {
       pessoas: pessoas,
       vinculos: vinculos,
       termos: termos,
+      solicitacoesPendentes: solicitacoesPendentes,
       ficha: ficha,
       participacao: participacao,
       termoVoluntario: termoVoluntario,
@@ -178,6 +184,7 @@ class RaizSessao extends StatefulWidget {
     this.pessoas,
     this.vinculos,
     this.termos,
+    this.solicitacoesPendentes,
     this.ficha,
     this.participacao,
     this.termoVoluntario,
@@ -194,6 +201,7 @@ class RaizSessao extends StatefulWidget {
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
+  final SolicitacoesPendentesGateway? solicitacoesPendentes;
   final FichaGateway? ficha;
   final ParticipacaoGateway? participacao;
   final TermoGateway? termoVoluntario;
@@ -274,6 +282,7 @@ class _RaizSessaoState extends State<RaizSessao> {
         pessoas: widget.pessoas,
         vinculos: widget.vinculos,
         termos: widget.termos,
+        solicitacoesPendentes: widget.solicitacoesPendentes,
         ficha: widget.ficha,
         participacao: widget.participacao,
         termoVoluntario: widget.termoVoluntario,
@@ -301,6 +310,7 @@ class AreaAutenticada extends StatefulWidget {
     this.pessoas,
     this.vinculos,
     this.termos,
+    this.solicitacoesPendentes,
     this.ficha,
     this.participacao,
     this.termoVoluntario,
@@ -317,6 +327,7 @@ class AreaAutenticada extends StatefulWidget {
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
+  final SolicitacoesPendentesGateway? solicitacoesPendentes;
   final FichaGateway? ficha;
   final ParticipacaoGateway? participacao;
   final TermoGateway? termoVoluntario;
@@ -412,6 +423,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           pessoas: widget.pessoas,
           vinculos: widget.vinculos,
           termos: widget.termos,
+          solicitacoesPendentes: widget.solicitacoesPendentes,
           pastor: widget.pastor,
           responsavelEquipe: widget.responsavelEquipe,
           coordenador: widget.coordenador,

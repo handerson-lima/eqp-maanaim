@@ -23,6 +23,8 @@ import '../auditoria/auditoria_service.dart';
 import '../auditoria/auditoria_relatorios_screen.dart';
 import '../privacidade/retencao_service.dart';
 import '../privacidade/conformidade_retencao_screen.dart';
+import 'painel_solicitacoes_pendentes_screen.dart';
+import 'solicitacoes_pendentes_service.dart';
 
 class _AbaAdmin {
   const _AbaAdmin({required this.item, required this.builder});
@@ -42,6 +44,7 @@ class AdminShell extends StatefulWidget {
     this.pessoas,
     this.vinculos,
     this.termos,
+    this.solicitacoesPendentes,
     this.pastor,
     this.responsavelEquipe,
     this.coordenador,
@@ -56,6 +59,7 @@ class AdminShell extends StatefulWidget {
   final PessoasGateway? pessoas;
   final VinculosGateway? vinculos;
   final TermosGateway? termos;
+  final SolicitacoesPendentesGateway? solicitacoesPendentes;
   final PastorLocalGateway? pastor;
   final ResponsavelEquipeGateway? responsavelEquipe;
   final CoordenadorGateway? coordenador;
@@ -143,6 +147,21 @@ class _AdminShellState extends State<AdminShell> {
               child: Padding(
                 padding: EdgeInsets.all(AppSpacing.cardPadding),
                 child: Text('Serviço de termos indisponível.'),
+              ),
+            ),
+    ),
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Solicitações por Equipe',
+        icon: Icons.pending_actions_outlined,
+        selectedIcon: Icons.pending_actions,
+      ),
+      builder: () => widget.solicitacoesPendentes != null
+          ? PainelSolicitacoesPendentesScreen(gateway: widget.solicitacoesPendentes!)
+          : const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.cardPadding),
+                child: Text('Serviço de solicitações indisponível.'),
               ),
             ),
     ),

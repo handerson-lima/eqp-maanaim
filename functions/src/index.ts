@@ -60,3 +60,4 @@ export { obterUrlDownloadPdf } from './commands/obterUrlDownloadPdf.js';
 export { executarRotinaRetencao } from './commands/executarRotinaRetencao.js';
 export { consultarConformidadeRetencao } from './commands/consultarConformidadeRetencao.js';
 export { expurgarRascunhosScheduled } from './triggers/expurgarRascunhosScheduled.js';
+export { consultarSolicitacoesPendentesGlobal } from './commands/consultarSolicitacoesPendentesGlobal.js';
