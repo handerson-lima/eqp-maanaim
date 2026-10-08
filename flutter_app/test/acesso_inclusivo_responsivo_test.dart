@@ -177,7 +177,6 @@ void main() {
 
         for (final label in ['Salvar', 'Voltar', 'Aprovar', 'Rejeitar']) {
           final finder = find.text(label);
-          final size = tester.getSize(finder);
           // O botão pai deve ter altura >= 44
           final parentButton = find.ancestor(
             of: finder,

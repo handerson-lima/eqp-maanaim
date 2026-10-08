@@ -84,7 +84,7 @@ action_items:
     action: "Configurar runner de integracao automatizada para executar a suite emulator
       com Firebase Emulator Suite"
     owner: "dev"
-    status: in-progress
+    status: done
     ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-1-retro-2026-09-30.md"
   - id: "epic-1-retro-item-2-implementar-endpoint-e-ui-para-inativaca"
     epic: 1
@@ -119,7 +119,7 @@ action_items:
     action: "Configurar pipeline de CI automatizado para execucao continua de npm
       run test:emulator"
     owner: "dev"
-    status: open
+    status: done
     ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-6-retro-2026-10-07.md"
   - id: "epic-6-retro-item-3-unificar-mascara-cpf"
     epic: 6

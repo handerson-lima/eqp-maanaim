@@ -6,6 +6,13 @@ PWA administrativa para gestão de voluntários do Maanaim. Use Flutter estável
 
 Nunca versione chaves ou URLs de produção. Instale dependências com `flutter pub get --directory flutter_app` e `npm install --prefix functions`. Execute testes com `flutter test` dentro de `flutter_app` e `npm test --prefix functions`.
 
+## Integração Contínua (CI/CD)
+
+O projeto possui validação contínua automatizada via GitHub Actions (`.github/workflows/ci.yml`), disparada em `push` e `pull_request` na branch `main`:
+- **Backend CI (`backend-ci`):** Executa em Ubuntu com Node 22 e Java 21 (Temurin). Instala dependências, roda checagem de tipos (`typecheck`), compilação TypeScript (`build`), suíte de testes unitários (`npm test`) e executa todos os 6 testes de emuladores e regras de segurança sob o Firebase Emulator Suite headless (`firebase emulators:exec --only auth,firestore,storage,functions "npm run test:emulator --prefix functions"`).
+- **Frontend CI (`frontend-ci`):** Executa em Ubuntu com Flutter estável. Roda análise estática rigorosa (`flutter analyze --fatal-infos --fatal-warnings`) e a suíte completa de testes de widget e unidade (`flutter test`).
+
+
 ### Configuração com `--dart-define-from-file`
 
 Crie `flutter_app/.env.dartdefines.json` (ignorado pelo Git) com as variáveis do projeto:
