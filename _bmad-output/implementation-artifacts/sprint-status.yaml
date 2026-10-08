@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-28-2026 22:53
-last_updated: 10-07-2026 22:07
+last_updated: 10-07-2026 22:18
 project: eqp_maanaim
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
@@ -70,21 +70,21 @@ development_status:
   5-4-exibir-dashboards-de-renovação-por-papel: done
   epic-5-retrospective: optional
 
-  epic-6: in-progress
+  epic-6: done
   6-1-registrar-e-reconciliar-evidência-auditoria-imutável: done
   6-2-consultar-auditoria-e-relatórios-autorizados: done
   6-3-gerar-e-entregar-pdf-privado-da-ficha: done
-  6-4-aplicar-retenção-minimização-e-controles-operacionais-de-dad: review
+  6-4-aplicar-retenção-minimização-e-controles-operacionais-de-dad: done
   6-5-acesso-inclusivo-e-responsivo-às-superfícies-do-voluntariado: done
   6-6-verificar-segurança-índices-e-ambientes-firebase: done
-  epic-6-retrospective: optional
+  epic-6-retrospective: done
 action_items:
   - id: "epic-1-retro-item-1-configurar-runner-de-integracao-automati"
     epic: 1
     action: "Configurar runner de integracao automatizada para executar a suite emulator
       com Firebase Emulator Suite"
     owner: "dev"
-    status: open
+    status: in-progress
     ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-1-retro-2026-09-30.md"
   - id: "epic-1-retro-item-2-implementar-endpoint-e-ui-para-inativaca"
     epic: 1
@@ -98,12 +98,33 @@ action_items:
     action: "Modelar trigger/worker para consumo de auditOutbox e politica de retencao
       de 5 anos"
     owner: "dev"
-    status: open
+    status: done
     ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-1-retro-2026-09-30.md"
   - id: "epic-1-retro-item-4-tratar-erro-e-recuperacao-suave-no-strea"
     epic: 1
     action: "Tratar erro e recuperacao suave no stream authStateChanges em RaizSessao
       da UI Flutter"
     owner: "dev"
-    status: open
+    status: done
     ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-1-retro-2026-09-30.md"
+  - id: "epic-6-retro-item-1-gcp-data-access-logs"
+    epic: 6
+    action: "Documentar e validar a ativacao de Data Access audit logs no projeto
+      GCP de producao para alertas de Cloud Storage"
+    owner: "dev"
+    status: open
+    ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-6-retro-2026-10-07.md"
+  - id: "epic-6-retro-item-2-ci-emulator-pipeline"
+    epic: 6
+    action: "Configurar pipeline de CI automatizado para execucao continua de npm
+      run test:emulator"
+    owner: "dev"
+    status: open
+    ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-6-retro-2026-10-07.md"
+  - id: "epic-6-retro-item-3-unificar-mascara-cpf"
+    epic: 6
+    action: "Centralizar funcoes de mascaramento e formatacao visual de CPF entre
+      modulos do frontend"
+    owner: "dev"
+    status: open
+    ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-6-retro-2026-10-07.md"
