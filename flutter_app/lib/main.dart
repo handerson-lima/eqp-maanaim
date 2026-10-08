@@ -696,7 +696,7 @@ class _CadastroState extends State<Cadastro> {
                 'CPF',
                 cpfValido,
                 tipo: TextInputType.number,
-                formatters: [FilteringTextInputFormatter.digitsOnly],
+                formatters: [CpfInputFormatter()],
               ),
               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: FirebaseFirestore.instance

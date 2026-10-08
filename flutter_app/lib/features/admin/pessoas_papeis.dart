@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../comando.dart';
 import '../../ui/identidade.dart';
@@ -460,7 +459,7 @@ class _FormularioPessoaState extends State<_FormularioPessoa> {
 
   String? _validaCpf(String? valor) {
     if (!_coordenador) return null;
-    final digitos = (valor ?? '').replaceAll(RegExp(r'\D'), '');
+    final digitos = CpfFormatter.apenasDigitos(valor);
     // Edição sem CPF preserva o registro restrito vigente; na criação é exigido.
     if (digitos.isEmpty && widget.pessoa != null) return null;
     if (digitos.length != 11) return 'Informe o CPF com 11 dígitos.';
@@ -469,13 +468,14 @@ class _FormularioPessoaState extends State<_FormularioPessoa> {
 
   void _salvar() {
     if (!(_formulario.currentState?.validate() ?? false)) return;
+    final digitos = CpfFormatter.apenasDigitos(_cpf.text.trim());
     Navigator.pop(
       context,
       _DadosPessoa(
         nomeCompleto: _nome.text.trim(),
         email: _email.text.trim(),
         coordenador: _coordenador,
-        cpf: _coordenador ? _cpf.text.trim() : null,
+        cpf: _coordenador ? digitos : null,
       ),
     );
   }
@@ -511,9 +511,12 @@ class _FormularioPessoaState extends State<_FormularioPessoa> {
             if (_coordenador)
               TextFormField(
                 controller: _cpf,
-                decoration: const InputDecoration(labelText: 'CPF'),
+                decoration: const InputDecoration(
+                  labelText: 'CPF',
+                  hintText: '000.000.000-00',
+                ),
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: [CpfInputFormatter()],
                 validator: _validaCpf,
               ),
           ],

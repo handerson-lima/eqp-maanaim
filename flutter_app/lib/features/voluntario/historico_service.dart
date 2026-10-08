@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import '../../ui/components/cpf_formatter.dart';
 
 /// Modelo de dados de evento da linha do tempo histórica.
 class EventoLinhaDoTempoModel {
@@ -90,7 +91,8 @@ class FichaConsultaModel {
   final String? atualizadoEm;
   final String? criadoEm;
 
-  String get cpfExibicao => cpfCompleto ?? cpfMascarado ?? '***.***.***-**';
+  String get cpfExibicao =>
+      CpfFormatter.formatar(cpfCompleto ?? cpfMascarado ?? '***.***.***-**');
 
   factory FichaConsultaModel.fromMap(Map<String, dynamic> map) {
     return FichaConsultaModel(

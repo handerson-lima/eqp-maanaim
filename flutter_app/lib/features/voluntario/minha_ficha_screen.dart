@@ -7,6 +7,7 @@ import '../../ui/components/layout_elements.dart';
 import '../../ui/components/status_chips.dart';
 import '../../ui/components/vigencia_badge.dart';
 import '../../ui/tokens.dart';
+import '../../ui/components/cpf_formatter.dart';
 import '../admin/catalogo_service.dart';
 import '../auth/validadores.dart';
 import '../termo/termo_service.dart';
@@ -606,6 +607,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                         readOnly: _isBloqueadoParaEdicao,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
+                        inputFormatters: [CpfInputFormatter()],
                         decoration: const InputDecoration(
                           hintText: '000.000.000-00',
                           prefixIcon: Icon(Icons.badge_outlined, size: 20),

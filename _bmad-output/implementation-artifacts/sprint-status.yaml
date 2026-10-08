@@ -126,5 +126,5 @@ action_items:
     action: "Centralizar funcoes de mascaramento e formatacao visual de CPF entre
       modulos do frontend"
     owner: "dev"
-    status: open
+    status: done
     ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-6-retro-2026-10-07.md"

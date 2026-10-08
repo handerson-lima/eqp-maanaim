@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../ui/components/buttons.dart';
 import '../../ui/tokens.dart';
+import '../../ui/components/cpf_formatter.dart';
 import 'termo_adesao_model.dart';
 import 'termo_logo_asset.dart';
 import 'termo_printer.dart';
@@ -205,7 +206,7 @@ class TermoAdesaoWidget extends StatelessWidget {
                   text: ', inscrito(a) no CPF/MF sob o nº ',
                 ),
                 TextSpan(
-                  text: model.cpfVoluntario.trim(),
+                  text: CpfFormatter.formatar(model.cpfVoluntario),
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 const TextSpan(
@@ -230,7 +231,7 @@ class TermoAdesaoWidget extends StatelessWidget {
                       '${model.estadoCivilCoordenador}, inscrito no CPF/MF sob o nº ',
                 ),
                 TextSpan(
-                  text: model.cpfCoordenador.trim(),
+                  text: CpfFormatter.formatar(model.cpfCoordenador),
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 const TextSpan(

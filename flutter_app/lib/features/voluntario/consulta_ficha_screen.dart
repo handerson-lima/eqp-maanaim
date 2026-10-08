@@ -5,6 +5,7 @@ import '../../ui/components/app_shell.dart';
 import '../../ui/components/layout_elements.dart';
 import '../../ui/components/status_chips.dart';
 import '../../ui/components/vigencia_badge.dart';
+import '../../ui/components/cpf_formatter.dart';
 import '../../ui/tokens.dart';
 import '../termo/pdf_termo_service.dart';
 import '../termo/termo_pdf_launcher.dart';
@@ -472,15 +473,26 @@ class _ConsultaFichaAutorizadaScreenState
             ),
           ),
           Expanded(
-            child: Text(
-              valor,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
-                fontFamily: destaqueMonospaced ? 'monospace' : null,
-              ),
-            ),
+            child: rotulo == 'CPF'
+                ? CpfText(
+                    cpf: valor,
+                    destaqueMonospaced: destaqueMonospaced,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                      fontFamily: destaqueMonospaced ? 'monospace' : null,
+                    ),
+                  )
+                : Text(
+                    valor,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                      fontFamily: destaqueMonospaced ? 'monospace' : null,
+                    ),
+                  ),
           ),
         ],
       ),

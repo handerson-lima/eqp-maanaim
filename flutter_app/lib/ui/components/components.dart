@@ -6,3 +6,4 @@ export 'status_chips.dart';
 export 'vigencia_badge.dart';
 export 'feedback_orientacao_card.dart';
 export 'responsive_data_table.dart';
+export 'cpf_formatter.dart';

@@ -471,7 +471,12 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.s4),
-              Text('CPF: ${v.cpfMascarado}', style: AppTypography.caption),
+              CpfText(
+                cpf: v.cpfMascarado,
+                incluirRotuloVisual: true,
+                destaqueMonospaced: true,
+                style: AppTypography.caption,
+              ),
               Text('Igreja: ${v.igrejaNome ?? v.igrejaId}', style: AppTypography.caption),
               if (v.equipes.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.s8),
@@ -518,7 +523,11 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
             return DataRow(
               cells: [
                 DataCell(Text(v.nomeCompleto, style: AppTypography.body)),
-                DataCell(Text(v.cpfMascarado, style: AppTypography.caption)),
+                DataCell(CpfText(
+                  cpf: v.cpfMascarado,
+                  destaqueMonospaced: true,
+                  style: AppTypography.caption,
+                )),
                 DataCell(Text(v.igrejaNome ?? v.igrejaId, style: AppTypography.caption)),
                 DataCell(StatusChip(status: v.estadoFicha)),
                 DataCell(Text(equipesStr.isEmpty ? '—' : equipesStr, style: AppTypography.caption)),

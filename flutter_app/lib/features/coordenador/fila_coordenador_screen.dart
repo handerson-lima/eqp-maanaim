@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../ui/tokens.dart';
+import '../../ui/components/cpf_formatter.dart';
 import 'coordenador_service.dart';
 
 class FilaCoordenadorScreen extends StatefulWidget {
@@ -639,8 +640,10 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                   'Profissão: ${item.profissao.isNotEmpty ? item.profissao : "Não informada"}',
                   style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
                 ),
-                Text(
-                  'CPF: ${item.cpfMascarado}',
+                CpfText(
+                  cpf: item.cpfMascarado,
+                  incluirRotuloVisual: true,
+                  destaqueMonospaced: true,
                   style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
                 ),
               ],
@@ -778,7 +781,11 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                     ),
                   ),
                   DataCell(Text(item.nomeIgreja, style: AppTypography.caption)),
-                  DataCell(Text(item.cpfMascarado, style: AppTypography.caption)),
+                  DataCell(CpfText(
+                    cpf: item.cpfMascarado,
+                    destaqueMonospaced: true,
+                    style: AppTypography.caption,
+                  )),
                   DataCell(Text(_rotuloPastorLocal(item), style: AppTypography.caption)),
                   DataCell(
                     Wrap(
