@@ -24,7 +24,7 @@ O usuário autenticado (voluntário, pastor, responsável de equipe ou coordenad
    * Leitura: permitida para usuários autenticados (`request.auth != null`), viabilizando a exibição para a liderança nas escalas e consultas de voluntários.
    * Escrita: permitida exclusivamente para o próprio usuário (`request.auth.uid == uid`), com restrições rígidas:
      * `request.resource.size <= 2 * 1024 * 1024` (máximo 2 MB).
-     * `request.resource.contentType.matches('image/(jpeg|png|webp)')`.
+     * `request.resource.contentType.matches('image/(jpeg|png|webp|heic|heif)')`.
 2. **Fluxo de Atualização de E-mail (Firebase Auth):**
    * Usa `user.verifyBeforeUpdateEmail(novoEmail)`.
    * Se o Firebase exigir reautenticação (`requires-recent-login`), a UI apresenta um modal seguro solicitando a senha atual antes de reenviar.

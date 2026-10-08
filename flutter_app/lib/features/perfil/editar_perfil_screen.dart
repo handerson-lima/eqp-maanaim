@@ -17,10 +17,16 @@ class EditarPerfilScreen extends StatefulWidget {
   const EditarPerfilScreen({
     super.key,
     this.service,
+    this.nomeInicial,
+    this.telefoneInicial,
+    this.fotoUrlInicial,
     this.onVoltar,
   });
 
   final IPerfilService? service;
+  final String? nomeInicial;
+  final String? telefoneInicial;
+  final String? fotoUrlInicial;
   final VoidCallback? onVoltar;
 
   @override
@@ -47,6 +53,21 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
   void initState() {
     super.initState();
     _service = widget.service ?? PerfilService();
+
+    final nomeIn = widget.nomeInicial?.trim();
+    if (nomeIn != null && nomeIn.isNotEmpty) {
+      _perfil = PerfilUsuario(
+        uid: FirebaseAuth.instance.currentUser?.uid ?? '',
+        nome: nomeIn,
+        email: FirebaseAuth.instance.currentUser?.email ?? '',
+        telefone: TelefoneFormatter.formatar(widget.telefoneInicial ?? ''),
+        fotoUrl: widget.fotoUrlInicial ?? FirebaseAuth.instance.currentUser?.photoURL,
+      );
+      _emailController.text = _perfil!.email;
+      _telefoneController.text = _perfil!.telefone;
+      _carregando = false;
+    }
+
     _carregarPerfil();
   }
 
@@ -58,27 +79,39 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
   }
 
   Future<void> _carregarPerfil() async {
-    setState(() {
-      _carregando = true;
-      _mensagemErro = null;
-    });
+    if (_perfil == null) {
+      setState(() {
+        _carregando = true;
+        _mensagemErro = null;
+      });
+    }
 
     try {
       final perfil = await _service.obterPerfil();
       if (!mounted) return;
 
       setState(() {
-        _perfil = perfil;
-        _emailController.text = perfil.email;
-        _telefoneController.text = perfil.telefone;
+        final nomeFinal = (_perfil != null && _perfil!.nome != 'Voluntário' && perfil.nome == 'Voluntário')
+            ? _perfil!.nome
+            : perfil.nome;
+
+        _perfil = perfil.copyWith(nome: nomeFinal);
+        if (_emailController.text.isEmpty) {
+          _emailController.text = perfil.email;
+        }
+        if (_telefoneController.text.isEmpty && perfil.telefone.isNotEmpty) {
+          _telefoneController.text = perfil.telefone;
+        }
         _carregando = false;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _mensagemErro = 'Não foi possível carregar o perfil: $e';
-        _carregando = false;
-      });
+      if (_perfil == null) {
+        setState(() {
+          _mensagemErro = 'Não foi possível carregar o perfil: $e';
+          _carregando = false;
+        });
+      }
     }
   }
 
@@ -131,7 +164,6 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
           fotoUrl: novaFotoUrl ?? _perfil!.fotoUrl,
         );
         _previewBytes = null;
-        _salvando = false;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -146,16 +178,18 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _salvando = false;
-      });
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro ao salvar perfil: $e'),
           backgroundColor: AppColors.danger,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _salvando = false;
+        });
+      }
     }
   }
 

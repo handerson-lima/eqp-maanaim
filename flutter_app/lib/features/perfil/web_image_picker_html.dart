@@ -14,7 +14,8 @@ class WebImageResult {
 Future<WebImageResult?> pickImageWeb() async {
   final completer = Completer<WebImageResult?>();
   final uploadInput = html.FileUploadInputElement();
-  uploadInput.accept = 'image/png,image/jpeg,image/webp,image/jpg';
+  uploadInput.accept =
+      'image/png,image/jpeg,image/webp,image/jpg,.heic,.heif,image/heic,image/heif';
 
   uploadInput.onChange.listen((event) {
     final files = uploadInput.files;

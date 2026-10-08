@@ -430,6 +430,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => EditarPerfilScreen(
+                nomeInicial: _ficha?.nomeCompleto.isNotEmpty == true
+                    ? _ficha!.nomeCompleto
+                    : (widget.userName != null && widget.userName!.isNotEmpty
+                        ? widget.userName
+                        : null),
                 onVoltar: () => Navigator.of(context).maybePop(),
               ),
             ),

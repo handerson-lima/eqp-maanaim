@@ -133,6 +133,7 @@ class _AvatarPickerWidgetState extends State<AvatarPickerWidget> {
                             width: tamanho,
                             height: tamanho,
                             fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildIniciais(iniciais),
                           )
                         : (widget.fotoUrl != null &&
                                 widget.fotoUrl!.trim().isNotEmpty)

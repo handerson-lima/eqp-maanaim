@@ -54,7 +54,7 @@ Future<void> main() async {
   try {
     final storageBucket = const String.fromEnvironment('FIREBASE_STORAGE_BUCKET').isNotEmpty
         ? const String.fromEnvironment('FIREBASE_STORAGE_BUCKET')
-        : (projectId.isNotEmpty ? '$projectId.appspot.com' : 'eqp-maanaim.appspot.com');
+        : (projectId.isNotEmpty ? '$projectId.firebasestorage.app' : 'eqp-maanaim.firebasestorage.app');
     await Firebase.initializeApp(
       options: FirebaseOptions(
         apiKey: apiKey,

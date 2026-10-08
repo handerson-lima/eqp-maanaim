@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -106,15 +108,17 @@ abstract interface class IPerfilService {
   });
 }
 
-/// Implementação padrão integrada com Firebase Auth, Storage e Firestore.
+/// Implementação padrão integrada com Firebase Auth, Storage e Cloud Functions.
 class PerfilService implements IPerfilService {
   PerfilService({
     FirebaseAuth? auth,
     FirebaseStorage? storage,
     FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
   })  : _auth = auth ?? FirebaseAuth.instance,
         _storage = storage ?? _obterStorageSeguro(),
-        _firestore = firestore ?? FirebaseFirestore.instance;
+        _firestore = firestore ?? FirebaseFirestore.instance,
+        _functions = functions ?? FirebaseFunctions.instance;
 
   static FirebaseStorage _obterStorageSeguro() {
     try {
@@ -123,10 +127,10 @@ class PerfilService implements IPerfilService {
       if (bucket != null && bucket.isNotEmpty) {
         return FirebaseStorage.instanceFor(app: app, bucket: bucket);
       }
-      return FirebaseStorage.instance;
+      return FirebaseStorage.instanceFor(bucket: 'eqp-maanaim.firebasestorage.app');
     } catch (_) {
       try {
-        return FirebaseStorage.instanceFor(bucket: 'eqp-maanaim.appspot.com');
+        return FirebaseStorage.instanceFor(bucket: 'eqp-maanaim.firebasestorage.app');
       } catch (_) {
         return FirebaseStorage.instance;
       }
@@ -136,6 +140,7 @@ class PerfilService implements IPerfilService {
   final FirebaseAuth _auth;
   final FirebaseStorage _storage;
   final FirebaseFirestore _firestore;
+  final FirebaseFunctions _functions;
 
   static const int limiteMaximoBytes = 2 * 1024 * 1024; // 2 MB
 
@@ -148,26 +153,44 @@ class PerfilService implements IPerfilService {
       throw StateError('Nenhum usuário autenticado.');
     }
 
+    String nome = (user.displayName ?? '').trim();
     String telefone = '';
     String? fotoUrl = user.photoURL;
 
-    try {
-      // Busca informações complementares da ficha ou coleção de usuários
-      final docFicha = await _firestore.collection('fichas').doc(user.uid).get();
-      if (docFicha.exists) {
-        final data = docFicha.data();
-        if (data != null) {
-          telefone = (data['telefone'] as String?) ?? '';
-          fotoUrl = (data['fotoUrl'] as String?) ?? fotoUrl;
+    // Se o nome não estiver no Auth ou for "Voluntário", busca a Ficha oficial
+    if (nome.isEmpty || nome.toLowerCase() == 'voluntário') {
+      try {
+        final callable = _functions.httpsCallable('obterMinhaFicha');
+        final res = await callable.call().timeout(const Duration(seconds: 8));
+        final dados = (res.data as Map?)?.cast<String, dynamic>();
+        if (dados != null && dados['existe'] == true && dados['ficha'] != null) {
+          final fichaMap = (dados['ficha'] as Map).cast<String, dynamic>();
+          final nomeFicha = fichaMap['nomeCompleto'] as String?;
+          if (nomeFicha != null && nomeFicha.trim().isNotEmpty) {
+            nome = nomeFicha.trim();
+            user.updateDisplayName(nome).catchError((_) {});
+          }
+          final telFicha = fichaMap['telefone'] as String?;
+          if (telFicha != null && telFicha.trim().isNotEmpty) {
+            telefone = telFicha.trim();
+          }
+          final fotoFicha = fichaMap['fotoUrl'] as String?;
+          if (fotoFicha != null && fotoFicha.trim().isNotEmpty) {
+            fotoUrl = fotoFicha.trim();
+          }
         }
+      } catch (_) {
+        // Fallback silencioso se a function falhar
       }
-    } catch (_) {
-      // Preserva os dados do Auth se o Firestore falhar ou estiver sem documento
+    }
+
+    if (nome.isEmpty) {
+      nome = 'Voluntário';
     }
 
     return PerfilUsuario(
       uid: user.uid,
-      nome: user.displayName ?? 'Voluntário',
+      nome: nome,
       email: user.email ?? '',
       telefone: TelefoneFormatter.formatar(telefone),
       fotoUrl: fotoUrl,
@@ -193,7 +216,9 @@ class PerfilService implements IPerfilService {
         ? 'image/png'
         : extLimpa == 'webp'
             ? 'image/webp'
-            : 'image/jpeg';
+            : (extLimpa == 'heic' || extLimpa == 'heif')
+                ? 'image/heic'
+                : 'image/jpeg';
 
     final nomeArquivo = 'avatar_${DateTime.now().millisecondsSinceEpoch}.$extLimpa';
     final storageRef = _storage.ref('avatars/${user.uid}/$nomeArquivo');
@@ -203,24 +228,20 @@ class PerfilService implements IPerfilService {
       customMetadata: {'uid': user.uid},
     );
 
-    final uploadTask = await storageRef.putData(bytes, metadata);
-    final downloadUrl = await uploadTask.ref.getDownloadURL();
+    final uploadTask = storageRef.putData(bytes, metadata);
+    final snapshot = await uploadTask.timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        uploadTask.cancel();
+        throw TimeoutException('Tempo limite excedido no upload da foto.');
+      },
+    );
+    final downloadUrl = await snapshot.ref.getDownloadURL().timeout(
+      const Duration(seconds: 15),
+    );
 
     // Atualiza o perfil no Auth
     await user.updatePhotoURL(downloadUrl);
-
-    // Sincroniza fotoUrl no Firestore
-    try {
-      await _firestore.collection('fichas').doc(user.uid).set(
-        {
-          'fotoUrl': downloadUrl,
-          'atualizadoEm': DateTime.now().toUtc().toIso8601String(),
-        },
-        SetOptions(merge: true),
-      );
-    } catch (_) {
-      // Ignora falha de sincronização se o documento ainda não existir
-    }
 
     return downloadUrl;
   }
@@ -234,13 +255,17 @@ class PerfilService implements IPerfilService {
 
     final telefoneFormatado = TelefoneFormatter.formatar(telefone);
 
-    await _firestore.collection('fichas').doc(user.uid).set(
-      {
-        'telefone': telefoneFormatado,
-        'atualizadoEm': DateTime.now().toUtc().toIso8601String(),
-      },
-      SetOptions(merge: true),
-    );
+    try {
+      await _firestore.collection('fichas').doc(user.uid).set(
+        {
+          'telefone': telefoneFormatado,
+          'atualizadoEm': DateTime.now().toUtc().toIso8601String(),
+        },
+        SetOptions(merge: true),
+      ).timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // Ignora erro de escrita direta para não bloquear a conclusão
+    }
   }
 
   @override
