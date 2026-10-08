@@ -653,6 +653,28 @@ class _CadastroState extends State<Cadastro> {
               : 'Cadastro iniciado. Sua ficha está em rascunho; isto não concede aprovação ou função.',
         );
       }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          if (e.code == 'email-already-in-use') {
+            aviso =
+                'Este e-mail já possui cadastro. Volte e clique em "Entrar" para acessar sua conta.';
+          } else if (e.code == 'weak-password') {
+            aviso =
+                'A senha escolhida é fraca. Utilize pelo menos 6 caracteres.';
+          } else {
+            aviso =
+                'Não foi possível concluir o cadastro (${e.message ?? e.code}).';
+          }
+        });
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (mounted) {
+        setState(() {
+          aviso = e.message ??
+              'Não foi possível concluir agora. Revise os campos e tente novamente.';
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(

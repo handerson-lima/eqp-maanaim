@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 /// Igreja do catálogo administrável; exibida como "Nome - Código".
@@ -99,27 +100,72 @@ List<EquipeCatalogo> filtrarEquipes(
         .toList(growable: false);
 
 class FirebaseCatalogoGateway implements CatalogoGateway {
-  FirebaseCatalogoGateway(this._functions);
+  FirebaseCatalogoGateway(this._functions, [FirebaseFirestore? firestore])
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFunctions _functions;
+  final FirebaseFirestore _firestore;
 
   @override
   Future<CatalogoResposta> consultar({String? termo}) async {
-    final payload = <String, dynamic>{};
-    if (termo != null && termo.trim().isNotEmpty) {
-      payload['termo'] = termo.trim();
+    try {
+      final payload = <String, dynamic>{};
+      if (termo != null && termo.trim().isNotEmpty) {
+        payload['termo'] = termo.trim();
+      }
+      final resposta =
+          await _functions.httpsCallable('consultarCatalogo').call(payload);
+      final dados = (resposta.data as Map).cast<String, dynamic>();
+      return CatalogoResposta(
+        igrejas: (dados['igrejas'] as List? ?? const [])
+            .map((item) => _mapearIgreja((item as Map).cast<String, dynamic>()))
+            .toList(growable: false),
+        equipes: (dados['equipes'] as List? ?? const [])
+            .map((item) => _mapearEquipe((item as Map).cast<String, dynamic>()))
+            .toList(growable: false),
+      );
+    } catch (_) {
+      // Fallback para usuários voluntários (não-administradores):
+      // Leitura direta das coleções abertas por firestore.rules para registros ativos.
+      final resultados = await Future.wait([
+        _firestore.collection('igrejas').where('ativo', isEqualTo: true).get(),
+        _firestore.collection('equipes').where('ativo', isEqualTo: true).get(),
+      ]);
+
+      final igrejasSnap = resultados[0];
+      final equipesSnap = resultados[1];
+
+      final igrejas = igrejasSnap.docs.map((doc) {
+        final d = doc.data();
+        return IgrejaCatalogo(
+          id: doc.id,
+          nome: d['nome'] as String? ?? '',
+          codigo: d['codigo']?.toString() ?? '',
+          ativo: d['ativo'] as bool? ?? true,
+        );
+      }).toList();
+
+      final equipes = equipesSnap.docs.map((doc) {
+        final d = doc.data();
+        return EquipeCatalogo(
+          id: doc.id,
+          nome: d['nome'] as String? ?? '',
+          ativo: d['ativo'] as bool? ?? true,
+        );
+      }).toList();
+
+      final igrejasFiltradas = termo != null && termo.trim().isNotEmpty
+          ? filtrarIgrejas(igrejas, termo)
+          : igrejas;
+      final equipesFiltradas = termo != null && termo.trim().isNotEmpty
+          ? filtrarEquipes(equipes, termo)
+          : equipes;
+
+      return CatalogoResposta(
+        igrejas: igrejasFiltradas,
+        equipes: equipesFiltradas,
+      );
     }
-    final resposta =
-        await _functions.httpsCallable('consultarCatalogo').call(payload);
-    final dados = (resposta.data as Map).cast<String, dynamic>();
-    return CatalogoResposta(
-      igrejas: (dados['igrejas'] as List? ?? const [])
-          .map((item) => _mapearIgreja((item as Map).cast<String, dynamic>()))
-          .toList(growable: false),
-      equipes: (dados['equipes'] as List? ?? const [])
-          .map((item) => _mapearEquipe((item as Map).cast<String, dynamic>()))
-          .toList(growable: false),
-    );
   }
 
   @override

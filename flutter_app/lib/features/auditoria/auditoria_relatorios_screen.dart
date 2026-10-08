@@ -65,6 +65,7 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
         ),
       );
 
+      if (!mounted) return;
       setState(() {
         if (carregarMais) {
           _itensAuditoria.addAll(res.itens);
@@ -76,6 +77,7 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
         _carregandoAuditoria = false;
       });
     } catch (err) {
+      if (!mounted) return;
       setState(() {
         _erroAuditoria = 'Não foi possível carregar os registros de auditoria.';
         _carregandoAuditoria = false;
@@ -91,11 +93,13 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
 
     try {
       final res = await widget.gateway.consultarRelatorio(const FiltrosRelatorio());
+      if (!mounted) return;
       setState(() {
         _relatorio = res;
         _carregandoRelatorio = false;
       });
     } catch (err) {
+      if (!mounted) return;
       setState(() {
         _erroRelatorio = 'Não foi possível gerar o relatório operacional.';
         _carregandoRelatorio = false;
