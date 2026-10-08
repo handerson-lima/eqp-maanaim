@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "descricao": "Especificação normativa de isolamento de ambientes Firebase, papéis IAM de menor privilégio e políticas de implantação/promoção (AD-1, AD-12).",
+  "versao": "1.0.0",
+  "ambientes": {
+    "desenvolvimento": {
+      "alias": "development",
+      "projetoId": "eqp-maanaim-dev",
+      "descricao": "Ambiente de desenvolvimento e testes integrados locais/remotos.",
+      "storageBucket": "eqp-maanaim-dev.appspot.com",
+      "appCheckEnforced": false,
+      "politicaPromocao": {
+        "exigeTestesUnitarios": true,
+        "exigeEmulatorSuite": true,
+        "aprovacaoManual": false
+      }
+    },
+    "homologacao": {
+      "alias": "staging",
+      "projetoId": "eqp-maanaim-staging",
+      "descricao": "Ambiente de homologação idêntico a produção para validação pré-release.",
+      "storageBucket": "eqp-maanaim-staging.appspot.com",
+      "appCheckEnforced": true,
+      "politicaPromocao": {
+        "exigeTestesUnitarios": true,
+        "exigeEmulatorSuite": true,
+        "exigeAuditoriaSeguranca": true,
+        "aprovacaoManual": true
+      }
+    },
+    "producao": {
+      "alias": "production",
+      "projetoId": "eqp-maanaim-prod",
+      "descricao": "Ambiente produtivo com auditoria estrita, retenção e isolamento total.",
+      "storageBucket": "eqp-maanaim-prod.appspot.com",
+      "appCheckEnforced": true,
+      "politicaPromocao": {
+        "exigeTestesUnitarios": true,
+        "exigeEmulatorSuite": true,
+        "exigeAuditoriaSeguranca": true,
+        "exigeValidacaoIndices": true,
+        "aprovacaoManual": true
+      }
+    }
+  },
+  "serviceAccounts": {
+    "cloudFunctions": {
+      "descricao": "Conta de serviço de execução das Cloud Functions do Maanaim.",
+      "principio": "Menor privilégio (AD-12). Proibido uso de roles/owner ou roles/editor.",
+      "papeisObrigatorios": [
+        "roles/datastore.user",
+        "roles/firebaseauth.admin",
+        "roles/cloudfunctions.invoker",
+        "roles/logging.logWriter"
+      ],
+      "papeisEscopados": [
+        {
+          "recurso": "gs://<projeto>.appspot.com/pdfs/*",
+          "papel": "roles/storage.objectAdmin",
+          "justificativa": "Criação, leitura de assinatura de download e anonimização de termos em PDF privado."
+        }
+      ],
+      "papeisProibidos": [
+        "roles/owner",
+        "roles/editor",
+        "roles/iam.securityAdmin",
+        "roles/resourcemanager.organizationAdmin"
+      ]
+    }
+  },
+  "politicaSegredosCliente": {
+    "descricao": "O cliente Flutter Web/PWA opera sob modelo público confiando exclusivamente em autenticação e App Check (AD-1, AD-12).",
+    "proibicoesCliente": [
+      "service_account_private_key",
+      "service_account_credentials",
+      "private_key",
+      "jwt_signing_secret",
+      "firebase_admin_sdk_credential"
+    ],
+    "camposPermitidosCliente": [
+      "FIREBASE_API_KEY",
+      "FIREBASE_APP_ID",
+      "FIREBASE_PROJECT_ID",
+      "FIREBASE_MESSAGING_SENDER_ID",
+      "FIREBASE_AUTH_DOMAIN",
+      "FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY",
+      "PASSWORD_RESET_CONTINUE_URL"
+    ]
+  }
+}

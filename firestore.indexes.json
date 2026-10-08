@@ -9,11 +9,93 @@
       ]
     },
     {
+      "collectionGroup": "participacoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fichaId", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "fichas",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "estado", "order": "ASCENDING" },
         { "fieldPath": "atualizadoEm", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "fichas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "igrejaId", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "filaPendencias",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "igrejaId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "filaPendenciasEquipe",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "equipeId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "vinculosPastorIgreja",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pessoaId", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "vinculosPastorIgreja",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pessoaId", "order": "ASCENDING" },
+        { "fieldPath": "entidadeId", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "vinculosPastorEquipe",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pessoaId", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "vinculosPastorEquipe",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pessoaId", "order": "ASCENDING" },
+        { "fieldPath": "entidadeId", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "auditoria",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "retencaoAte", "order": "ASCENDING" },
+        { "fieldPath": "materializadoEm", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "alertasOperacionais",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tipo", "order": "ASCENDING" },
+        { "fieldPath": "criadoEm", "order": "ASCENDING" }
       ]
     }
   ],

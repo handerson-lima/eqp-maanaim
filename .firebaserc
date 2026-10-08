@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "eqp-maanaim"
+    "default": "eqp-maanaim",
+    "development": "eqp-maanaim-dev",
+    "staging": "eqp-maanaim-staging",
+    "production": "eqp-maanaim-prod"
   }
 }
