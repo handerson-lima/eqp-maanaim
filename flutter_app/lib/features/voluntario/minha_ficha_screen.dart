@@ -24,6 +24,7 @@ import 'cancelar_voluntariado_dialog.dart';
 import 'solicitar_reativacao_dialog.dart';
 import 'manifestar_renovacao_dialog.dart';
 import '../privacidade/politica_privacidade_card.dart';
+import '../perfil/editar_perfil_screen.dart';
 
 /// Tela responsiva mobile-first para o voluntário preencher e manter sua ficha cadastral permanente.
 class MinhaFichaScreen extends StatefulWidget {
@@ -423,6 +424,17 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       userRole: 'Voluntário',
       userStatus: estadoExibicao,
       topBarActions: [
+        IconButton(
+          tooltip: 'Editar Perfil',
+          icon: const Icon(Icons.account_circle_outlined),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => EditarPerfilScreen(
+                onVoltar: () => Navigator.of(context).maybePop(),
+              ),
+            ),
+          ),
+        ),
         IconButton(
           tooltip: 'Consulta autorizada da ficha e histórico',
           icon: const Icon(Icons.manage_search_outlined),
