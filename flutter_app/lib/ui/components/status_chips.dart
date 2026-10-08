@@ -22,7 +22,8 @@ class StatusChip extends StatelessWidget {
     super.key,
     required this.status,
     this.label,
-    this.showDot = true,
+    this.showIcon = true,
+    this.showDot = false,
   });
 
   /// Status bruto ou normalizado (ex.: 'ATIVA', 'EM_APROVACAO', 'REJEITADA', 'EXPIRADA', etc.).
@@ -31,7 +32,10 @@ class StatusChip extends StatelessWidget {
   /// Rótulo alternativo para exibição. Se nulo, utiliza a formatação canônica.
   final String? label;
 
-  /// Se deve exibir o indicador circular ao lado do texto.
+  /// Se deve exibir o ícone canônico ao lado do texto (padrão true para acessibilidade WCAG 2.2 AA).
+  final bool showIcon;
+
+  /// Se deve exibir o indicador circular ao lado do texto (quando showIcon for false).
   final bool showDot;
 
   static StatusConfig resolveConfig(String statusRaw) {
@@ -47,6 +51,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: AppColors.successBg,
           textColor: AppColors.success,
           type: StatusType.ativa,
+          icon: Icons.check_circle_outline,
         );
 
       case 'EM_APROVACAO':
@@ -56,6 +61,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: AppColors.warningBg,
           textColor: AppColors.warning,
           type: StatusType.emAprovacao,
+          icon: Icons.hourglass_top_outlined,
         );
 
       case 'AGUARDANDO':
@@ -70,6 +76,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: AppColors.warningBg,
           textColor: AppColors.warning,
           type: StatusType.aguardando,
+          icon: Icons.pending_outlined,
         );
 
       case 'EM_RENOVACAO':
@@ -79,6 +86,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: AppColors.warningBg,
           textColor: AppColors.warning,
           type: StatusType.emRenovacao,
+          icon: Icons.sync_outlined,
         );
 
       case 'REJEITADA':
@@ -88,6 +96,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: AppColors.dangerBg,
           textColor: AppColors.danger,
           type: StatusType.rejeitada,
+          icon: Icons.cancel_outlined,
         );
 
       case 'CANCELADA':
@@ -97,6 +106,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: AppColors.dangerBg,
           textColor: AppColors.danger,
           type: StatusType.cancelada,
+          icon: Icons.do_not_disturb_on_outlined,
         );
 
       case 'EXPIRADA':
@@ -106,6 +116,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: AppColors.dangerBg,
           textColor: AppColors.danger,
           type: StatusType.expirada,
+          icon: Icons.timer_off_outlined,
         );
 
       case 'INATIVA':
@@ -115,6 +126,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: Color(0xFFF0F2F5),
           textColor: Color(0xFF475467),
           type: StatusType.inativa,
+          icon: Icons.pause_circle_outline,
         );
 
       case 'RASCUNHO':
@@ -123,6 +135,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: Color(0xFFF0F2F5),
           textColor: Color(0xFF475467),
           type: StatusType.inativa,
+          icon: Icons.edit_note_outlined,
         );
 
       case 'ORIENTACAO':
@@ -132,6 +145,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: AppColors.warningBg,
           textColor: AppColors.warning,
           type: StatusType.aguardando,
+          icon: Icons.help_outline,
         );
 
       default:
@@ -140,6 +154,7 @@ class StatusChip extends StatelessWidget {
           backgroundColor: const Color(0xFFF0F2F5),
           textColor: const Color(0xFF475467),
           type: StatusType.desconhecida,
+          icon: Icons.info_outline,
         );
     }
   }
@@ -151,6 +166,7 @@ class StatusChip extends StatelessWidget {
 
     return Semantics(
       label: 'Situação: $displayLabel',
+      excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.s8,
@@ -164,7 +180,14 @@ class StatusChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (showDot) ...[
+            if (showIcon) ...[
+              Icon(
+                config.icon,
+                size: 14,
+                color: config.textColor,
+              ),
+              const SizedBox(width: AppSpacing.s4 + 2),
+            ] else if (showDot) ...[
               Container(
                 width: 6,
                 height: 6,
@@ -201,10 +224,12 @@ class StatusConfig {
     required this.backgroundColor,
     required this.textColor,
     required this.type,
+    required this.icon,
   });
 
   final String label;
   final Color backgroundColor;
   final Color textColor;
   final StatusType type;
+  final IconData icon;
 }

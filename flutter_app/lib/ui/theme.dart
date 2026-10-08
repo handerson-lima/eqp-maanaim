@@ -30,7 +30,30 @@ ThemeData temaMaanaim() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: AppColors.background,
     canvasColor: AppColors.surface,
+    focusColor: const Color(0x330B6FE8),
+    hoverColor: const Color(0xFFF0F4F8),
+    highlightColor: AppColors.blue50,
     dividerColor: AppColors.border,
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: AppColors.navy900,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      textStyle: const TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+        fontFamily: AppTypography.fontFamily,
+      ),
+      waitDuration: const Duration(milliseconds: 400),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        minimumSize: const Size(AppGeometry.minTouchTarget, AppGeometry.minTouchTarget),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppGeometry.buttonBorderRadius,
+        ),
+      ),
+    ),
     dividerTheme: const DividerThemeData(
       color: AppColors.border,
       thickness: AppGeometry.borderWidth,
@@ -80,7 +103,7 @@ ThemeData temaMaanaim() {
         borderRadius: AppGeometry.inputBorderRadius,
         borderSide: const BorderSide(
           color: AppColors.blue600,
-          width: 1.5,
+          width: 2.0,
         ),
       ),
       errorBorder: OutlineInputBorder(
@@ -94,7 +117,7 @@ ThemeData temaMaanaim() {
         borderRadius: AppGeometry.inputBorderRadius,
         borderSide: const BorderSide(
           color: AppColors.danger,
-          width: 1.5,
+          width: 2.0,
         ),
       ),
     ),
