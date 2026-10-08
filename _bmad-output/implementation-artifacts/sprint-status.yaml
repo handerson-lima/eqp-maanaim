@@ -79,11 +79,12 @@ development_status:
   6-6-verificar-segurança-índices-e-ambientes-firebase: done
   epic-6-retrospective: done
 
-  epic-7: in-progress
+  epic-7: done
   7-1-pipeline-de-ci-cd-automatizado: done
   7-2-inativacao-logica-de-igrejas-e-equipes-no-catalogo: done
   7-3-centralizacao-de-mascara-e-formatacao-de-cpf: done
   7-4-governanca-de-logs-gcp-e-deploy: done
+  epic-7-retrospective: optional
 action_items:
   - id: "epic-1-retro-item-1-configurar-runner-de-integracao-automati"
     epic: 1

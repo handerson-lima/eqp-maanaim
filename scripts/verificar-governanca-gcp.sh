@@ -70,7 +70,11 @@ if [[ -z "${PROJECT_ID}" ]]; then
 fi
 
 if [[ -z "${BUCKET_NAME}" ]]; then
-  BUCKET_NAME="${PROJECT_ID}.appspot.com"
+  if gcloud storage buckets describe "gs://${PROJECT_ID}.firebasestorage.app" &>/dev/null; then
+    BUCKET_NAME="${PROJECT_ID}.firebasestorage.app"
+  else
+    BUCKET_NAME="${PROJECT_ID}.appspot.com"
+  fi
 fi
 
 if ! command -v gcloud &> /dev/null; then
@@ -138,11 +142,11 @@ if gcloud storage buckets describe "gs://${BUCKET_NAME}" --format=json > "${TEMP
   CHECK_LIFECYCLE=$(node -e "
     const fs = require('fs');
     const b = JSON.parse(fs.readFileSync('${TEMP_DIR}/bucket.json', 'utf8'));
-    const rules = b.lifecycle?.rule || [];
+    const rules = b.lifecycle_config?.rule || b.lifecycle?.rule || [];
     const delete5y = rules.find(r => 
-      r.action?.type === 'Delete' &&
+      (r.action?.type === 'Delete' || r.action?.type === 'delete') &&
       r.condition?.age >= 1825 &&
-      r.condition?.matchesPrefix?.some(p => p.startsWith('pdfs'))
+      (r.condition?.matchesPrefix || r.condition?.matches_prefix || []).some(p => p.startsWith('pdfs'))
     );
     console.log(delete5y ? 'OK' : 'MISSING');
   ")

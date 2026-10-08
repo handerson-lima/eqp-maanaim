@@ -7,7 +7,8 @@
       "categoria": "IAM",
       "displayName": "Maanaim - Alteracao de IAM",
       "documentation": {
-        "content": "Qualquer alteracao de politica de IAM no projeto deve ser revisada pela coordenacao de TI."
+        "content": "Qualquer alteracao de politica de IAM no projeto deve ser revisada pela coordenacao de TI.",
+        "mimeType": "text/markdown"
       },
       "conditions": [
         {
@@ -19,6 +20,9 @@
       ],
       "combiner": "OR",
       "alertStrategy": {
+        "notificationRateLimit": {
+          "period": "300s"
+        },
         "autoClose": "604800s"
       },
       "severity": "ERROR"
@@ -27,7 +31,8 @@
       "categoria": "RULES",
       "displayName": "Maanaim - Alteracao de Firestore/Storage Rules",
       "documentation": {
-        "content": "Alteracoes de regras de seguranca do Firestore ou Storage exigem revisao imediata."
+        "content": "Alteracoes de regras de seguranca do Firestore ou Storage exigem revisao imediata.",
+        "mimeType": "text/markdown"
       },
       "conditions": [
         {
@@ -39,6 +44,9 @@
       ],
       "combiner": "OR",
       "alertStrategy": {
+        "notificationRateLimit": {
+          "period": "300s"
+        },
         "autoClose": "604800s"
       },
       "severity": "ERROR"
@@ -47,7 +55,8 @@
       "categoria": "SERVICE_ACCOUNT",
       "displayName": "Maanaim - Alteracao de Conta de Servico",
       "documentation": {
-        "content": "Criacao, alteracao de papeis ou remocao de contas de servico deve ser auditada (menor privilegio)."
+        "content": "Criacao, alteracao de papeis ou remocao de contas de servico deve ser auditada (menor privilegio).",
+        "mimeType": "text/markdown"
       },
       "conditions": [
         {
@@ -59,6 +68,9 @@
       ],
       "combiner": "OR",
       "alertStrategy": {
+        "notificationRateLimit": {
+          "period": "300s"
+        },
         "autoClose": "604800s"
       },
       "severity": "WARNING"
@@ -67,7 +79,8 @@
       "categoria": "DELETION",
       "displayName": "Maanaim - Delecao de Documento ou Objeto",
       "documentation": {
-        "content": "Delecoes de documentos Firestore ou objetos Storage exigem verificacao (retencao de 5 anos)."
+        "content": "Delecoes de documentos Firestore ou objetos Storage exigem verificacao (retencao de 5 anos).",
+        "mimeType": "text/markdown"
       },
       "conditions": [
         {
@@ -79,6 +92,9 @@
       ],
       "combiner": "OR",
       "alertStrategy": {
+        "notificationRateLimit": {
+          "period": "300s"
+        },
         "autoClose": "604800s"
       },
       "severity": "WARNING"
@@ -87,7 +103,8 @@
       "categoria": "BACKUP_FAILURE",
       "displayName": "Maanaim - Falha de Backup do Firestore",
       "documentation": {
-        "content": "Falhas de backup agendado/exportacao do Firestore devem ser tratadas dentro do prazo de retencao."
+        "content": "Falhas de backup agendado/exportacao do Firestore devem ser tratadas dentro do prazo de retencao.",
+        "mimeType": "text/markdown"
       },
       "conditions": [
         {
@@ -99,6 +116,9 @@
       ],
       "combiner": "OR",
       "alertStrategy": {
+        "notificationRateLimit": {
+          "period": "300s"
+        },
         "autoClose": "604800s"
       },
       "severity": "ERROR"

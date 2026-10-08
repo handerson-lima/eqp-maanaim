@@ -12,7 +12,7 @@ export { semanaIso } from './expurgarRascunhosGate.js';
  */
 export const expurgarRascunhosScheduled = onSchedule(
   {
-    schedule: 'every week',
+    schedule: '0 3 * * 0',
     timeZone: 'UTC',
     retryCount: 3,
   },

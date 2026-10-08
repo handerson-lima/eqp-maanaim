@@ -4,12 +4,12 @@
   "functions": {
     "source": "functions",
     "ignore": ["node_modules", ".git", "firebase-debug.log", "test", "*.local"],
-    "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+    "predeploy": ["node \"$RESOURCE_DIR/node_modules/typescript/bin/tsc\" -p \"$RESOURCE_DIR\""]
   },
   "hosting": {
     "public": "flutter_app/build/web",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "predeploy": ["bash -c 'cd flutter_app && flutter build web --release'"],
+    "predeploy": ["bash -c 'cd flutter_app && flutter build web --release --dart-define-from-file=.env.dartdefines.json'"],
     "rewrites": [
       { "source": "**", "destination": "/index.html" }
     ]

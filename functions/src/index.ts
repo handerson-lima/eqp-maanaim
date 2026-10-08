@@ -1,5 +1,13 @@
 import { initializeApp } from 'firebase-admin/app';
+import { setGlobalOptions } from 'firebase-functions/v2';
+
 initializeApp();
+setGlobalOptions({
+  region: 'us-central1',
+  maxInstances: 10,
+  cpu: 'gcf_gen1',
+  memory: '256MiB',
+});
 export { criarOuRetomarRascunho } from './commands/criarOuRetomarRascunho.js';
 export { alterarAutoridadeAdministrativa } from './commands/gerenciarAutoridadeAdministrativa.js';
 export { semearCatalogoInicial } from './commands/semearCatalogoInicial.js';
