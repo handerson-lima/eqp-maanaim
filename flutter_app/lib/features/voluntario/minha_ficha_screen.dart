@@ -414,13 +414,29 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         ? null
         : (_ficha?.estado ?? 'RASCUNHO');
 
+    final String? nomeValidoFicha =
+        (_ficha?.nomeCompleto.isNotEmpty == true &&
+                !_ficha!.nomeCompleto.contains('@') &&
+                _ficha!.nomeCompleto.toLowerCase() != 'voluntário')
+            ? _ficha!.nomeCompleto
+            : null;
+
+    final String? nomeValidoWidget =
+        (widget.userName != null &&
+                widget.userName!.isNotEmpty &&
+                !widget.userName!.contains('@') &&
+                widget.userName!.toLowerCase() != 'voluntário')
+            ? widget.userName
+            : null;
+
+    final String nomeExibicao =
+        nomeValidoFicha ?? nomeValidoWidget ?? 'Voluntário';
+
     return AppShell(
       items: navItems,
       selectedIndex: 0,
       onLogout: widget.onSair,
-      userName: _ficha?.nomeCompleto.isNotEmpty == true
-          ? _ficha!.nomeCompleto
-          : widget.userName,
+      userName: nomeExibicao,
       userRole: 'Voluntário',
       userStatus: estadoExibicao,
       topBarActions: [
@@ -430,11 +446,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => EditarPerfilScreen(
-                nomeInicial: _ficha?.nomeCompleto.isNotEmpty == true
-                    ? _ficha!.nomeCompleto
-                    : (widget.userName != null && widget.userName!.isNotEmpty
-                        ? widget.userName
-                        : null),
+                nomeInicial: nomeValidoFicha ?? nomeValidoWidget,
                 onVoltar: () => Navigator.of(context).maybePop(),
               ),
             ),

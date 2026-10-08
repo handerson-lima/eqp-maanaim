@@ -154,6 +154,9 @@ class PerfilService implements IPerfilService {
     }
 
     String nome = (user.displayName ?? '').trim();
+    if (nome.contains('@')) {
+      nome = '';
+    }
     String telefone = '';
     String? fotoUrl = user.photoURL;
 
@@ -166,7 +169,10 @@ class PerfilService implements IPerfilService {
         if (dados != null && dados['existe'] == true && dados['ficha'] != null) {
           final fichaMap = (dados['ficha'] as Map).cast<String, dynamic>();
           final nomeFicha = fichaMap['nomeCompleto'] as String?;
-          if (nomeFicha != null && nomeFicha.trim().isNotEmpty) {
+          if (nomeFicha != null &&
+              nomeFicha.trim().isNotEmpty &&
+              !nomeFicha.contains('@') &&
+              nomeFicha.trim().toLowerCase() != 'voluntário') {
             nome = nomeFicha.trim();
             user.updateDisplayName(nome).catchError((_) {});
           }
@@ -184,7 +190,7 @@ class PerfilService implements IPerfilService {
       }
     }
 
-    if (nome.isEmpty) {
+    if (nome.isEmpty || nome.contains('@')) {
       nome = 'Voluntário';
     }
 
@@ -228,22 +234,33 @@ class PerfilService implements IPerfilService {
       customMetadata: {'uid': user.uid},
     );
 
-    final uploadTask = storageRef.putData(bytes, metadata);
-    final snapshot = await uploadTask.timeout(
-      const Duration(seconds: 30),
-      onTimeout: () {
-        uploadTask.cancel();
-        throw TimeoutException('Tempo limite excedido no upload da foto.');
-      },
-    );
-    final downloadUrl = await snapshot.ref.getDownloadURL().timeout(
-      const Duration(seconds: 15),
-    );
+    try {
+      final uploadTask = storageRef.putData(bytes, metadata);
+      final snapshot = await uploadTask.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          uploadTask.cancel();
+          throw TimeoutException('Tempo limite excedido no upload da foto.');
+        },
+      );
+      final downloadUrl = await snapshot.ref.getDownloadURL().timeout(
+        const Duration(seconds: 15),
+      );
 
-    // Atualiza o perfil no Auth
-    await user.updatePhotoURL(downloadUrl);
+      // Atualiza o perfil no Auth
+      await user.updatePhotoURL(downloadUrl);
 
-    return downloadUrl;
+      return downloadUrl;
+    } on FirebaseException catch (e) {
+      if (e.code == 'quota-exceeded') {
+        throw StateError(
+          'O serviço de armazenamento está temporariamente indisponível (limite de cota atingido). Tente novamente mais tarde.',
+        );
+      } else if (e.code == 'unauthorized' || e.code == 'permission-denied') {
+        throw StateError('Permissão negada para atualizar a foto de perfil.');
+      }
+      rethrow;
+    }
   }
 
   @override

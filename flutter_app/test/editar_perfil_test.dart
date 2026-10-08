@@ -31,6 +31,7 @@ class PerfilServiceFake implements IPerfilService {
   String? ultimoEmailSolicitado;
   Uint8List? ultimosBytesFoto;
   bool deveLancarErroNoUpload = false;
+  Object? erroUpload;
 
   @override
   Future<PerfilUsuario> obterPerfil() async {
@@ -42,6 +43,9 @@ class PerfilServiceFake implements IPerfilService {
     required Uint8List bytes,
     required String extensao,
   }) async {
+    if (erroUpload != null) {
+      throw erroUpload!;
+    }
     if (deveLancarErroNoUpload) {
       throw const FotoMuitoGrandeException(3000000);
     }
@@ -230,6 +234,70 @@ void main() {
 
       expect(find.text('Informe um e-mail válido.'), findsOneWidget);
       expect(service.ultimoEmailSolicitado, isNull);
+    });
+
+    testWidgets('recusa e-mail como nomeInicial e usa fallback do perfil', (tester) async {
+      final service = PerfilServiceFake(
+        perfilInicial: const PerfilUsuario(
+          uid: 'user-123',
+          nome: 'Voluntário',
+          email: 'usuario@example.com',
+          telefone: '',
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: EditarPerfilScreen(
+            service: service,
+            nomeInicial: 'usuario@example.com',
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump();
+
+      // Somente o campo de e-mail pode ter o e-mail, e não o campo Nome Completo
+      expect(find.widgetWithText(TextFormField, 'usuario@example.com'), findsOneWidget);
+      expect(find.text('Voluntário'), findsWidgets);
+    });
+
+    testWidgets('exibe mensagem amigável quando quota-exceeded ocorre no salvamento', (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final service = PerfilServiceFake();
+      service.erroUpload = StateError(
+        '[firebase_storage/quota-exceeded] Firebase Storage: Quota for bucket exceeded',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: EditarPerfilScreen(service: service),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump();
+
+      final picker = tester.widget<AvatarPickerWidget>(find.byType(AvatarPickerWidget));
+      picker.onImageSelected(png1x1Valido, 'png');
+      await tester.pump();
+
+      final botaoSalvar = find.text('Salvar Alterações');
+      await tester.ensureVisible(botaoSalvar);
+      await tester.pumpAndSettle();
+
+      await tester.tap(botaoSalvar);
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text('O serviço de armazenamento está temporariamente indisponível (limite de cota atingido). Tente novamente mais tarde.'),
+        findsOneWidget,
+      );
     });
   });
 }

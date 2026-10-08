@@ -444,13 +444,21 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           onSair: _sair,
         );
       }
+      final nomeAuth = FirebaseAuth.instance.currentUser?.displayName?.trim();
+      final nomeValido = (nomeAuth != null &&
+              nomeAuth.isNotEmpty &&
+              !nomeAuth.contains('@') &&
+              nomeAuth.toLowerCase() != 'voluntário')
+          ? nomeAuth
+          : null;
+
       return MinhaFichaScreen(
         fichaGateway: _obterFichaGateway(),
         catalogoGateway: _obterCatalogoGateway(),
         participacaoGateway: _obterParticipacaoGateway(),
         termoGateway: _obterTermoGateway(),
         onSair: _sair,
-        userName: widget.auth.emailAtual,
+        userName: nomeValido,
       );
     },
   );

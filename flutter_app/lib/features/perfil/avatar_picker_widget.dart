@@ -96,55 +96,68 @@ class _AvatarPickerWidgetState extends State<AvatarPickerWidget> {
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
-            // Container do Avatar
-            Container(
-              width: tamanho,
-              height: tamanho,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.navy900,
-                border: Border.all(
-                  color: AppColors.surface,
-                  width: 3.0,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x1F000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
+            // Container do Avatar com toque no círculo completo
+            Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              child: InkWell(
+                onTap: widget.carregando ? null : _selecionarImagem,
+                customBorder: const CircleBorder(),
+                child: Container(
+                  width: tamanho,
+                  height: tamanho,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.navy900,
+                    border: Border.all(
+                      color: AppColors.surface,
+                      width: 3.0,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1F000000),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: ClipOval(
-                child: widget.carregando
-                    ? const Center(
-                        child: SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 3,
-                            color: AppColors.surface,
-                          ),
-                        ),
-                      )
-                    : widget.previewBytes != null
-                        ? Image.memory(
-                            widget.previewBytes!,
-                            width: tamanho,
-                            height: tamanho,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildIniciais(iniciais),
+                  child: ClipOval(
+                    child: widget.carregando
+                        ? const Center(
+                            child: SizedBox(
+                              width: 32,
+                              height: 32,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                color: AppColors.surface,
+                              ),
+                            ),
                           )
-                        : (widget.fotoUrl != null &&
-                                widget.fotoUrl!.trim().isNotEmpty)
-                            ? Image.network(
-                                widget.fotoUrl!,
+                        : widget.previewBytes != null
+                            ? Image.memory(
+                                widget.previewBytes!,
+                                key: ValueKey(widget.previewBytes.hashCode),
                                 width: tamanho,
                                 height: tamanho,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => _buildIniciais(iniciais),
+                                gaplessPlayback: true,
+                                errorBuilder: (_, __, ___) =>
+                                    _buildIniciais(iniciais),
                               )
-                            : _buildIniciais(iniciais),
+                            : (widget.fotoUrl != null &&
+                                    widget.fotoUrl!.trim().isNotEmpty)
+                                ? Image.network(
+                                    widget.fotoUrl!,
+                                    width: tamanho,
+                                    height: tamanho,
+                                    fit: BoxFit.cover,
+                                    gaplessPlayback: true,
+                                    errorBuilder: (_, __, ___) =>
+                                        _buildIniciais(iniciais),
+                                  )
+                                : _buildIniciais(iniciais),
+                  ),
+                ),
               ),
             ),
 

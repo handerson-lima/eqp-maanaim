@@ -55,10 +55,17 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
     _service = widget.service ?? PerfilService();
 
     final nomeIn = widget.nomeInicial?.trim();
-    if (nomeIn != null && nomeIn.isNotEmpty) {
+    final nomeValido = (nomeIn != null &&
+            nomeIn.isNotEmpty &&
+            !nomeIn.contains('@') &&
+            nomeIn.toLowerCase() != 'voluntário')
+        ? nomeIn
+        : null;
+
+    if (nomeValido != null) {
       _perfil = PerfilUsuario(
         uid: FirebaseAuth.instance.currentUser?.uid ?? '',
-        nome: nomeIn,
+        nome: nomeValido,
         email: FirebaseAuth.instance.currentUser?.email ?? '',
         telefone: TelefoneFormatter.formatar(widget.telefoneInicial ?? ''),
         fotoUrl: widget.fotoUrlInicial ?? FirebaseAuth.instance.currentUser?.photoURL,
@@ -91,9 +98,16 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
       if (!mounted) return;
 
       setState(() {
-        final nomeFinal = (_perfil != null && _perfil!.nome != 'Voluntário' && perfil.nome == 'Voluntário')
-            ? _perfil!.nome
-            : perfil.nome;
+        String nomeFinal = perfil.nome;
+        if (nomeFinal.contains('@') || nomeFinal.isEmpty) {
+          nomeFinal = 'Voluntário';
+        }
+        if (nomeFinal == 'Voluntário' &&
+            _perfil != null &&
+            !_perfil!.nome.contains('@') &&
+            _perfil!.nome != 'Voluntário') {
+          nomeFinal = _perfil!.nome;
+        }
 
         _perfil = perfil.copyWith(nome: nomeFinal);
         if (_emailController.text.isEmpty) {
@@ -178,9 +192,31 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final erroTexto = e.toString();
+      final String mensagemAmigavel;
+      if (erroTexto.contains('quota-exceeded')) {
+        mensagemAmigavel =
+            'O serviço de armazenamento está temporariamente indisponível (limite de cota atingido). Tente novamente mais tarde.';
+      } else if (erroTexto.contains('unauthorized') ||
+          erroTexto.contains('permission-denied') ||
+          erroTexto.contains('unauthenticated')) {
+        mensagemAmigavel =
+            'Permissão negada para atualizar as informações do perfil.';
+      } else if (e is FotoMuitoGrandeException) {
+        mensagemAmigavel = e.toString();
+      } else if (erroTexto.contains('network') ||
+          erroTexto.contains('timeout') ||
+          erroTexto.contains('Tempo limite')) {
+        mensagemAmigavel =
+            'Tempo limite esgotado. Verifique sua conexão e tente novamente.';
+      } else {
+        mensagemAmigavel =
+            'Não foi possível salvar as alterações no momento. Tente novamente.';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao salvar perfil: $e'),
+          content: Text(mensagemAmigavel),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -382,7 +418,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
               ),
               const Center(
                 child: Text(
-                  'Toque na câmera para alterar sua foto de perfil (máx. 2 MB)',
+                  'Toque na foto ou na câmera para alterar (máx. 2 MB)',
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -435,6 +471,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                     children: [
                       // Nome (Leitura apenas)
                       TextFormField(
+                        key: ValueKey(perfil.nome),
                         initialValue: perfil.nome,
                         readOnly: true,
                         decoration: const InputDecoration(
