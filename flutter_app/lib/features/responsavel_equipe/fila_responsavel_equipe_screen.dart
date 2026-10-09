@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../ui/components/layout_elements.dart';
 import '../../ui/components/metrics.dart';
 import '../../ui/tokens.dart';
+import '../analise/detalhe_solicitacao_model.dart';
+import '../analise/detalhe_solicitacao_screen.dart';
+import '../analise/detalhe_solicitacao_service.dart';
 import '../renovacao/dashboard_renovacao_service.dart';
 import 'responsavel_equipe_service.dart';
 
@@ -10,12 +13,14 @@ class FilaResponsavelEquipeScreen extends StatefulWidget {
   const FilaResponsavelEquipeScreen({
     super.key,
     required this.gateway,
+    this.detalheGateway,
     this.dashboardRenovacaoGateway,
     this.onSair,
     this.dentroDeShell = false,
   });
 
   final ResponsavelEquipeGateway gateway;
+  final DetalheSolicitacaoGateway? detalheGateway;
   final DashboardRenovacaoGateway? dashboardRenovacaoGateway;
   final VoidCallback? onSair;
   final bool dentroDeShell;
@@ -342,6 +347,37 @@ class _FilaResponsavelEquipeScreenState
         ),
       );
       _carregarFila();
+    }
+  }
+
+  Future<void> _abrirDetalheSolicitacao(ItemFilaResponsavelEquipe item) async {
+    final resultado = await Navigator.of(context).push<ResultadoDecisaoContextual>(
+      MaterialPageRoute(
+        builder: (_) => DetalheSolicitacaoScreen(
+          fichaId: item.fichaId,
+          nomeVoluntarioInicial: item.voluntarioNome,
+          papel: PapelContextualAnalise.responsavelEquipe,
+          equipeEscopoId: item.equipeId,
+          isRenovacaoAnual: item.isRenovacaoAnual,
+          cicloId: item.cicloId,
+          versaoInicial: item.versao,
+          gateway: widget.detalheGateway ??
+              CompostoDetalheSolicitacaoGateway(responsavelGateway: widget.gateway),
+          onDecisaoConcluida: (res) {
+            if (mounted) {
+              setState(() {
+                _pendencias.removeWhere((p) => p.participacaoId == item.participacaoId);
+              });
+            }
+          },
+        ),
+      ),
+    );
+
+    if (resultado != null && mounted) {
+      setState(() {
+        _pendencias.removeWhere((p) => p.participacaoId == item.participacaoId);
+      });
     }
   }
 
@@ -772,6 +808,18 @@ class _FilaResponsavelEquipeScreenState
                         : Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              ElevatedButton.icon(
+                                key: Key('btnAnalisar_${item.participacaoId}'),
+                                onPressed: () => _abrirDetalheSolicitacao(item),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.navy900,
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size(100, AppGeometry.minTouchTarget),
+                                ),
+                                icon: const Icon(Icons.assignment_outlined, size: 16),
+                                label: const Text('Analisar'),
+                              ),
+                              const SizedBox(width: 8),
                               OutlinedButton.icon(
                                 key: Key('btnRecusar_${item.participacaoId}'),
                                 onPressed: () => _abrirModalRecusa(item),
@@ -944,6 +992,17 @@ class _FilaResponsavelEquipeScreenState
                 overflowSpacing: AppSpacing.s8,
                 alignment: MainAxisAlignment.end,
                 children: [
+                  ElevatedButton.icon(
+                    key: Key('btnAnalisar_${item.participacaoId}'),
+                    onPressed: () => _abrirDetalheSolicitacao(item),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.navy900,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(110, AppGeometry.minTouchTarget),
+                    ),
+                    icon: const Icon(Icons.assignment_outlined, size: 18),
+                    label: const Text('Analisar'),
+                  ),
                   OutlinedButton.icon(
                     key: Key('btnRecusar_${item.participacaoId}'),
                     onPressed: () => _abrirModalRecusa(item),

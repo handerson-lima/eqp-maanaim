@@ -5,6 +5,9 @@ import '../../ui/components/layout_elements.dart';
 import '../../ui/components/metrics.dart';
 import '../../ui/components/status_chips.dart';
 import '../../ui/tokens.dart';
+import '../analise/detalhe_solicitacao_model.dart';
+import '../analise/detalhe_solicitacao_screen.dart';
+import '../analise/detalhe_solicitacao_service.dart';
 import '../renovacao/dashboard_renovacao_service.dart';
 import 'pastor_service.dart';
 
@@ -12,6 +15,7 @@ class FilaPastorScreen extends StatefulWidget {
   const FilaPastorScreen({
     super.key,
     required this.gateway,
+    this.detalheGateway,
     this.dashboardRenovacaoGateway,
     this.onSair,
     this.userName,
@@ -19,6 +23,7 @@ class FilaPastorScreen extends StatefulWidget {
   });
 
   final PastorLocalGateway gateway;
+  final DetalheSolicitacaoGateway? detalheGateway;
   final DashboardRenovacaoGateway? dashboardRenovacaoGateway;
   final VoidCallback? onSair;
   final String? userName;
@@ -329,6 +334,36 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
           backgroundColor: AppColors.danger,
         ),
       );
+    }
+  }
+
+  Future<void> _abrirDetalheSolicitacao(ItemFilaPastor item) async {
+    final resultado = await Navigator.of(context).push<ResultadoDecisaoContextual>(
+      MaterialPageRoute(
+        builder: (_) => DetalheSolicitacaoScreen(
+          fichaId: item.fichaId,
+          nomeVoluntarioInicial: item.voluntarioNome,
+          papel: PapelContextualAnalise.pastorLocal,
+          isRenovacaoAnual: item.isRenovacaoAnual,
+          cicloId: item.cicloId,
+          versaoInicial: item.versao,
+          gateway: widget.detalheGateway ??
+              CompostoDetalheSolicitacaoGateway(pastorGateway: widget.gateway),
+          onDecisaoConcluida: (res) {
+            if (mounted) {
+              setState(() {
+                _pendencias.removeWhere((p) => p.fichaId == res.fichaId);
+              });
+            }
+          },
+        ),
+      ),
+    );
+
+    if (resultado != null && mounted) {
+      setState(() {
+        _pendencias.removeWhere((p) => p.fichaId == resultado.fichaId);
+      });
     }
   }
 
@@ -740,6 +775,18 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        ElevatedButton.icon(
+                          key: Key('btnAnalisar_${item.fichaId}'),
+                          onPressed: processando ? null : () => _abrirDetalheSolicitacao(item),
+                          icon: const Icon(Icons.assignment_outlined, size: 16),
+                          label: const Text('Analisar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.navy900,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(100, AppGeometry.minTouchTarget),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         OutlinedButton(
                           key: Key('btnRecusar_${item.fichaId}'),
                           onPressed: processando ? null : () => _abrirModalRecusa(item),
@@ -890,6 +937,17 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
               alignment: WrapAlignment.end,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
+                ElevatedButton.icon(
+                  key: Key('btnAnalisar_${item.fichaId}'),
+                  onPressed: processando ? null : () => _abrirDetalheSolicitacao(item),
+                  icon: const Icon(Icons.assignment_outlined, size: 16),
+                  label: const Text('Analisar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.navy900,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(110, AppGeometry.minTouchTarget),
+                  ),
+                ),
                 OutlinedButton(
                   key: Key('btnRecusar_${item.fichaId}'),
                   onPressed: processando ? null : () => _abrirModalRecusa(item),

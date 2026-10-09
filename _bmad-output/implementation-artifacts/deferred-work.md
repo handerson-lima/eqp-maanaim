@@ -120,3 +120,8 @@
 - Texto de marca "Maanaim" adicionado ao `_headerCompacto` do login, fora do Code Map (`flutter_app/lib/ui/identidade.dart:92-102`). Mudança de composição de UI pertencente à Story 8.4 (shell/acesso público).
 - `status_chips.dart` é listado como modificado no Code Map/Tasks, mas não foi alterado; o componente ainda permite `showIcon: false`/`showDot` (chip só-cor) (`flutter_app/lib/ui/components/status_chips.dart:25-26,190`). Os novos tokens já propagam via `AppColors.success/warning/danger` e o default é ícone+texto.
 - `_buildButtonContent` removeu `overflow: TextOverflow.ellipsis` sem adicionar `maxLines` (`flutter_app/lib/ui/components/buttons.dart:36-43`). Afeta apenas rótulo longo/sem quebra; wrap a 200% é comportamento deliberado.
+
+## Deferred from: code review of spec-8-3-resolver-contexto-de-acesso-e-rotas-por-capacidades (2026-10-09)
+
+- `/inicio` e `/perfil` são autorizados pelo guard mas não têm despacho em `main.dart`, caindo em `MinhaFichaScreen` (`flutter_app/lib/main.dart:484-599`). Diferido: telas Início (8.5) e Perfil (8.4/8.15) pertencem a histórias posteriores.
+- Cobertura de testes ausente para deep link, reload, revogação e matriz de cinco perfis (`flutter_app/test/rotas_capacidades_test.dart`; `rotaInicial` só é injetado diretamente). Diferido: depende da implementação de roteamento por URL (achado decision-needed de 8.3).

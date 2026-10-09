@@ -123,3 +123,42 @@ A resolução de contexto adota o padrão de autoridade estrita do servidor com 
 **Commands:**
 - `cd /Users/usuario/eqp_maanaim/functions && npm test` -- expected: Suíte de testes do backend executando e passando com novos testes de `contextoAcesso`.
 - `cd /Users/usuario/eqp_maanaim/flutter_app && flutter test` -- expected: Suíte de testes do Flutter passando com testes de modelos e rotas.
+
+## Review Findings
+
+Revisão de código em 2026-10-09 (diff `5f68585..4b225d3`, 4 camadas: Blind Hunter, Edge Case Hunter, Verification Gap, Acceptance Auditor).
+
+### Decision Needed
+
+- [ ] [Review][Decision] Deep link, reload (F5) e navegação do navegador não implementados — `main.dart` usa `MaterialApp(home: ...)` sem `Router`/`onGenerateRoute`/`usePathUrlStrategy` e nunca lê `Uri.base`; `rotaInicial` só é fornecido por testes. O guard avalia uma string em memória, então a URL real (`/#/pastor?igrejaId=...`) nunca é processada e o filtro não é restaurado. Fere AC5 e as linhas "Deep link direto" e "Recarregar página (F5)" da matriz. Decisão: implementar roteamento por URL agora ou diferir para a 8.4 (shell único).
+- [ ] [Review][Decision] `/renovacao` autoriza qualquer usuário autenticado — `contexto.ehVoluntario` é sempre `true` no servidor, tornando o ramo de negação código morto (`app_router.dart:117-128`). Decisão: qual o público de `/renovacao` (dashboard de gestão vs. renovação do voluntário); hoje o guard não restringe nada.
+- [ ] [Review][Decision] Fonte de verdade de autoridade pastoral/equipe ambígua — o repositório une `igrejas.pastorLocalVigentePessoaId`/`equipes.responsavelVigentePessoaId` (canônicos, usados pelo restante do código) com as coleções `vinculosPastorIgreja`/`vinculosResponsavelEquipe`, sem reconciliação nem teste do caminho derivado de vínculo (`functions/src/repositories/contextoAcesso.ts:33-108`). Decisão: qual fonte é autoritativa.
+
+### Patch
+
+- [ ] [Review][Patch] Capacidade de coordenador derivada de campos não canônicos [functions/src/repositories/contextoAcesso.ts:25] — usa `dados?.coordenadorGeral === true && dados?.ativo !== false`, mas o agregado canônico é `{ ativa, papeis, revisao, claimStatus }` (`domain/autoridadeAdministrativa.ts:20-25`). Todo coordenador real (`papeis: ['COORDENADOR']`) fica sem a capacidade; o teste só passa porque a fixture usa `coordenadorGeral: true`. Corrigir com `possuiPapel(dados, PAPEL_COORDENADOR)` e cobrir `{ ativa, papeis: ['COORDENADOR'] }` (ativo/inativo).
+- [ ] [Review][Patch] `sanitizarRota` mantém segredos quando todos os parâmetros são filtrados [flutter_app/lib/routes/app_router.dart:39] — `uri.replace(queryParameters: parametrosLimpos.isEmpty ? null : parametrosLimpos)`; `null` preserva a query original, então `/pastor?token=secret123` volta com o token. O teste existente só cobre query mista (um `igrejaId` sobrevive). Aplicar allowlist de parâmetros seguros/`uri.replace(query: '')` e adicionar caso só com parâmetros sensíveis.
+- [ ] [Review][Patch] Despacho de rota ignora o caminho/parâmetros sanitizados pelo guard [flutter_app/lib/main.dart:472-599] — compara `_destinoAtual` bruto a constantes e descarta `avaliacao.caminho`/`RotaAutorizada.parametros`; uma rota autorizada com filtro (`/pastor?igrejaId=ig_1`) cai silenciosamente em `MinhaFichaScreen`. Passar a despachar por `avaliacao.caminho` e consumir os parâmetros.
+- [ ] [Review][Patch] Rotas desconhecidas são autorizadas em vez de 403 [flutter_app/lib/routes/app_router.dart:130-131] — o `default` retorna `RotaAutorizada`; qualquer URL não reconhecida é aceita e cai em `MinhaFichaScreen`. Negar com 403 explícito.
+- [ ] [Review][Patch] `ContextoAcessoService` não integrado à aplicação [flutter_app/lib/main.dart:375] — o serviço (cache/revalidação) só aparece em seu próprio arquivo e em teste; `_resolverContexto` chama o gateway direto. O Code Map exige integração em `main.dart`. Além disso, o Review Triage Log cita `ContextoAcessoService.recarregar()`/`ValueNotifier`, que não existem (a classe é `ChangeNotifier` com `carregarContexto`/`invalidar`).
+- [ ] [Review][Patch] Leituras N+1 por vínculo no repositório [functions/src/repositories/contextoAcesso.ts:59,99] — busca cada `igrejas`/`equipes` dentro dos laços de vínculo; contraria AD-09 ("Prevents… N+1 inviável"). Usar leitura em lote.
+- [ ] [Review][Patch] Parâmetro morto `temFichaOuUsuario` [functions/src/domain/contextoAcesso.ts:38,125] — declarado e nunca lido; `derivarCapacidades` sempre insere `voluntario`.
+- [ ] [Review][Patch] Cor hardcoded em vez de token no FAB de alternância [flutter_app/lib/main.dart:621] — `TextStyle(color: Colors.white)` em vez de token canônico (política do Design System).
+
+### Defer
+
+- [x] [Review][Defer] `/inicio` e `/perfil` autorizados sem despacho, caem em `MinhaFichaScreen` [flutter_app/lib/main.dart:484-599] — deferred: telas Início (8.5) e Perfil (8.4/8.15) pertencem a histórias posteriores.
+- [x] [Review][Defer] Cobertura ausente para deep link/reload/revogação/matriz de cinco perfis [flutter_app/test/rotas_capacidades_test.dart] — deferred: depende da implementação de roteamento por URL (decision-needed acima).
+
+### Rejected (appendix)
+
+- `false` — `db.collection('fichas').doc(uid)` (contextoAcesso.ts:112) presumiria que o id da ficha difere do uid; o restante do backend usa exatamente `fichas.doc(uid)` (enviarFicha.ts:57, participacao.ts:109, manifestarRenovacao.ts:88, ficha.ts:87).
+- `false` — Callable retornando `null`/não-Map causaria TypeError (contexto_acesso_service.dart:20); `obterContextoAcesso` sempre retorna o DTO, nunca `null`.
+- `false` — Fallback do cliente fabricaria capacidades e engoliria erro (main.dart:382-404): em produção `widget.contextoAcesso` é sempre fornecido (main.dart:115 → RaizSessao:305), então o ramo não é alcançável; o erro real sobe para o `FutureBuilder` (retry/logout). O trecho é código morto, não defeito em produção.
+- `false` — Rota autorizada sem gateway (ex.: pastor) cairia em MinhaFicha (main.dart:505): em produção todos os gateways são injetados em `main()`.
+- `low` (rejeitado) — `ContextoAcesso` sem `==`/`hashCode` e comentário impreciso em `capacidadesAtivas` (contexto_acesso_model.dart:130,266).
+- `low` (rejeitado) — `fromJson` ignoraria silenciosamente capacidades desconhecidas (contexto_acesso_model.dart:180).
+- `low` (rejeitado) — `email`/`estadoFicha` além da projeção mínima (repository/`ContextoAcessoDTO`); `estadoFicha` é insumo da Início (8.5) e `email` é o do próprio usuário.
+- `low` (rejeitado) — `fromJson` re-deriva capacidades no cliente (contexto_acesso_model.dart:206-216); o servidor sempre envia os flags.
+- `low` (rejeitado) — linha em branco final em `functions/src/index.ts` e nome inexistente `AppRouter` na documentação.
+- `false` (rejeitado por editar artefato de acompanhamento) — divergência `status: done` (spec) vs `review` (sprint-status) vs texto do épico.

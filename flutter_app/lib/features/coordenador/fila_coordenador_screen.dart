@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../ui/tokens.dart';
 import '../../ui/components/cpf_formatter.dart';
 import '../../ui/components/metrics.dart';
+import '../analise/detalhe_solicitacao_model.dart';
+import '../analise/detalhe_solicitacao_screen.dart';
+import '../analise/detalhe_solicitacao_service.dart';
 import '../renovacao/dashboard_renovacao_service.dart';
 import 'coordenador_service.dart';
 
@@ -10,12 +13,14 @@ class FilaCoordenadorScreen extends StatefulWidget {
   const FilaCoordenadorScreen({
     super.key,
     required this.gateway,
+    this.detalheGateway,
     this.dashboardRenovacaoGateway,
     this.onSair,
     this.dentroDeShell = false,
   });
 
   final CoordenadorGateway gateway;
+  final DetalheSolicitacaoGateway? detalheGateway;
   final DashboardRenovacaoGateway? dashboardRenovacaoGateway;
   final VoidCallback? onSair;
   final bool dentroDeShell;
@@ -621,6 +626,36 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
         ),
       );
 
+  Future<void> _abrirDetalheSolicitacao(ItemFilaCoordenador item) async {
+    final resultado = await Navigator.of(context).push<ResultadoDecisaoContextual>(
+      MaterialPageRoute(
+        builder: (_) => DetalheSolicitacaoScreen(
+          fichaId: item.fichaId,
+          nomeVoluntarioInicial: item.voluntarioNome,
+          papel: PapelContextualAnalise.coordenadorGeral,
+          isRenovacaoAnual: item.isRenovacaoAnual,
+          cicloId: item.cicloId,
+          versaoInicial: item.versaoFicha,
+          gateway: widget.detalheGateway ??
+              CompostoDetalheSolicitacaoGateway(coordenadorGateway: widget.gateway),
+          onDecisaoConcluida: (res) {
+            if (mounted) {
+              setState(() {
+                _pendencias.removeWhere((p) => p.fichaId == res.fichaId);
+              });
+            }
+          },
+        ),
+      ),
+    );
+
+    if (resultado != null && mounted) {
+      setState(() {
+        _pendencias.removeWhere((p) => p.fichaId == resultado.fichaId);
+      });
+    }
+  }
+
   Widget _acoesDaFicha(ItemFilaCoordenador item, {bool compact = true}) {
     final processando = _processandoFichaId == item.fichaId;
     if (processando) {
@@ -636,6 +671,18 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
       );
     }
     final botoes = <Widget>[
+      ElevatedButton.icon(
+        key: Key('btnAnalisar_${item.fichaId}'),
+        onPressed: () => _abrirDetalheSolicitacao(item),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.navy900,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(100, AppGeometry.minTouchTarget),
+        ),
+        icon: const Icon(Icons.assignment_outlined, size: 16),
+        label: const Text('Analisar'),
+      ),
+      const SizedBox(width: 8),
       OutlinedButton.icon(
         key: Key('btnRecusar_${item.fichaId}'),
         onPressed: () => _abrirModalRecusa(item),
