@@ -3,8 +3,7 @@
 Contrato consolidado: [contrato visual](../correcao-ui/contrato-visual-ui.md), [inventário](../correcao-ui/inventario-dados-ui.md) e [contratos de dados](../architecture/architecture-eqp_maanaim-2026-09-28/UI-CONTRACTS.md). Estado: especificação documental de 8.1; implementação e homologação permanecem futuras.
 
 **Versão:** 1.1\
-As telas abaixo derivam diretamente da imagem de referência anexada ao
-projeto.
+S01–S09 possuem composição na imagem de referência anexada ao projeto; S10–S14 têm especificação textual. As adaptações funcionais e de acessibilidade seguem o contrato consolidado.
 
 ## S01 --- Login
 

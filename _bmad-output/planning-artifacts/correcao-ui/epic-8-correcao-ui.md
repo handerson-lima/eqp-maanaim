@@ -1,6 +1,6 @@
 # Épico 8 — Aderência visual e conclusão das jornadas de UI
 
-Status: proposto em 08/10/2026. Origem: [proposta de correção](../sprint-change-proposal-2026-10-08.md). Este backlog complementa as histórias concluídas; não substitui seus contratos de domínio.
+Status: adotado em 08/10/2026; épico in-progress. História documental 8.1 em review em 09/10/2026; 8.2–8.16 permanecem backlog. Origem: [proposta de correção](../sprint-change-proposal-2026-10-08.md). Este backlog complementa as histórias concluídas; não substitui seus contratos de domínio.
 
 Objetivo: usuários de cada perfil alcançam e concluem as jornadas previstas, com aparência institucional consistente, acessibilidade e dados autorizados.
 
@@ -303,3 +303,11 @@ Como responsável pelo produto, quero evidências de fidelidade e jornadas funci
 6. Sincronizar acompanhamento somente com resultados reais; anexar evidências e registrar adaptações funcionais da referência.
 
 **Saída:** relatório final de aderência com telas verificadas, exceções justificadas e resultados; não confundir teste de widgets com validação visual ou acessibilidade integral.
+
+## Registro de adoção e acompanhamento
+
+A adoção foi autorizada em 08/10/2026 e incorporada ao sprint em 09/10/2026, registrando backlog como estado inicial das 16 histórias, preservando os épicos 1–7 e action_items anteriores. Apenas 8.1 avançou backlog → in-progress → review (09/10). Implementar 8.2 ou código não integra esta execução.
+
+A correção de UX-DR1 e Story 6.5 é rastreada em 8.1/8.2/8.4/8.16: escala institucional e tokens do pacote ux/ prevalecem sobre defaults Material; os aceites históricos da 6.5 e seus resultados não foram reescritos nem usados como homologação deste épico. O épico 7 já existente no sprint-status permanece preservado.
+
+Entregas 8.1: [contrato visual](contrato-visual-ui.md), [inventário](inventario-dados-ui.md), [companion](../architecture/architecture-eqp_maanaim-2026-09-28/UI-CONTRACTS.md), [validação documental](validacao-8-1.md).

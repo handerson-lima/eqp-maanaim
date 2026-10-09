@@ -70,3 +70,16 @@ Padrão sugerido de evidências: `_bmad-output/implementation-artifacts/ui-evide
 ## Critério de encerramento
 
 Todos os achados da análise possuem história e evidência de resolução ou adaptação funcional documentada; todas as linhas da matriz são avaliadas; não há bloqueio de navegação/ação, vazamento de escopo, falha de contraste conhecida nos componentes corrigidos ou divergência P0/P1 aberta. A passagem dos 41 testes anteriores é apenas uma base histórica, não o aceite deste épico.
+
+## Consolidação documental da história 8.1
+
+Conferência em 09/10/2026: todas as linhas S01–S14 e extras acima possuem composição mobile/tablet/desktop, navegação e estados E/M no [contrato visual](contrato-visual-ui.md), fontes/campos/lacunas no [inventário](inventario-dados-ui.md) e regras de dados no [companion](../architecture/architecture-eqp_maanaim-2026-09-28/UI-CONTRACTS.md). **Cobertura documental concluída; execução visual/acessível não realizada; nenhuma linha homologada.** As histórias principais desta matriz continuam responsáveis por implementar e produzir as evidências exigidas.
+
+| Aceite 8.1 | Rastreabilidade documental | Resultado da conferência |
+|---|---|---|
+| AC 1 S01–S14, estados, navegação, lacunas | Contrato: Wireframes e complementares; inventário: S01–S14 e extras; linhas desta matriz | Coberto documentalmente; sem capturas de aplicação |
+| AC 2 conflitos de tokens/negativa/PDF/vigência/responsável/Google | Contrato: decisões; textos originais corrigidos de DESIGN-SYSTEM/SCREEN-SPECS/UX-LAYOUT-SPEC e DESIGN/EXPERIENCE; catálogo real | Convergência documental; código ainda requer 8.2–8.15 |
+| AC 3 métricas com unidade, escopo, período, atualização | UI-CONTRACTS §2–3 e §7 (aceites); inventário distingue retornos existentes de agregações propostas | Contratos definidos; completude/filtros em runtime ainda não validados |
+| AC 4 múltiplos vínculos sem atomicidade global | UI-CONTRACTS §6, S08 do contrato, inventário e experiência legada | Resultados/retry/recibo/conflito por item definidos; implementação 8.12 |
+
+O [registro de validação 8.1](validacao-8-1.md) guarda verificações de links, cobertura, contraste, diff e preservação do acompanhamento. Não substituir evidências de implementação pela conferência de documentos.

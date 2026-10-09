@@ -1,7 +1,7 @@
 ---
 project: eqp_maanaim
 date: 2026-10-08
-status: planejamento-proposto
+status: adotado-documentacao-8-1-em-review
 trigger: ../analise-ui-2026-10-08.md
 scope: moderate
 approach: direct-adjustment
@@ -18,9 +18,9 @@ Restabelecer a aderência das telas S01–S14 e das superfícies adicionais ao p
 
 O gatilho é a análise de 08/10/2026, solicitada pelo usuário, que encontrou diferenças de composição, navegação, jornada, contraste e cobertura funcional. Não se trata de mudança de produto: a maior parte é recuperação de requisitos já previstos. A análise anterior executou 41 testes de componentes/login com sucesso, mas não homologou screenshots de todas as telas. Os riscos de overflow apontados continuam hipóteses a reproduzir.
 
-O sprint-status registra os épicos 1–7 como concluídos; epics.md contém a decomposição 1–6. O épico 7 já existe no acompanhamento e não deve ser renumerado. Propõe-se um **épico 8 corretivo**, com 16 histórias, mantendo a rastreabilidade das entregas anteriores.
+O sprint-status registra os épicos 1–7 como concluídos; epics.md contém a decomposição 1–6. O épico 7 já existe no acompanhamento e não deve ser renumerado. Foi adotado em 08/10 um **épico 8 corretivo**, com 16 histórias, mantendo a rastreabilidade das entregas anteriores.
 
-Este documento entrega o planejamento solicitado. As histórias estão propostas, não implementadas nem marcadas ready-for-dev. Código, documentos normativos e sprint-status não são alterados por esta proposta.
+A proposta original entregou o planejamento. Após autorização explícita de 08/10, o plano foi adotado e a história documental 8.1 executada, em review em 09/10. Documentos normativos e sprint-status foram consolidados; código não foi alterado. As histórias 8.2–8.16 permanecem backlog e não implementadas.
 
 ## 2. Abordagem e impacto
 
@@ -126,7 +126,7 @@ Classificação **moderada**: reorganização corretiva do backlog, sem replanej
 - Desenvolvimento backend: contexto, métricas, catálogos, filtros e consultas autorizadas.
 - QA: fixtures, testes por jornada, acessibilidade e evidências da matriz.
 
-Entrada em implementação: adotar o backlog proposto; acrescentar o épico 8 ao acompanhamento; detalhar contratos/arquivos da próxima história; executar em fatias completas. A primeira história recomendada é **8.1 — Consolidar contrato visual e inventário de dados**, seguida de 8.2/8.3.
+Autorização em 08/10 e incorporação ao sprint em 09/10: 16 histórias com estado inicial backlog; épico 8 in-progress; **8.1 — Consolidar contrato visual e inventário de dados** em review. Próximas dependências são 8.2/8.3, ainda backlog; nenhuma implementação de código foi iniciada nesta consolidação.
 
 Conclusão do épico: todas as linhas da matriz com evidência; nenhuma lacuna de escopo apresentada como corrigida; testes necessários verdes; jornadas com perfis reais de teste; comparação visual por tela; ausência de regressão nos invariantes. Publicação em produção é uma atividade posterior à implementação e homologação, não executada neste planejamento.
 
@@ -135,7 +135,7 @@ Conclusão do épico: todas as linhas da matriz com evidência; nenhuma lacuna d
 | Itens | Situação | Registro |
 |---|---|---|
 | 1.1–1.3 Gatilho/problema/evidência | [x] | Análise de 08/10; divergência transversal, não uma única story. |
-| 2.1–2.5 Impacto/ordem dos épicos | [x] | Épicos concluídos preservados; épico 8 proposto; dependências em backlog. |
+| 2.1–2.5 Impacto/ordem dos épicos | [x] | Épicos concluídos preservados; épico 8 adotado; somente 8.1 em review, demais dependências em backlog. |
 | 3.1–3.4 Conflitos e artefatos | [x] | PRD/ADs preservados; UX consolidada; contratos e CI previstos. |
 | 4.1 Ajuste direto | [x] Viável | Caminho recomendado. |
 | 4.2 Rollback | [N/A] | Avaliado, sem benefício para o caso. |
@@ -143,6 +143,10 @@ Conclusão do épico: todas as linhas da matriz com evidência; nenhuma lacuna d
 | 4.4 Recomendação | [x] | Cinco marcos e 16 histórias. |
 | 5.1–5.5 Proposta e responsabilidades | [x] | Este documento e companions. |
 | 6.1–6.2 Consistência/completude do plano | [x] | Cobertura S01–S14, extras e dependências conferida. |
-| 6.3 Autorização de implementação | [!] Etapa posterior | Pedido atual é planejamento; não registrar autorização de executar código. |
-| 6.4 Sincronização do sprint | [!] Etapa posterior | Acrescentar backlog quando o plano for adotado para execução. |
-| 6.5 Encaminhamento | [x] Plano definido | Responsabilidades e primeira história descritas; execução não iniciada. |
+| 6.3 Autorização de implementação | [x] Documental 8.1 | Autorização explícita em 08/10 para adoção e história 8.1; não implica execução de 8.2/código ou deploy. |
+| 6.4 Sincronização do sprint | [x] Adoção registrada |16 histórias inicialmente backlog; apenas 8.1 progride; estados1–7/action_items preservados. |
+| 6.5 Encaminhamento | [x] Plano definido | Consolidação8.1 em review; histórias de implementação e homologação futuras. |
+
+## Registro de execução documental 8.1
+
+Adoção08/10, consolidação retomada e encaminhada à revisão 09/10. [Contrato visual](correcao-ui/contrato-visual-ui.md), [inventário](correcao-ui/inventario-dados-ui.md), [UI-CONTRACTS](architecture/architecture-eqp_maanaim-2026-09-28/UI-CONTRACTS.md) e [validação](correcao-ui/validacao-8-1.md). UX-DR1/Story 6.5 recebem referência corretiva sem edição de aceites históricos. O épico 7 existente foi reconhecido; os ADs e código permanecem intactos.

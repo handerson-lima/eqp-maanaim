@@ -996,3 +996,35 @@ para impedir vazamento de escopo, regressões de estado e consultas ineficientes
 **When** a configuração é validada
 **Then** usa projetos Firebase isolados, contas de serviço de menor privilégio e configuração sem segredos no cliente
 **And** o pipeline não permite promoção sem os testes de Emulator aprovados.
+
+
+## Adoção corretiva — Épicos 7 e 8 (08/10/2026)
+
+O épico 7 já está implementado e registrado no [sprint-status](../implementation-artifacts/sprint-status.yaml), com histórias 7.1–7.4 e retrospectiva opcional; não é renumerado nem substituído. Os épicos 1–7 e aceites históricos, inclusive Story 6.5, permanecem intactos.
+
+### Correção rastreável de UX-DR1 / Story 6.5
+
+A redação histórica de UX-DR1 menciona tokens Material 3. Para novas implementações, aplicar a escala institucional e os tokens do [Design System](ux/DESIGN-SYSTEM.md); Material é infraestrutura subordinada ao pacote ux/. A correção visual e de cobertura de 6.5 é tratada por 8.1 (contrato), 8.2 (componentes), 8.4 (shell) e 8.16 (homologação). Resultados anteriores não homologam a UI corrigida. Nenhum aceite histórico foi editado.
+
+### Épico 8 — Aderência visual e conclusão das jornadas de UI
+
+Adotado conforme [épico corretivo completo](correcao-ui/epic-8-correcao-ui.md), que contém intenção, dependências, escopo e aceites das 16 histórias. Autorização em 08/10; incorporação ao sprint em 09/10, com backlog como estado inicial registrado das 16 histórias; apenas 8.1 progrediu, permanecendo em review para conferência final em 09/10. Épico in-progress; 8.2–8.16 backlog.
+
+| História | Título | Estado após consolidação |
+|---|---|---|
+| 8.1 | Consolidar contrato visual e inventário de dados | review |
+| 8.2 | Corrigir tokens acessíveis e componentes compartilhados | backlog |
+| 8.3 | Resolver contexto de acesso e rotas por capacidades | backlog |
+| 8.4 | Aplicar shell único e corrigir acesso público | backlog |
+| 8.5 | Construir início do voluntário | backlog |
+| 8.6 | Recompor dashboards e filas dos responsáveis | backlog |
+| 8.7 | Integrar detalhe da análise e decisão contextual | backlog |
+| 8.8 | Implementar solicitação de equipe em etapas | backlog |
+| 8.9 | Renovação em uma superfície com revisão | backlog |
+| 8.10 | Organizar Minha Ficha e documentos privados | backlog |
+| 8.11 | Completar administração de igrejas e equipes | backlog |
+| 8.12 | Vincular múltiplas igrejas a partir do pastor | backlog |
+| 8.13 | Completar filtros e paginação de auditoria/relatórios | backlog |
+| 8.14 | Exibir versões e aceites pendentes dos termos | backlog |
+| 8.15 | Alinhar superfícies adicionais e linguagem | backlog |
+| 8.16 | Homologar todas as telas e impedir regressões | backlog |

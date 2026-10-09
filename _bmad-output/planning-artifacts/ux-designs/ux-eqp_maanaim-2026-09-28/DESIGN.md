@@ -20,7 +20,7 @@ typography:
   body: { note: '14/400; Inter, fallback Roboto/sans-serif' }
   meta: { note: 'label 13/600; caption 12/400; botão 14/600' }
 rounded: { sm: 6px, md: 10px, full: 999px }
-spacing: { '1': 4px, '2': 8px, '3': 12px, '4': 16px, '5': 24px, '6': 32px }
+spacing: { '1': 4px, '2': 8px, '3': 12px, '4': 16px, '5': 20px, '6': 24px, '7': 32px, '8': 40px, '9': 48px }
 components:
   primary-action: { background: '{colors.primary}', foreground: '{colors.primary-foreground}', radius: '{rounded.sm}' }
   status: { radius: '{rounded.full}', 'note': 'texto + ícone; nunca apenas cor' }

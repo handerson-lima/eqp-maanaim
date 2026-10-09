@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-28-2026 22:53
-last_updated: 10-07-2026 22:18
+last_updated: 10-09-2026
 project: eqp_maanaim
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
@@ -85,6 +85,27 @@ development_status:
   7-3-centralizacao-de-mascara-e-formatacao-de-cpf: done
   7-4-governanca-de-logs-gcp-e-deploy: done
   epic-7-retrospective: optional
+
+  # Autorização 08/10; incorporação 09/10 com backlog como estado inicial das 16 histórias.
+  # Apenas 8.1 progride para review em 09/10; código e 8.2 não iniciados.
+  epic-8: in-progress
+  8-1-consolidar-contrato-visual-e-inventario-de-dados: review
+  8-2-corrigir-tokens-acessiveis-e-componentes-compartilhados: backlog
+  8-3-resolver-contexto-de-acesso-e-rotas-por-capacidades: backlog
+  8-4-aplicar-shell-unico-e-corrigir-acesso-publico: backlog
+  8-5-construir-inicio-do-voluntario: backlog
+  8-6-recompor-dashboards-e-filas-dos-responsaveis: backlog
+  8-7-integrar-detalhe-da-analise-e-decisao-contextual: backlog
+  8-8-implementar-solicitacao-de-equipe-em-etapas: backlog
+  8-9-renovacao-em-uma-superficie-com-revisao: backlog
+  8-10-organizar-minha-ficha-e-documentos-privados: backlog
+  8-11-completar-administracao-de-igrejas-e-equipes: backlog
+  8-12-vincular-multiplas-igrejas-a-partir-do-pastor: backlog
+  8-13-completar-filtros-e-paginacao-de-auditoria-relatorios: backlog
+  8-14-exibir-versoes-e-aceites-pendentes-dos-termos: backlog
+  8-15-alinhar-superficies-adicionais-e-linguagem: backlog
+  8-16-homologar-todas-as-telas-e-impedir-regressoes: backlog
+  epic-8-retrospective: optional
 action_items:
   - id: "epic-1-retro-item-1-configurar-runner-de-integracao-automati"
     epic: 1

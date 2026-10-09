@@ -64,7 +64,7 @@ sobre densidade.
 -   grid de equipes selecionáveis com ícone + nome;
 -   selecionado com borda azul, fundo azul muito claro e check;
 -   botão Próximo no canto inferior direito da área;
--   mobile: stepper compacto e grid 2 colunas/1 coluna conforme largura.
+-   mobile: stepper compacto e uma coluna por padrão; duas somente com cards de pelo menos 160 px úteis cada + gap de 16 px, alvos de 44 px e texto a 200% sem truncar. Caso contrário, uma coluna; mesma condição para seleção no tablet.
 
 ## 6. Dashboard Pastor Local
 

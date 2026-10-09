@@ -134,3 +134,23 @@ nunca substitui texto em ações críticas sem tooltip/label.
 -   Não transformar toda informação em card.
 -   Não centralizar tabelas operacionais.
 -   Não alterar a hierarquia visual da referência sem justificativa.
+
+## 7. Pares acessíveis consolidados em 8.1
+
+Decisão documental para implementação em **8.2**. `tokens.dart` ainda contém success#16A34A, warning#F59E0B e danger#EF4444; esta história não os alterou. O conjunto canônico acima passa a usar success#16794A, warning#9A6700 e danger#B42318. Preservam-se os fundos semânticos e identidade navy/azul. `border`#DDE3EA é decorativo; novo token `border-interactive`#667085 delimita controles quando contorno é necessário. Foco usa anel azul em superfícies claras e anel branco sobre navy, com separação perceptível do controle. Não usar opacidade para tornar contorno/foco obrigatório invisível.
+
+Cálculo WCAG/sRGB: linearizar canal `c<=0.04045 ? c/12.92 : ((c+0.055)/1.055)^2.4`; luminância `0.2126R+0.7152G+0.0722B`; razão `(Lmaior+0.05)/(Lmenor+0.05)`. Valores arredondados para 3 casas; limiar é aplicado ao valor não arredondado.
+
+| Uso | Frente / fundo | Contraste calculado | Critério |
+|---|---|---|---|
+| Primary | #FFFFFF / #0B6FE8 | 4,716:1 | texto normal≥4,5 |
+| Approve | #FFFFFF / #16794A | 5,429:1 | texto normal≥4,5 |
+| Danger | #FFFFFF / #B42318 | 6,574:1 | texto normal≥4,5 |
+| Chip sucesso | #16794A / #EAF8EF | 4,957:1 | texto normal≥4,5 |
+| Chip atenção | #9A6700 / #FFF6DE | 4,518:1 | texto normal≥4,5; não reduzir por opacidade |
+| Chip erro autorizado | #B42318 / #FDECEC | 5,756:1 | texto normal≥4,5 |
+| Texto secundário e borda interativa | #667085 / #FFFFFF | 4,975:1 | texto≥4,5, controle≥3 |
+| Foco em seleção clara | #0B6FE8 / #EEF6FF | 4,325:1 | contorno/foco≥3 |
+| Texto/foco sobre sidebar | #FFFFFF / #082C49 | 14,317:1 | texto≥4,5, foco≥3 |
+
+Estados de botões: default usa os pares acima; hover/pressed não podem reduzir contraste, podem usar contorno/elevação discreta mantendo preenchimento; focus acrescenta anel visível conforme superfície; loading mantém contraste, nome acessível e indicador, bloqueando reenvio; disabled anuncia indisponibilidade e motivo contextual sem depender de baixa opacidade. Secondary usa azul sobre branco e borda interativa; approve/danger restringem-se a ações explícitas autorizadas. 8.2 deve calcular os pares efetivos de todos os estados implementados (incluindo superfícies adjacentes), testar teclado/fonte 200% e registrar capturas; esta tabela não homologa componentes existentes.
