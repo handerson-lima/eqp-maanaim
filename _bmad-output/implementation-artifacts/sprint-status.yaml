@@ -89,8 +89,8 @@ development_status:
   # Autorização 08/10; incorporação 09/10 com backlog como estado inicial das 16 histórias.
   # Apenas 8.1 progride para review em 09/10; código e 8.2 não iniciados.
   epic-8: in-progress
-  8-1-consolidar-contrato-visual-e-inventario-de-dados: review
-  8-2-corrigir-tokens-acessiveis-e-componentes-compartilhados: backlog
+  8-1-consolidar-contrato-visual-e-inventario-de-dados: done
+  8-2-corrigir-tokens-acessiveis-e-componentes-compartilhados: in-progress
   8-3-resolver-contexto-de-acesso-e-rotas-por-capacidades: backlog
   8-4-aplicar-shell-unico-e-corrigir-acesso-publico: backlog
   8-5-construir-inicio-do-voluntario: backlog
