@@ -13,6 +13,7 @@ import '../auth/validadores.dart';
 import '../termo/termo_service.dart';
 import '../termo/pdf_termo_service.dart';
 import '../termo/termo_pdf_launcher.dart';
+import '../termo/pdf_preview_panel.dart';
 import 'ficha_service.dart';
 import 'consulta_ficha_screen.dart';
 import 'historico_service.dart';
@@ -90,6 +91,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   List<EventoLinhaDoTempoModel> _eventosHistorico = [];
   bool _carregandoEventos = false;
   String? _baixandoPdfParticipacaoId;
+  bool _modoEdicao = false;
+  ParticipacaoModel? _participacaoSelecionada;
 
   bool get _isRascunho => _ficha?.isRascunho ?? true;
   bool get _isAguardandoPastor => _ficha?.estado == 'AGUARDANDO_PASTOR_LOCAL';
@@ -225,6 +228,25 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             } else if (f.igrejaId.isNotEmpty) {
               _igrejaSelecionadaId = f.igrejaId;
             }
+            _modoEdicao = f.nomeCompleto.isEmpty;
+          } else {
+            _modoEdicao = true;
+          }
+
+          if (participacoes.isNotEmpty) {
+            if (_participacaoSelecionada == null ||
+                !participacoes.any((p) => p.id == _participacaoSelecionada!.id)) {
+              _participacaoSelecionada = participacoes.cast<ParticipacaoModel?>().firstWhere(
+                (p) => p?.isAtiva == true,
+                orElse: () => participacoes.first,
+              );
+            } else {
+              _participacaoSelecionada = participacoes.firstWhere(
+                (p) => p.id == _participacaoSelecionada!.id,
+              );
+            }
+          } else {
+            _participacaoSelecionada = null;
           }
           _carregando = false;
         });
@@ -369,6 +391,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         setState(() {
           _ficha = resposta.ficha;
           _salvando = false;
+          _modoEdicao = false;
           _mensagemSucesso = 'Ficha salva com sucesso.';
         });
 
@@ -533,7 +556,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints: const BoxConstraints(maxWidth: 1200),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -598,171 +621,442 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 const SizedBox(height: AppSpacing.s16),
               ],
 
-              // Card com formulário de dados cadastrais
-              SectionCard(
-                title: 'Dados Cadastrais',
-                subtitle: _isBloqueadoParaEdicao
-                    ? 'Dados cadastrais bloqueados para edição durante o processo de avaliação.'
-                    : 'Campos marcados são obrigatórios para emissão do termo e aprovação.',
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Nome Completo
-                      Text('Nome Completo', style: AppTypography.label),
-                      const SizedBox(height: AppSpacing.s4),
-                      TextFormField(
-                        key: const Key('campo_nome_completo'),
-                        controller: _nomeController,
-                        readOnly: _isBloqueadoParaEdicao,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          hintText: 'Seu nome completo',
-                          prefixIcon: Icon(Icons.person_outline, size: 20),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.s16),
-
-                      // Profissão
-                      Text('Profissão', style: AppTypography.label),
-                      const SizedBox(height: AppSpacing.s4),
-                      TextFormField(
-                        key: const Key('campo_profissao'),
-                        controller: _profissaoController,
-                        readOnly: _isBloqueadoParaEdicao,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          hintText: 'Sua ocupação principal (ex: Marceneiro, Advogado)',
-                          prefixIcon: Icon(Icons.work_outline, size: 20),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.s16),
-
-                      // CPF
-                      Text('CPF', style: AppTypography.label),
-                      const SizedBox(height: AppSpacing.s4),
-                      TextFormField(
-                        key: const Key('campo_cpf'),
-                        controller: _cpfController,
-                        readOnly: _isBloqueadoParaEdicao,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        inputFormatters: [CpfInputFormatter()],
-                        decoration: const InputDecoration(
-                          hintText: '000.000.000-00',
-                          prefixIcon: Icon(Icons.badge_outlined, size: 20),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.s16),
-
-                      // Igreja Local
-                      Text('Igreja Local', style: AppTypography.label),
-                      const SizedBox(height: AppSpacing.s4),
-                      DropdownButtonFormField<String>(
-                        key: const Key('campo_igreja'),
-                        initialValue: _igrejaSelecionadaId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          hintText: 'Selecione a sua igreja',
-                          prefixIcon: Icon(Icons.church_outlined, size: 20),
-                        ),
-                        items: _igrejas
-                            .map(
-                              (igreja) => DropdownMenuItem(
-                                value: igreja.id,
-                                child: Text(
-                                  igreja.rotulo,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: _isBloqueadoParaEdicao
-                            ? null
-                            : (novoId) {
-                                setState(() {
-                                  _igrejaSelecionadaId = novoId;
-                                });
-                              },
-                      ),
-                      const SizedBox(height: AppSpacing.s24),
-
-                      // Botão de salvar rascunho
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: PrimaryButton(
-                          key: const Key('botao_salvar_ficha'),
-                          label: 'Salvar Ficha',
-                          icon: Icons.save_outlined,
-                          isLoading: _salvando,
-                          onPressed: (_isBloqueadoParaEdicao || _salvando)
-                              ? null
-                              : _salvarFicha,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              if (_ficha != null) ...[
-                const SizedBox(height: AppSpacing.s16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Versão: ${_ficha!.versao}',
-                        style: AppTypography.caption,
-                      ),
-                      if (_ficha!.atualizadoEm != null)
-                        Flexible(
-                          child: Text(
-                            'Última alteração: ${_formatarData(_ficha!.atualizadoEm!)}',
-                            style: AppTypography.caption,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.end,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isDesktop = constraints.maxWidth >= 1024;
+                  if (isDesktop) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildCardDadosCadastrais(),
+                              if (_participacoes.isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.s24),
+                                _buildCardSeletorParticipacao(),
+                              ],
+                              const SizedBox(height: AppSpacing.s24),
+                              _buildSecaoEquipes(),
+                              const SizedBox(height: AppSpacing.s24),
+                              _buildSecaoTermo(),
+                              const SizedBox(height: AppSpacing.s24),
+                              _buildSecaoEnvioAprovacao(pendencias),
+                              if (!_isRascunho || _eventosHistorico.isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.s24),
+                                _buildSecaoHistorico(),
+                              ],
+                            ],
                           ),
                         ),
+                        const SizedBox(width: AppSpacing.s24),
+                        Expanded(
+                          flex: 6,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (_participacoes.isNotEmpty)
+                                PdfPreviewPanel(
+                                  key: Key('preview_pdf_desktop_${_participacaoSelecionada?.id}'),
+                                  fichaId: _ficha?.id ?? '',
+                                  participacao: _participacaoSelecionada,
+                                  pdfTermoGateway: widget.pdfTermoGateway,
+                                  nomeVoluntario: _ficha?.nomeCompleto,
+                                  alturaMinima: 480,
+                                )
+                              else
+                                _buildPreviewPlaceholderVazio(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildCardDadosCadastrais(),
+                      if (_participacoes.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.s20),
+                        _buildCardSeletorParticipacao(),
+                        const SizedBox(height: AppSpacing.s20),
+                        PdfPreviewPanel(
+                          key: Key('preview_pdf_mobile_${_participacaoSelecionada?.id}'),
+                          fichaId: _ficha?.id ?? '',
+                          participacao: _participacaoSelecionada,
+                          pdfTermoGateway: widget.pdfTermoGateway,
+                          nomeVoluntario: _ficha?.nomeCompleto,
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.s24),
+                      _buildSecaoEquipes(),
+                      const SizedBox(height: AppSpacing.s24),
+                      _buildSecaoTermo(),
+                      const SizedBox(height: AppSpacing.s24),
+                      _buildSecaoEnvioAprovacao(pendencias),
+                      if (!_isRascunho || _eventosHistorico.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.s24),
+                        _buildSecaoHistorico(),
+                      ],
                     ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: AppSpacing.s24),
-
-              // Seção de seleção de equipes e participações em rascunho
-              _buildSecaoEquipes(),
-
-              const SizedBox(height: AppSpacing.s24),
-
-              // Seção do Termo de Adesão ao Serviço Voluntário (Story 2.3)
-              _buildSecaoTermo(),
-
-              const SizedBox(height: AppSpacing.s24),
-
-              // Seção de Envio para Aprovação (Story 2.4)
-              _buildSecaoEnvioAprovacao(pendencias),
-
-              // Seção da Linha do Tempo e Histórico Auditável (Story 4.1)
-              if (!_isRascunho || _eventosHistorico.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.s24),
-                SectionCard(
-                  title: 'Linha do Tempo e Histórico',
-                  subtitle:
-                      'Acompanhamento cronológico dos marcos e decisões do seu voluntariado.',
-                  child: LinhaDoTempoWidget(
-                    eventos: _eventosHistorico,
-                    isLoading: _carregandoEventos,
-                    tituloSecao: '',
-                  ),
-                ),
-              ],
+                  );
+                },
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCardDadosCadastrais() {
+    if (_ficha != null && !_modoEdicao) {
+      return _buildResumoDadosCadastrais();
+    }
+    return _buildFormularioDadosCadastrais();
+  }
+
+  Widget _buildResumoDadosCadastrais() {
+    final nomeIgreja = _obterNomeIgreja(_ficha!.igrejaId);
+
+    return SectionCard(
+      title: 'Dados Cadastrais',
+      subtitle: _isBloqueadoParaEdicao
+          ? 'Dados cadastrais bloqueados para edição durante o processo de avaliação.'
+          : 'Consulte seus dados cadastrais permanentes no Maanaim.',
+      headerAction: _isBloqueadoParaEdicao
+          ? null
+          : OutlinedButton.icon(
+              key: const Key('btn_editar_dados'),
+              onPressed: () => setState(() => _modoEdicao = true),
+              icon: const Icon(Icons.edit_outlined, size: 16),
+              label: const Text('Editar dados'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(44, 44),
+                foregroundColor: AppColors.navy900,
+                side: const BorderSide(color: AppColors.navy900),
+              ),
+            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildLinhaInfo('Nome Completo', _ficha!.nomeCompleto),
+          _buildLinhaInfo('Profissão', _ficha!.profissao),
+          _buildLinhaInfo(
+            'CPF',
+            _ficha!.cpf,
+            destaqueMonospaced: true,
+          ),
+          if (nomeIgreja != null)
+            _buildLinhaInfo('Igreja Local', nomeIgreja),
+          _buildLinhaInfo('Versão da Ficha', 'v${_ficha!.versao}'),
+          const SizedBox(height: AppSpacing.s12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Versão: ${_ficha!.versao}',
+                style: AppTypography.caption,
+              ),
+              if (_ficha!.atualizadoEm != null)
+                Flexible(
+                  child: Text(
+                    'Última alteração: ${_formatarData(_ficha!.atualizadoEm!)}',
+                    style: AppTypography.caption,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormularioDadosCadastrais() {
+    return SectionCard(
+      title: 'Dados Cadastrais',
+      subtitle: _isBloqueadoParaEdicao
+          ? 'Dados cadastrais bloqueados para edição durante o processo de avaliação.'
+          : 'Campos marcados são obrigatórios para emissão do termo e aprovação.',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Nome Completo', style: AppTypography.label),
+            const SizedBox(height: AppSpacing.s4),
+            TextFormField(
+              key: const Key('campo_nome_completo'),
+              controller: _nomeController,
+              readOnly: _isBloqueadoParaEdicao,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                hintText: 'Seu nome completo',
+                prefixIcon: Icon(Icons.person_outline, size: 20),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+
+            Text('Profissão', style: AppTypography.label),
+            const SizedBox(height: AppSpacing.s4),
+            TextFormField(
+              key: const Key('campo_profissao'),
+              controller: _profissaoController,
+              readOnly: _isBloqueadoParaEdicao,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                hintText: 'Sua ocupação principal (ex: Marceneiro, Advogado)',
+                prefixIcon: Icon(Icons.work_outline, size: 20),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+
+            Text('CPF', style: AppTypography.label),
+            const SizedBox(height: AppSpacing.s4),
+            TextFormField(
+              key: const Key('campo_cpf'),
+              controller: _cpfController,
+              readOnly: _isBloqueadoParaEdicao,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+              inputFormatters: [CpfInputFormatter()],
+              decoration: const InputDecoration(
+                hintText: '000.000.000-00',
+                prefixIcon: Icon(Icons.badge_outlined, size: 20),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+
+            Text('Igreja Local', style: AppTypography.label),
+            const SizedBox(height: AppSpacing.s4),
+            DropdownButtonFormField<String>(
+              key: const Key('campo_igreja'),
+              initialValue: _igrejaSelecionadaId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                hintText: 'Selecione a sua igreja',
+                prefixIcon: Icon(Icons.church_outlined, size: 20),
+              ),
+              items: _igrejas
+                  .map(
+                    (igreja) => DropdownMenuItem(
+                      value: igreja.id,
+                      child: Text(
+                        igreja.rotulo,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: _isBloqueadoParaEdicao
+                  ? null
+                  : (novoId) {
+                      setState(() {
+                        _igrejaSelecionadaId = novoId;
+                      });
+                    },
+            ),
+            const SizedBox(height: AppSpacing.s24),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (_ficha != null) ...[
+                  OutlinedButton(
+                    key: const Key('btn_cancelar_edicao'),
+                    onPressed: () {
+                      setState(() {
+                        _modoEdicao = false;
+                        _nomeController.text = _ficha!.nomeCompleto;
+                        _profissaoController.text = _ficha!.profissao;
+                        _cpfController.text = _ficha!.cpf;
+                        _igrejaSelecionadaId = _ficha!.igrejaId;
+                      });
+                    },
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(44, 44),
+                    ),
+                    child: const Text('Cancelar'),
+                  ),
+                  const SizedBox(width: AppSpacing.s12),
+                ],
+                PrimaryButton(
+                  key: const Key('botao_salvar_ficha'),
+                  label: 'Salvar Ficha',
+                  icon: Icons.save_outlined,
+                  isLoading: _salvando,
+                  onPressed: (_isBloqueadoParaEdicao || _salvando)
+                      ? null
+                      : _salvarFicha,
+                ),
+              ],
+            ),
+            if (_ficha != null) ...[
+              const SizedBox(height: AppSpacing.s16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Versão: ${_ficha!.versao}',
+                    style: AppTypography.caption,
+                  ),
+                  if (_ficha!.atualizadoEm != null)
+                    Flexible(
+                      child: Text(
+                        'Última alteração: ${_formatarData(_ficha!.atualizadoEm!)}',
+                        style: AppTypography.caption,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardSeletorParticipacao() {
+    if (_participacoes.isEmpty) return const SizedBox.shrink();
+
+    return SectionCard(
+      title: 'Documento por Participação (AD-13)',
+      subtitle:
+          'Selecione a equipe desejada para consultar o termo probatório específico gerado no servidor.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Equipe Selecionada', style: AppTypography.label),
+          const SizedBox(height: AppSpacing.s8),
+          DropdownButtonFormField<String>(
+            key: const Key('seletor_participacao_equipe'),
+            initialValue: _participacaoSelecionada?.id,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.groups_outlined, size: 20),
+            ),
+            items: _participacoes.map((p) {
+              final eq = _equipes.cast<EquipeCatalogo?>().firstWhere(
+                    (e) => e?.id == p.equipeId,
+                    orElse: () => null,
+                  );
+              final nome = p.nomeEquipe.isNotEmpty
+                  ? p.nomeEquipe
+                  : (eq?.nome ?? p.equipeId);
+              final statusTexto = p.isAtiva ? 'Aprovada' : p.estado;
+              return DropdownMenuItem<String>(
+                value: p.id,
+                child: Text(
+                  '$nome ($statusTexto)',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: (novoId) {
+              if (novoId == null) return;
+              setState(() {
+                _participacaoSelecionada =
+                    _participacoes.firstWhere((p) => p.id == novoId);
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewPlaceholderVazio() {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 400),
+      padding: const EdgeInsets.all(AppSpacing.s24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.description_outlined, size: 48, color: AppColors.textSecondary),
+            SizedBox(height: AppSpacing.s16),
+            Text(
+              'Nenhum documento disponível',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navy900,
+              ),
+            ),
+            SizedBox(height: AppSpacing.s8),
+            Text(
+              'Ao cadastrar equipes e obter aprovação, os termos probatórios individuais estarão disponíveis aqui.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSecaoHistorico() {
+    return SectionCard(
+      title: 'Linha do Tempo e Histórico',
+      subtitle:
+          'Acompanhamento cronológico dos marcos e decisões do seu voluntariado.',
+      child: LinhaDoTempoWidget(
+        eventos: _eventosHistorico,
+        isLoading: _carregandoEventos,
+        tituloSecao: '',
+      ),
+    );
+  }
+
+  String? _obterNomeIgreja(String? id) {
+    if (id == null || id.isEmpty) return null;
+    final match = _igrejas.cast<IgrejaCatalogo?>().firstWhere(
+          (i) => i?.id == id,
+          orElse: () => null,
+        );
+    return match?.rotulo ?? match?.nome ?? id;
+  }
+
+  Widget _buildLinhaInfo(String rotulo, String valor, {bool destaqueMonospaced = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              rotulo,
+              style: AppTypography.label.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              valor,
+              style: destaqueMonospaced
+                  ? AppTypography.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'monospace',
+                    )
+                  : AppTypography.body.copyWith(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
       ),
     );
   }

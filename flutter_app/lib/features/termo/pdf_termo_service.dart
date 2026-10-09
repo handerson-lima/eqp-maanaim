@@ -25,6 +25,12 @@ class ResultadoGeracaoPdfModel {
       jaExistia: map['jaExistia'] as bool? ?? false,
     );
   }
+  bool get isExpirada {
+    if (expiraEm.isEmpty) return false;
+    final dt = DateTime.tryParse(expiraEm);
+    if (dt == null) return false;
+    return DateTime.now().toUtc().isAfter(dt.toUtc());
+  }
 }
 
 /// Modelo de resultado da obtenção de URL de download assinada.
@@ -38,6 +44,13 @@ class ResultadoDownloadPdfModel {
   final String urlDownload;
   final String expiraEm;
   final String nomeArquivo;
+
+  bool get isExpirada {
+    if (expiraEm.isEmpty) return false;
+    final dt = DateTime.tryParse(expiraEm);
+    if (dt == null) return false;
+    return DateTime.now().toUtc().isAfter(dt.toUtc());
+  }
 
   factory ResultadoDownloadPdfModel.fromMap(Map<String, dynamic> map) {
     return ResultadoDownloadPdfModel(
@@ -140,11 +153,13 @@ class MemoriaPdfTermoGateway implements PdfTermoGateway {
     this.lancarErroAoGerar,
     this.lancarErroAoObterDownload,
     this.urlDownloadRetorno = 'https://storage.googleapis.com/test-bucket/termo.pdf',
+    this.expiraEmRetorno,
   });
 
   String? lancarErroAoGerar;
   String? lancarErroAoObterDownload;
   String urlDownloadRetorno;
+  String? expiraEmRetorno;
   final List<String> geracoesRegistradas = [];
 
   @override
@@ -178,7 +193,8 @@ class MemoriaPdfTermoGateway implements PdfTermoGateway {
     }
     return ResultadoDownloadPdfModel(
       urlDownload: urlDownloadRetorno,
-      expiraEm: DateTime.now().add(const Duration(minutes: 15)).toIso8601String(),
+      expiraEm: expiraEmRetorno ??
+          DateTime.now().add(const Duration(minutes: 15)).toIso8601String(),
       nomeArquivo: 'Termo_Voluntariado_Equipe.pdf',
     );
   }
