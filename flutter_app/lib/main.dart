@@ -16,6 +16,7 @@ import 'features/admin/termos_service.dart';
 import 'features/admin/vinculos_service.dart';
 import 'features/admin/admin_shell.dart';
 import 'features/voluntario/ficha_service.dart';
+import 'features/voluntario/inicio_voluntario_screen.dart';
 import 'features/voluntario/minha_ficha_screen.dart';
 import 'features/voluntario/participacao_service.dart';
 import 'features/termo/termo_service.dart';
@@ -494,7 +495,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           onNavegarEquipe: () => _navegarPara(AppRotas.equipe),
           onNavegarCoordenador: () => _navegarPara(AppRotas.coordenador),
           onNavegarAdmin: () => _navegarPara(AppRotas.admin),
-          onNavegarVoluntario: () => _navegarPara(AppRotas.minhaFicha),
+          onNavegarVoluntario: () => _navegarPara(AppRotas.inicio),
           onNavegarRenovacao: () => _navegarPara(AppRotas.renovacao),
           onSair: _sair,
         );
@@ -594,8 +595,8 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
                       : PapelDashboard.voluntario)),
           onSair: _sair,
         );
-      } else {
-        // Voluntário (Minha Ficha)
+      } else if (_destinoAtual == AppRotas.minhaFicha) {
+        // Voluntário (Minha Ficha - S03/S09)
         corpo = MinhaFichaScreen(
           fichaGateway: _obterFichaGateway(),
           catalogoGateway: _obterCatalogoGateway(),
@@ -605,13 +606,39 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           userName: nomeValido,
           dentroDeShell: true,
         );
+      } else {
+        // Voluntário (Início - S02 Dashboard)
+        corpo = InicioVoluntarioScreen(
+          fichaGateway: _obterFichaGateway(),
+          participacaoGateway: _obterParticipacaoGateway(),
+          catalogoGateway: _obterCatalogoGateway(),
+          termoGateway: _obterTermoGateway(),
+          onNavegarMinhaFicha: () => _navegarPara(AppRotas.minhaFicha),
+          onNavegarRenovacao: () => _navegarPara(AppRotas.renovacao),
+          userName: nomeValido,
+          dentroDeShell: true,
+        );
       }
 
       final menuItens = _construirItensMenu(contexto);
       int indiceSelecionado =
           menuItens.indexWhere((it) => it.route == _destinoAtual);
       if (indiceSelecionado < 0) {
-        indiceSelecionado = 0;
+        if (_destinoAtual == AppRotas.raiz) {
+          final rotaPadrao = contexto.ehPastorLocal
+              ? AppRotas.pastor
+              : (contexto.ehResponsavelEquipe
+                  ? AppRotas.equipe
+                  : (contexto.ehCoordenador
+                      ? AppRotas.coordenador
+                      : (contexto.ehAdministrador
+                          ? AppRotas.admin
+                          : AppRotas.inicio)));
+          indiceSelecionado = menuItens.indexWhere((it) => it.route == rotaPadrao);
+        }
+        if (indiceSelecionado < 0) {
+          indiceSelecionado = 0;
+        }
       }
 
       return AppShell(
@@ -650,6 +677,14 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
     }
 
     if (contexto.ehVoluntario) {
+      adicionar(
+        const AppNavItem(
+          label: 'Início',
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home,
+          route: AppRotas.inicio,
+        ),
+      );
       adicionar(
         const AppNavItem(
           label: 'Minha Ficha',
