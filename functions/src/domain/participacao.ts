@@ -92,6 +92,9 @@ export interface ParticipacaoRascunho {
   alertaVigencia?: string | null;
   emAlertaRenovacao?: boolean;
   cicloAtualId?: string | null;
+  intencaoRenovacao?: string | null;
+  cicloRenovacaoId?: string | null;
+  programadoEncerramentoEm?: string | null;
   criadoEm?: string | null;
   atualizadoEm?: string | null;
 }

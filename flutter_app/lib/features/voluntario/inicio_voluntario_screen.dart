@@ -166,6 +166,10 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
   }
 
   Future<void> _abrirManifestacaoRenovacao(ParticipacaoModel participacao) async {
+    if (widget.onNavegarRenovacao != null) {
+      widget.onNavegarRenovacao!();
+      return;
+    }
     final sucesso = await ManifestarRenovacaoDialog.show(
       context,
       participacoesElegiveis: [participacao],

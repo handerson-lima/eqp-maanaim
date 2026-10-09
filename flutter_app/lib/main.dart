@@ -19,6 +19,7 @@ import 'features/voluntario/ficha_service.dart';
 import 'features/voluntario/inicio_voluntario_screen.dart';
 import 'features/voluntario/minha_ficha_screen.dart';
 import 'features/voluntario/solicitacao_equipe_screen.dart';
+import 'features/voluntario/renovacao_screen.dart';
 import 'features/voluntario/participacao_service.dart';
 import 'features/termo/termo_service.dart';
 import 'features/pastor/pastor_service.dart';
@@ -381,6 +382,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
   late String _destinoAtual =
       AppRotas.sanitizarRota(widget.rotaInicial ?? AppRotas.raiz);
   ContextoAcessoService? _contextoService;
+  bool _exibirRenovacaoVoluntario = false;
 
   @override
   void initState() {
@@ -437,6 +439,17 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
     atualizarRotaNoNavegador(rota);
     setState(() {
       _destinoAtual = rota;
+      if (rota != AppRotas.renovacao) {
+        _exibirRenovacaoVoluntario = false;
+      }
+    });
+  }
+
+  void _navegarParaRenovacaoVoluntario() {
+    atualizarRotaNoNavegador(AppRotas.renovacao);
+    setState(() {
+      _destinoAtual = AppRotas.renovacao;
+      _exibirRenovacaoVoluntario = true;
     });
   }
 
@@ -614,19 +627,36 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           onSair: _sair,
           dentroDeShell: true,
         );
-      } else if (destino == AppRotas.renovacao &&
-          widget.dashboardRenovacao != null) {
-        corpo = DashboardRenovacaoScreen(
-          gateway: widget.dashboardRenovacao!,
-          papelInicial: contexto.ehCoordenador
-              ? PapelDashboard.coordenador
-              : (contexto.ehPastorLocal
-                  ? PapelDashboard.pastorLocal
-                  : (contexto.ehResponsavelEquipe
-                      ? PapelDashboard.responsavelEquipe
-                      : PapelDashboard.voluntario)),
-          onSair: _sair,
-        );
+      } else if (destino == AppRotas.renovacao) {
+        final apenasVoluntario = !contexto.ehPastorLocal &&
+            !contexto.ehResponsavelEquipe &&
+            !contexto.ehCoordenador &&
+            !contexto.ehAdministrador;
+
+        if (apenasVoluntario ||
+            _exibirRenovacaoVoluntario ||
+            widget.dashboardRenovacao == null) {
+          corpo = RenovacaoScreen(
+            participacaoGateway: _obterParticipacaoGateway(),
+            onVoltar: () => _navegarPara(AppRotas.inicio),
+            onIrParaInicio: () => _navegarPara(AppRotas.inicio),
+            onIrParaMinhaFicha: () => _navegarPara(AppRotas.minhaFicha),
+            dentroDeShell: true,
+          );
+        } else {
+          corpo = DashboardRenovacaoScreen(
+            gateway: widget.dashboardRenovacao!,
+            papelInicial: contexto.ehCoordenador
+                ? PapelDashboard.coordenador
+                : (contexto.ehPastorLocal
+                    ? PapelDashboard.pastorLocal
+                    : (contexto.ehResponsavelEquipe
+                        ? PapelDashboard.responsavelEquipe
+                        : PapelDashboard.voluntario)),
+            onManifestarVoluntario: (_) => _navegarParaRenovacaoVoluntario(),
+            onSair: _sair,
+          );
+        }
       } else if (destino == AppRotas.solicitarEquipe) {
         // Voluntário (Solicitação de Equipe - S03 em Etapas)
         corpo = SolicitacaoEquipeScreen(
@@ -655,7 +685,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           catalogoGateway: _obterCatalogoGateway(),
           termoGateway: _obterTermoGateway(),
           onNavegarMinhaFicha: () => _navegarPara(AppRotas.minhaFicha),
-          onNavegarRenovacao: () => _navegarPara(AppRotas.renovacao),
+          onNavegarRenovacao: _navegarParaRenovacaoVoluntario,
           onNavegarSolicitarEquipe: () => _navegarPara(AppRotas.solicitarEquipe),
           userName: nomeValido,
           dentroDeShell: true,

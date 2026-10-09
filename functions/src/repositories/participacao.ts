@@ -67,6 +67,9 @@ function montarParticipacao(
     alertaVigencia: alertaInfo?.alerta ?? null,
     emAlertaRenovacao: alertaInfo?.emAlertaRenovacao ?? false,
     cicloAtualId: dados.cicloAtualId ? String(dados.cicloAtualId) : null,
+    intencaoRenovacao: dados.intencaoRenovacao ? String(dados.intencaoRenovacao) : null,
+    cicloRenovacaoId: dados.cicloRenovacaoId ? String(dados.cicloRenovacaoId) : null,
+    programadoEncerramentoEm: serializarTimestamp(dados.programadoEncerramentoEm),
     criadoEm: serializarTimestamp(dados.criadoEm),
     atualizadoEm: serializarTimestamp(dados.atualizadoEm),
   };
