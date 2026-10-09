@@ -33,6 +33,7 @@ import 'features/auth/contexto_acesso_service.dart';
 import 'features/auth/acesso_negado_screen.dart';
 import 'features/auth/seletor_destino_capacidades.dart';
 import 'routes/app_router.dart';
+import 'routes/navegacao_url.dart';
 import 'features/pastor/fila_pastor_screen.dart';
 import 'features/responsavel_equipe/fila_responsavel_equipe_screen.dart';
 import 'features/renovacao/dashboard_renovacao_screen.dart';
@@ -116,6 +117,7 @@ Future<void> main() async {
       solicitacoesPendentes:
           FirebaseSolicitacoesPendentesGateway(functions: functions),
       contextoAcesso: FirebaseContextoAcessoGateway(functions),
+      rotaInicial: rotaInicialDoNavegador(),
     ),
   );
 }
@@ -375,15 +377,35 @@ class AreaAutenticada extends StatefulWidget {
 
 class _AreaAutenticadaState extends State<AreaAutenticada> {
   late Future<ContextoAcesso> _autorizacao = _resolverContexto();
-  late String _destinoAtual = widget.rotaInicial ?? AppRotas.raiz;
+  late String _destinoAtual =
+      AppRotas.sanitizarRota(widget.rotaInicial ?? AppRotas.raiz);
+  ContextoAcessoService? _contextoService;
+
+  @override
+  void initState() {
+    super.initState();
+    registrarMudancaDeRotaNoNavegador(_aoMudarRotaNoNavegador);
+  }
+
+  void _aoMudarRotaNoNavegador() {
+    if (!mounted) return;
+    final rota = AppRotas.sanitizarRota(rotaInicialDoNavegador());
+    if (rota == _destinoAtual) return;
+    setState(() => _destinoAtual = rota);
+  }
 
   Future<ContextoAcesso> _resolverContexto() async {
     if (widget.contextoAcesso != null) {
-      return widget.contextoAcesso!.obterContextoAcesso();
+      final service = ContextoAcessoService(widget.contextoAcesso!);
+      _contextoService = service;
+      return service.carregarContexto();
     }
     try {
-      final gateway = FirebaseContextoAcessoGateway(FirebaseFunctions.instance);
-      return await gateway.obterContextoAcesso();
+      final service = ContextoAcessoService(
+        FirebaseContextoAcessoGateway(FirebaseFunctions.instance),
+      );
+      _contextoService = service;
+      return await service.carregarContexto();
     } catch (_) {
       // Fallback para testes unitários ou ambientes sem Firebase ativo
       final ehAdmin = await widget.auth.possuiAdministracao();
@@ -410,14 +432,20 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
   }
 
   void _retentar() => setState(() {
-    _autorizacao = _resolverContexto();
+    _autorizacao = _contextoService?.carregarContexto(forcar: true) ??
+        _resolverContexto();
   });
 
-  void _navegarPara(String destino) => setState(() {
-    _destinoAtual = destino;
-  });
+  void _navegarPara(String destino) {
+    final rota = AppRotas.sanitizarRota(destino);
+    atualizarRotaNoNavegador(rota);
+    setState(() {
+      _destinoAtual = rota;
+    });
+  }
 
   Future<void> _sair() async {
+    _contextoService?.invalidar();
     try {
       await widget.auth.sair();
       // O StreamBuilder em RaizSessao reagirá ao logout.
@@ -486,9 +514,14 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
         );
       }
 
+      // Despacha pelo caminho sanitizado/autorizado pelo guard, não pela string
+      // bruta (que poderia conter query/filtro). (review 8.3)
+      final destino =
+          avaliacao is RotaAutorizada ? avaliacao.caminho : _destinoAtual;
+
       // Se usuário tem múltiplos papéis e está na raiz ou pediu o seletor de destinos:
-      if (_destinoAtual == AppRotas.destinos ||
-          (_destinoAtual == AppRotas.raiz && contexto.temMultiplosDestinos)) {
+      if (destino == AppRotas.destinos ||
+          (destino == AppRotas.raiz && contexto.temMultiplosDestinos)) {
         return SeletorDestinoCapacidades(
           contexto: contexto,
           onNavegarPastor: () => _navegarPara(AppRotas.pastor),
@@ -502,8 +535,8 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
       }
 
       // Administrador Geral
-      if (_destinoAtual == AppRotas.admin ||
-          (_destinoAtual == AppRotas.raiz &&
+      if (destino == AppRotas.admin ||
+          (destino == AppRotas.raiz &&
               contexto.ehAdministrador &&
               !contexto.temMultiplosDestinos)) {
         return AdminShell(
@@ -536,7 +569,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
 
       // Destino do corpo no shell único
       Widget corpo;
-      if (_destinoAtual == AppRotas.perfil) {
+      if (destino == AppRotas.perfil) {
         corpo = EditarPerfilScreen(
           service: widget.perfilService,
           dentroDeShell: true,
@@ -550,8 +583,8 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
                         : AppRotas.minhaFicha)),
           ),
         );
-      } else if ((_destinoAtual == AppRotas.pastor ||
-              (_destinoAtual == AppRotas.raiz &&
+      } else if ((destino == AppRotas.pastor ||
+              (destino == AppRotas.raiz &&
                   contexto.ehPastorLocal &&
                   !contexto.ehAdministrador &&
                   !contexto.ehCoordenador)) &&
@@ -562,8 +595,8 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           onSair: _sair,
           dentroDeShell: true,
         );
-      } else if ((_destinoAtual == AppRotas.equipe ||
-              (_destinoAtual == AppRotas.raiz &&
+      } else if ((destino == AppRotas.equipe ||
+              (destino == AppRotas.raiz &&
                   contexto.ehResponsavelEquipe &&
                   !contexto.ehAdministrador &&
                   !contexto.ehCoordenador)) &&
@@ -574,8 +607,8 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           onSair: _sair,
           dentroDeShell: true,
         );
-      } else if ((_destinoAtual == AppRotas.coordenador ||
-              (_destinoAtual == AppRotas.raiz &&
+      } else if ((destino == AppRotas.coordenador ||
+              (destino == AppRotas.raiz &&
                   contexto.ehCoordenador &&
                   !contexto.ehAdministrador)) &&
           widget.coordenador != null) {
@@ -585,7 +618,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           onSair: _sair,
           dentroDeShell: true,
         );
-      } else if (_destinoAtual == AppRotas.renovacao &&
+      } else if (destino == AppRotas.renovacao &&
           widget.dashboardRenovacao != null) {
         corpo = DashboardRenovacaoScreen(
           gateway: widget.dashboardRenovacao!,
@@ -598,7 +631,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
                       : PapelDashboard.voluntario)),
           onSair: _sair,
         );
-      } else if (_destinoAtual == AppRotas.minhaFicha) {
+      } else if (destino == AppRotas.minhaFicha) {
         // Voluntário (Minha Ficha - S03/S09)
         corpo = MinhaFichaScreen(
           fichaGateway: _obterFichaGateway(),
@@ -625,9 +658,9 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
 
       final menuItens = _construirItensMenu(contexto);
       int indiceSelecionado =
-          menuItens.indexWhere((it) => it.route == _destinoAtual);
+          menuItens.indexWhere((it) => it.route == destino);
       if (indiceSelecionado < 0) {
-        if (_destinoAtual == AppRotas.raiz) {
+        if (destino == AppRotas.raiz) {
           final rotaPadrao = contexto.ehPastorLocal
               ? AppRotas.pastor
               : (contexto.ehResponsavelEquipe

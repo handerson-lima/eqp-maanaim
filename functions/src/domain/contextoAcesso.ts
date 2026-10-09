@@ -35,7 +35,6 @@ export interface ParametrosDerivacaoCapacidades {
   ehCoord: boolean;
   temIgrejas: boolean;
   temEquipes: boolean;
-  temFichaOuUsuario?: boolean;
 }
 
 /**

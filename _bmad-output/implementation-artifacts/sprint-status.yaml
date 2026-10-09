@@ -87,11 +87,11 @@ development_status:
   epic-7-retrospective: optional
 
   # Autorização 08/10; incorporação 09/10 com backlog como estado inicial das 16 histórias.
-  # Execução em curso: 8.1 e 8.2 concluídas (8.2 revisada em 09/10); 8.3 e 8.4 em andamento.
+  # Execução em curso: 8.1–8.7 concluídas (8.3 revisada e corrigida em 09/10).
   epic-8: in-progress
   8-1-consolidar-contrato-visual-e-inventario-de-dados: done
   8-2-corrigir-tokens-acessiveis-e-componentes-compartilhados: done
-  8-3-resolver-contexto-de-acesso-e-rotas-por-capacidades: review
+  8-3-resolver-contexto-de-acesso-e-rotas-por-capacidades: done
   8-4-aplicar-shell-unico-e-corrigir-acesso-publico: done
   8-5-construir-inicio-do-voluntario: done
   8-6-recompor-dashboards-e-filas-dos-responsaveis: done

@@ -16,6 +16,10 @@ abstract final class AppRotas {
   static const String destinos = '/destinos';
   static const String acessoNegado = '/acesso-negado';
 
+  /// Parâmetros de filtro permitidos em URL (allowlist). Qualquer outro é
+  /// descartado para não trafegar PII, tokens ou dados sensíveis (AD-12).
+  static const Set<String> parametrosSeguros = {'igrejaid', 'equipeid', 'ano'};
+
   /// Sanitiza e valida rotas para garantir que nenhuma PII, CPF, token ou URL assinada
   /// trafegue na URL do navegador web (AD-12).
   static String sanitizarRota(String? caminhoCompleto) {
@@ -23,21 +27,31 @@ abstract final class AppRotas {
     final uri = Uri.tryParse(caminhoCompleto);
     if (uri == null) return inicio;
 
-    // Remove qualquer parâmetro que possa conter PII ou tokens
-    final parametrosLimpos = Map<String, String>.from(uri.queryParameters);
-    parametrosLimpos.removeWhere((chave, valor) {
-      final k = chave.toLowerCase();
-      return k.contains('token') ||
-          k.contains('cpf') ||
-          k.contains('email') ||
-          k.contains('senha') ||
-          k.contains('signature') ||
-          valor.contains('token=') ||
-          valor.length > 120;
-    });
+    var caminho = uri.path;
+    var parametros = uri.queryParameters;
 
-    final novoUri = uri.replace(queryParameters: parametrosLimpos.isEmpty ? null : parametrosLimpos);
-    return novoUri.toString();
+    // Flutter Web (hash strategy): rota e query vivem no fragmento (/#/rota?...).
+    if ((caminho.isEmpty || caminho == '/') && uri.fragment.isNotEmpty) {
+      final fragmento = Uri.tryParse(uri.fragment);
+      if (fragmento != null) {
+        if (fragmento.path.isNotEmpty) caminho = fragmento.path;
+        if (fragmento.queryParameters.isNotEmpty) {
+          parametros = fragmento.queryParameters;
+        }
+      }
+    }
+
+    if (caminho.isEmpty) caminho = raiz;
+
+    // Allowlist: só parâmetros de filtro conhecidos sobrevivem.
+    final seguros = <String, String>{
+      for (final entrada in parametros.entries)
+        if (parametrosSeguros.contains(entrada.key.toLowerCase()))
+          entrada.key: entrada.value,
+    };
+
+    if (seguros.isEmpty) return caminho;
+    return Uri(path: caminho, queryParameters: seguros).toString();
   }
 }
 
@@ -115,20 +129,15 @@ class AppRouteGuard {
         );
 
       case AppRotas.renovacao:
-        if (contexto.ehPastorLocal ||
-            contexto.ehResponsavelEquipe ||
-            contexto.ehCoordenador ||
-            contexto.ehAdministrador ||
-            contexto.ehVoluntario) {
-          return RotaAutorizada(caminho: caminho, parametros: uri.queryParameters);
-        }
-        return const RotaNaoAutorizada(
-          caminho: AppRotas.renovacao,
-          capacidadeFaltante: 'Vínculo com ciclo de renovação',
-        );
+        // Renovação é jornada do voluntário: disponível a qualquer usuário
+        // autenticado (decisão de revisão 2026-10-09).
+        return RotaAutorizada(caminho: caminho, parametros: uri.queryParameters);
 
       default:
-        return RotaAutorizada(caminho: caminho, parametros: uri.queryParameters);
+        return RotaNaoAutorizada(
+          caminho: caminho,
+          capacidadeFaltante: 'uma rota válida',
+        );
     }
   }
 

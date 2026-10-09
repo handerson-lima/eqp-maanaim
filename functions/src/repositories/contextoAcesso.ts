@@ -1,5 +1,9 @@
 import type { Firestore } from 'firebase-admin/firestore';
-import { podeAdministrar } from '../domain/autoridadeAdministrativa.js';
+import {
+  PAPEL_COORDENADOR,
+  podeAdministrar,
+  possuiPapel,
+} from '../domain/autoridadeAdministrativa.js';
 import {
   ContextoAcessoDTO,
   EscopoEquipeDTO,
@@ -22,7 +26,7 @@ export async function obterContextoAcessoRepo(
     if (podeAdministrar(dados)) {
       ehAdmin = true;
     }
-    if (dados?.coordenadorGeral === true && dados?.ativo !== false) {
+    if (possuiPapel(dados, PAPEL_COORDENADOR)) {
       ehCoord = true;
     }
   }
@@ -46,22 +50,40 @@ export async function obterContextoAcessoRepo(
     }
   }
 
+  // Vínculos históricos complementam o catálogo apenas quando consistentes com
+  // o responsável canônico vigente (reconciliação e deduplicação por id).
   const vinculosPastorSnap = await db
     .collection('vinculosPastorIgreja')
     .where('pessoaId', '==', uid)
     .where('estado', '==', 'VIGENTE')
     .get();
 
-  for (const doc of vinculosPastorSnap.docs) {
-    const v = doc.data() ?? {};
-    const igId = String(v.entidadeId ?? '');
-    if (igId && !igrejasMap.has(igId)) {
-      const igDoc = await db.collection('igrejas').doc(igId).get();
-      if (igDoc.exists && igDoc.data()?.ativo !== false) {
-        const d = igDoc.data() ?? {};
-        igrejasMap.set(igId, {
-          id: igId,
-          nome: String(d.nome ?? igId),
+  const idsIgrejasVinculo = [
+    ...new Set(
+      vinculosPastorSnap.docs
+        .map((doc) => String((doc.data() ?? {}).entidadeId ?? ''))
+        .filter((id) => id && !igrejasMap.has(id)),
+    ),
+  ];
+
+  if (idsIgrejasVinculo.length > 0) {
+    const igrejasVinculo = await db.getAll(
+      ...idsIgrejasVinculo.map((id) => db.collection('igrejas').doc(id)),
+    );
+    for (const igDoc of igrejasVinculo) {
+      const d = igDoc.data() ?? {};
+      const pastorCanonico = d.pastorLocalVigentePessoaId;
+      if (
+        typeof pastorCanonico === 'string' &&
+        pastorCanonico !== '' &&
+        pastorCanonico !== uid
+      ) {
+        continue;
+      }
+      if (igDoc.exists && d.ativo !== false) {
+        igrejasMap.set(igDoc.id, {
+          id: igDoc.id,
+          nome: String(d.nome ?? igDoc.id),
           codigo: d.codigo ? String(d.codigo) : undefined,
         });
       }
@@ -92,16 +114,32 @@ export async function obterContextoAcessoRepo(
     .where('estado', '==', 'VIGENTE')
     .get();
 
-  for (const doc of vinculosRespSnap.docs) {
-    const v = doc.data() ?? {};
-    const eqId = String(v.entidadeId ?? '');
-    if (eqId && !equipesMap.has(eqId)) {
-      const eqDoc = await db.collection('equipes').doc(eqId).get();
-      if (eqDoc.exists && eqDoc.data()?.ativo !== false) {
-        const d = eqDoc.data() ?? {};
-        equipesMap.set(eqId, {
-          id: eqId,
-          nome: String(d.nome ?? eqId),
+  const idsEquipesVinculo = [
+    ...new Set(
+      vinculosRespSnap.docs
+        .map((doc) => String((doc.data() ?? {}).entidadeId ?? ''))
+        .filter((id) => id && !equipesMap.has(id)),
+    ),
+  ];
+
+  if (idsEquipesVinculo.length > 0) {
+    const equipesVinculo = await db.getAll(
+      ...idsEquipesVinculo.map((id) => db.collection('equipes').doc(id)),
+    );
+    for (const eqDoc of equipesVinculo) {
+      const d = eqDoc.data() ?? {};
+      const responsavelCanonico = d.responsavelVigentePessoaId;
+      if (
+        typeof responsavelCanonico === 'string' &&
+        responsavelCanonico !== '' &&
+        responsavelCanonico !== uid
+      ) {
+        continue;
+      }
+      if (eqDoc.exists && d.ativo !== false) {
+        equipesMap.set(eqDoc.id, {
+          id: eqDoc.id,
+          nome: String(d.nome ?? eqDoc.id),
         });
       }
     }
@@ -122,7 +160,6 @@ export async function obterContextoAcessoRepo(
     ehCoord,
     temIgrejas: listaIgrejas.length > 0,
     temEquipes: listaEquipes.length > 0,
-    temFichaOuUsuario: true,
   });
 
   return {

@@ -56,6 +56,36 @@ void main() {
       expect(limpa, isNot(contains('a@b.com')));
     });
 
+    test('AppRotas.sanitizarRota remove a query quando só há parâmetros sensíveis', () {
+      final limpa = AppRotas.sanitizarRota('/pastor?token=secret123&cpf=12345678900');
+
+      expect(limpa, equals('/pastor'));
+      expect(limpa, isNot(contains('secret123')));
+      expect(limpa, isNot(contains('cpf')));
+    });
+
+    test('AppRotas.sanitizarRota resolve deep link com fragmento hash', () {
+      final limpa = AppRotas.sanitizarRota(
+        'https://maanaim.example/#/pastor?igrejaId=ig_1&token=secret',
+      );
+
+      expect(limpa, equals('/pastor?igrejaId=ig_1'));
+      expect(limpa, isNot(contains('secret')));
+    });
+
+    test('AppRouteGuard nega rota desconhecida com 403', () {
+      final contextoVoluntario = ContextoAcesso.fromJson({
+        'uid': 'vol-1',
+        'capacidades': ['voluntario'],
+        'ehVoluntario': true,
+      });
+
+      expect(
+        const AppRouteGuard().avaliar('/rota-inexistente', contextoVoluntario),
+        isA<RotaNaoAutorizada>(),
+      );
+    });
+
     test('AppRouteGuard autoriza voluntário simples apenas em rotas permitidas', () {
       final contextoVoluntario = ContextoAcesso.fromJson({
         'uid': 'vol-1',

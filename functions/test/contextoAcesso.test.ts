@@ -111,6 +111,8 @@ describe('Story 8.3: Repositório obterContextoAcessoRepo', () => {
           return criarQuery([{ campo, op, valor }]);
         },
       }),
+      getAll: async (...refs: Array<{ get: () => Promise<unknown> }>) =>
+        Promise.all(refs.map((ref) => ref.get())),
     } as any;
   }
 
@@ -219,7 +221,6 @@ describe('Story 8.3: Repositório obterContextoAcessoRepo', () => {
         'admin-1': {
           ativa: true,
           papeis: ['ADMINISTRADOR'],
-          coordenadorGeral: true,
         },
       },
     });
@@ -227,9 +228,69 @@ describe('Story 8.3: Repositório obterContextoAcessoRepo', () => {
     const contexto = await obterContextoAcessoRepo(db, 'admin-1');
 
     expect(contexto.ehAdministrador).toBe(true);
-    expect(contexto.ehCoordenador).toBe(true);
     expect(contexto.capacidades).toContain('administrador');
+    expect(contexto.ehCoordenador).toBe(false);
+    expect(contexto.capacidades).not.toContain('coordenador');
+  });
+
+  it('resolve capacidade de coordenador a partir do papel canônico COORDENADOR', async () => {
+    const db = criarMockDb({
+      autoridadesAdministrativas: {
+        'coord-1': {
+          ativa: true,
+          papeis: ['COORDENADOR'],
+        },
+      },
+    });
+
+    const contexto = await obterContextoAcessoRepo(db, 'coord-1');
+
+    expect(contexto.ehCoordenador).toBe(true);
+    expect(contexto.ehAdministrador).toBe(false);
     expect(contexto.capacidades).toContain('coordenador');
+    expect(contexto.capacidades).not.toContain('administrador');
+  });
+
+  it('não concede coordenador quando o papel canônico está inativo', async () => {
+    const db = criarMockDb({
+      autoridadesAdministrativas: {
+        'coord-1': {
+          ativa: false,
+          papeis: ['COORDENADOR'],
+        },
+      },
+    });
+
+    const contexto = await obterContextoAcessoRepo(db, 'coord-1');
+
+    expect(contexto.ehCoordenador).toBe(false);
+    expect(contexto.capacidades).not.toContain('coordenador');
+  });
+
+  it('reconcilia vínculo pastoral com o responsável canônico do catálogo', async () => {
+    const db = criarMockDb({
+      vinculosPastorIgreja: {
+        'v-1': { pessoaId: 'pastor-1', entidadeId: 'ig-ok', estado: 'VIGENTE' },
+        'v-2': { pessoaId: 'pastor-1', entidadeId: 'ig-outro', estado: 'VIGENTE' },
+      },
+      igrejas: {
+        'ig-ok': {
+          nome: 'Igreja Consistente',
+          pastorLocalVigentePessoaId: 'pastor-1',
+          ativo: true,
+        },
+        'ig-outro': {
+          nome: 'Igreja de Outro Pastor',
+          pastorLocalVigentePessoaId: 'pastor-2',
+          ativo: true,
+        },
+      },
+    });
+
+    const contexto = await obterContextoAcessoRepo(db, 'pastor-1');
+
+    expect(contexto.ehPastorLocal).toBe(true);
+    expect(contexto.igrejas.map((i) => i.id)).toEqual(['ig-ok']);
   });
 
   it('remove capacidade imediatamente quando vínculo pastoral é revogado ou igreja inativada', async () => {
