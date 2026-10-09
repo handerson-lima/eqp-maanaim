@@ -38,6 +38,7 @@ class MinhaFichaScreen extends StatefulWidget {
     this.historicoService,
     this.onSair,
     this.userName,
+    this.dentroDeShell = false,
   });
 
   final FichaGateway fichaGateway;
@@ -48,6 +49,7 @@ class MinhaFichaScreen extends StatefulWidget {
   final HistoricoService? historicoService;
   final VoidCallback? onSair;
   final String? userName;
+  final bool dentroDeShell;
 
   @override
   State<MinhaFichaScreen> createState() => _MinhaFichaScreenState();
@@ -432,6 +434,51 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     final String nomeExibicao =
         nomeValidoFicha ?? nomeValidoWidget ?? 'Voluntário';
 
+    final corpo = _carregando
+        ? SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s16,
+              vertical: AppSpacing.s24,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    PageHeader(
+                      title: 'Minha Ficha',
+                      subtitle:
+                          'Acesso realizado. Sua ficha pode continuar em rascunho.',
+                      action: _obterActionHeader(),
+                    ),
+                    const SizedBox(height: AppSpacing.s32),
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(AppSpacing.s32),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        : _erroCarregamento != null
+            ? ErrorState(
+                title: 'Erro ao carregar ficha',
+                message: _erroCarregamento!,
+                onRetry: _carregarDados,
+              )
+            : _buildConteudo();
+
+    if (widget.dentroDeShell) {
+      return Container(
+        color: AppColors.background,
+        child: corpo,
+      );
+    }
+
     return AppShell(
       items: navItems,
       selectedIndex: 0,
@@ -467,43 +514,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           ),
         ),
       ],
-      body: _carregando
-          ? SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s16,
-                vertical: AppSpacing.s24,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      PageHeader(
-                        title: 'Minha Ficha',
-                        subtitle:
-                            'Acesso realizado. Sua ficha pode continuar em rascunho.',
-                        action: _obterActionHeader(),
-                      ),
-                      const SizedBox(height: AppSpacing.s32),
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(AppSpacing.s32),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          : _erroCarregamento != null
-              ? ErrorState(
-                  title: 'Erro ao carregar ficha',
-                  message: _erroCarregamento!,
-                  onRetry: _carregarDados,
-                )
-              : _buildConteudo(),
+      body: corpo,
     );
   }
 

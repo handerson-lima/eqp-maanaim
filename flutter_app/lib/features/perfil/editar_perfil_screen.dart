@@ -21,6 +21,7 @@ class EditarPerfilScreen extends StatefulWidget {
     this.telefoneInicial,
     this.fotoUrlInicial,
     this.onVoltar,
+    this.dentroDeShell = false,
   });
 
   final IPerfilService? service;
@@ -28,6 +29,7 @@ class EditarPerfilScreen extends StatefulWidget {
   final String? telefoneInicial;
   final String? fotoUrlInicial;
   final VoidCallback? onVoltar;
+  final bool dentroDeShell;
 
   @override
   State<EditarPerfilScreen> createState() => _EditarPerfilScreenState();
@@ -327,6 +329,15 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final corpo = SafeArea(child: _buildConteudo());
+
+    if (widget.dentroDeShell) {
+      return Container(
+        color: AppColors.background,
+        child: corpo,
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -346,7 +357,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
           onPressed: widget.onVoltar ?? () => Navigator.of(context).maybePop(),
         ),
       ),
-      body: _buildConteudo(),
+      body: corpo,
     );
   }
 

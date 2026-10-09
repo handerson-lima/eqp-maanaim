@@ -6,25 +6,44 @@ import 'package:flutter/material.dart';
 /// - `_bmad-output/planning-artifacts/ux/DESIGN-RULES-FOR-AGENTS.md`
 abstract final class AppColors {
   // Institucionais / Navegação
-  static const Color navy900 = Color(0xFF082C49); // sidebar / áreas institucionais
+  static const Color navy900 = Color(
+    0xFF082C49,
+  ); // sidebar / áreas institucionais
   static const Color navy800 = Color(0xFF0D3859); // hover / variações escuras
-  static const Color blue600 = Color(0xFF0B6FE8); // ação primária / botões principais
-  static const Color blue50 = Color(0xFFEEF6FF); // seleção / fundos informativos
+  static const Color blue600 = Color(
+    0xFF0B6FE8,
+  ); // ação primária / botões principais
+  static const Color blue50 = Color(
+    0xFFEEF6FF,
+  ); // seleção / fundos informativos
 
   // Superfícies e Neutros
   static const Color surface = Color(0xFFFFFFFF);
   static const Color background = Color(0xFFF5F7FA);
   static const Color border = Color(0xFFDDE3EA);
-  static const Color borderInteractive = Color(0xFF667085); // limites de controles interativos (WCAG ≥ 3:1)
+  static const Color borderInteractive = Color(
+    0xFF667085,
+  ); // limites de controles interativos (WCAG ≥ 3:1)
   static const Color textPrimary = Color(0xFF172033);
   static const Color textSecondary = Color(0xFF667085);
-  static const Color neutral50 = Color(0xFFF9FAFB); // fundos neutros muito claros
+  static const Color textDisabled = Color(
+    0xFF475467,
+  ); // texto de controles desabilitados (WCAG ≥ 4,5:1 sobre border)
+  static const Color neutral50 = Color(
+    0xFFF9FAFB,
+  ); // fundos neutros muito claros
   static const Color neutral100 = Color(0xFFF3F4F6); // chips/etiquetas neutras
-  static const Color neutral150 = Color(0xFFF8FAFC); // containers informativos neutros
+  static const Color neutral150 = Color(
+    0xFFF8FAFC,
+  ); // containers informativos neutros
 
   // Foco Acessível (WCAG 2.2 AA ≥ 3:1)
-  static const Color focusLight = Color(0xFF0B6FE8); // anel de foco em superfícies claras
-  static const Color focusDark = Color(0xFFFFFFFF); // anel de foco em superfícies escuras (navy)
+  static const Color focusLight = Color(
+    0xFF0B6FE8,
+  ); // anel de foco em superfícies claras
+  static const Color focusDark = Color(
+    0xFFFFFFFF,
+  ); // anel de foco em superfícies escuras (navy)
 
   // Semânticos Acessíveis (Status e Feedback - WCAG 2.2 AA ≥ 4.5:1 para texto normal)
   static const Color success = Color(0xFF16794A);
@@ -62,9 +81,15 @@ abstract final class AppGeometry {
   static const double radiusInput = 6.0;
   static const double borderWidth = 1.0;
 
-  static final BorderRadius cardBorderRadius = BorderRadius.circular(radiusCard);
-  static final BorderRadius buttonBorderRadius = BorderRadius.circular(radiusButton);
-  static final BorderRadius inputBorderRadius = BorderRadius.circular(radiusInput);
+  static final BorderRadius cardBorderRadius = BorderRadius.circular(
+    radiusCard,
+  );
+  static final BorderRadius buttonBorderRadius = BorderRadius.circular(
+    radiusButton,
+  );
+  static final BorderRadius inputBorderRadius = BorderRadius.circular(
+    radiusInput,
+  );
 
   static const double minTouchTarget = 44.0;
   static const double sidebarDesktopWidth = 220.0;

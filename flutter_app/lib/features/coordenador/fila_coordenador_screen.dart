@@ -9,10 +9,12 @@ class FilaCoordenadorScreen extends StatefulWidget {
     super.key,
     required this.gateway,
     this.onSair,
+    this.dentroDeShell = false,
   });
 
   final CoordenadorGateway gateway;
   final VoidCallback? onSair;
+  final bool dentroDeShell;
 
   @override
   State<FilaCoordenadorScreen> createState() => _FilaCoordenadorScreenState();
@@ -850,6 +852,65 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
     final isDesktop = largura >= 1024;
     final isCompact = largura < 600;
 
+    final corpo = SafeArea(
+      child: _carregando
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: AppSpacing.s12),
+                  Text(
+                    'Carregando fila do coordenador...',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            )
+          : _erro != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
+                      const SizedBox(height: AppSpacing.s12),
+                      Text(
+                        _erro!,
+                        style: AppTypography.body.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: AppSpacing.s16),
+                      ElevatedButton(
+                        onPressed: _carregarFila,
+                        child: const Text('Tentar novamente'),
+                      ),
+                    ],
+                  ),
+                )
+              : _pendencias.isEmpty
+                  ? _buildVazio()
+                  : isDesktop
+                      ? _buildTabelaDesktop()
+                      : ListView.builder(
+                          padding: EdgeInsets.all(
+                            isCompact
+                                ? AppSpacing.pagePaddingMobile
+                                : AppSpacing.pagePaddingDesktop,
+                          ),
+                          itemCount: _pendencias.length,
+                          itemBuilder: (ctx, idx) => _buildCardPendencia(
+                            _pendencias[idx],
+                            isCompact,
+                          ),
+                        ),
+    );
+
+    if (widget.dentroDeShell) {
+      return Container(
+        color: AppColors.background,
+        child: corpo,
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -870,57 +931,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
             ),
         ],
       ),
-      body: SafeArea(
-        child: _carregando
-            ? const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: AppSpacing.s12),
-                    Text(
-                      'Carregando fila do coordenador...',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              )
-            : _erro != null
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
-                        const SizedBox(height: AppSpacing.s12),
-                        Text(
-                          _erro!,
-                          style: AppTypography.body.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: AppSpacing.s16),
-                        ElevatedButton(
-                          onPressed: _carregarFila,
-                          child: const Text('Tentar novamente'),
-                        ),
-                      ],
-                    ),
-                  )
-                : _pendencias.isEmpty
-                    ? _buildVazio()
-                    : isDesktop
-                        ? _buildTabelaDesktop()
-                        : ListView.builder(
-                            padding: EdgeInsets.all(
-                              isCompact
-                                  ? AppSpacing.pagePaddingMobile
-                                  : AppSpacing.pagePaddingDesktop,
-                            ),
-                            itemCount: _pendencias.length,
-                            itemBuilder: (ctx, idx) => _buildCardPendencia(
-                              _pendencias[idx],
-                              isCompact,
-                            ),
-                          ),
-      ),
+      body: corpo,
     );
   }
 }

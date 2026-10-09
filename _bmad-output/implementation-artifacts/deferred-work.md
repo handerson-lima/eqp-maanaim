@@ -111,3 +111,12 @@
 ## Deferred from: code review of spec-6-4-aplicar-retencao-minimizacao-e-controles-operacionais-de-dados (2026-10-07)
 
 - Filtros das políticas de `infra/alertas-monitoramento.json` podem não corresponder aos nomes reais de método dos Cloud Audit Logs (ex.: `google.firestore.v1.FirestoreAdmin.DeleteDocumentBatch`, `storage.objects.delete` depende de Data Access logs, normalmente desabilitados; `ExportDocuments AND severity>=ERROR` pode não capturar falha de exportação), e o habilitar dos Data Access logs não está documentado. Marca maybe-false: validar no ambiente GCP (habilitar Data Access logs e forçar cada evento) settle se cada alerta dispara; se verdadeiro, severidade medium/high (controle ineficaz).
+
+## Deferred from: code review of spec-8-2-corrigir-tokens-acessiveis-e-componentes-compartilhados (2026-10-09)
+
+- `AppTextField` interpola o `Key` recebido em `ValueKey('field_$key')` no `TextFormField` interno (`flutter_app/lib/ui/components/inputs.dart:98`). Cosmético: `Key.toString()` é determinístico e não há consumidor atual afetado.
+- `AppTextField` repassa `controller`+`initialValue` e `minLines`> `maxLines` sem guarda, e `AppDropdownField` repassa `value` ausente de `items` (`flutter_app/lib/ui/components/inputs.dart:99-100,108,253`). Asserts latentes do Flutter, sem chamador que os acione hoje.
+- `main.dart` engole silenciosamente erro de `FirebaseAuth.instance` com `catch (_) {}` (`flutter_app/lib/main.dart:447-452`). Em produção o Firebase é inicializado antes de `runApp`; o `catch` só dispara em testes, sem dano ao usuário demonstrável.
+- Texto de marca "Maanaim" adicionado ao `_headerCompacto` do login, fora do Code Map (`flutter_app/lib/ui/identidade.dart:92-102`). Mudança de composição de UI pertencente à Story 8.4 (shell/acesso público).
+- `status_chips.dart` é listado como modificado no Code Map/Tasks, mas não foi alterado; o componente ainda permite `showIcon: false`/`showDot` (chip só-cor) (`flutter_app/lib/ui/components/status_chips.dart:25-26,190`). Os novos tokens já propagam via `AppColors.success/warning/danger` e o default é ícone+texto.
+- `_buildButtonContent` removeu `overflow: TextOverflow.ellipsis` sem adicionar `maxLines` (`flutter_app/lib/ui/components/buttons.dart:36-43`). Afeta apenas rótulo longo/sem quebra; wrap a 200% é comportamento deliberado.

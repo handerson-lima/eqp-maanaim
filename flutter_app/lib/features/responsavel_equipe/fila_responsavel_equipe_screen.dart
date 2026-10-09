@@ -8,10 +8,12 @@ class FilaResponsavelEquipeScreen extends StatefulWidget {
     super.key,
     required this.gateway,
     this.onSair,
+    this.dentroDeShell = false,
   });
 
   final ResponsavelEquipeGateway gateway;
   final VoidCallback? onSair;
+  final bool dentroDeShell;
 
   @override
   State<FilaResponsavelEquipeScreen> createState() =>
@@ -304,6 +306,16 @@ class _FilaResponsavelEquipeScreenState
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 600;
+    final corpo = SafeArea(
+      child: _buildConteudo(isDesktop),
+    );
+
+    if (widget.dentroDeShell) {
+      return Container(
+        color: AppColors.background,
+        child: corpo,
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -323,9 +335,7 @@ class _FilaResponsavelEquipeScreenState
             ),
         ],
       ),
-      body: SafeArea(
-        child: _buildConteudo(isDesktop),
-      ),
+      body: corpo,
     );
   }
 

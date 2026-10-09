@@ -172,7 +172,11 @@ class _AdminShellState extends State<AdminShell> {
           icon: Icons.how_to_reg_outlined,
           selectedIcon: Icons.how_to_reg,
         ),
-        builder: () => FilaPastorScreen(gateway: widget.pastor!, onSair: widget.onSair),
+        builder: () => FilaPastorScreen(
+          gateway: widget.pastor!,
+          onSair: widget.onSair,
+          dentroDeShell: true,
+        ),
       ),
     if (widget.responsavelEquipe != null)
       _AbaAdmin(
@@ -184,6 +188,7 @@ class _AdminShellState extends State<AdminShell> {
         builder: () => FilaResponsavelEquipeScreen(
           gateway: widget.responsavelEquipe!,
           onSair: widget.onSair,
+          dentroDeShell: true,
         ),
       ),
     if (widget.coordenador != null)
@@ -196,6 +201,7 @@ class _AdminShellState extends State<AdminShell> {
         builder: () => FilaCoordenadorScreen(
           gateway: widget.coordenador!,
           onSair: widget.onSair,
+          dentroDeShell: true,
         ),
       ),
     _AbaAdmin(

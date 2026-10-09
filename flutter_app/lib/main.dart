@@ -35,6 +35,8 @@ import 'routes/app_router.dart';
 import 'features/pastor/fila_pastor_screen.dart';
 import 'features/responsavel_equipe/fila_responsavel_equipe_screen.dart';
 import 'features/renovacao/dashboard_renovacao_screen.dart';
+import 'features/perfil/editar_perfil_screen.dart';
+import 'features/perfil/perfil_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -345,6 +347,7 @@ class AreaAutenticada extends StatefulWidget {
     this.dashboardRenovacao,
     this.auditoria,
     this.retencao,
+    this.perfilService,
   });
   final AuthService auth;
   final ContextoAcessoGateway? contextoAcesso;
@@ -364,6 +367,7 @@ class AreaAutenticada extends StatefulWidget {
   final DashboardRenovacaoGateway? dashboardRenovacao;
   final AuditoriaRelatoriosGateway? auditoria;
   final RetencaoGateway? retencao;
+  final IPerfilService? perfilService;
   @override
   State<AreaAutenticada> createState() => _AreaAutenticadaState();
 }
@@ -496,56 +500,11 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
         );
       }
 
-      // Pastor Local
-      if (_destinoAtual == AppRotas.pastor ||
-          (_destinoAtual == AppRotas.raiz &&
-              contexto.ehPastorLocal &&
-              !contexto.ehAdministrador &&
-              !contexto.ehCoordenador)) {
-        if (widget.pastor != null) {
-          return _comBotaoAlternarSeNecessario(
-            contexto: contexto,
-            child: FilaPastorScreen(gateway: widget.pastor!, onSair: _sair),
-          );
-        }
-      }
-
-      // Responsável de Equipe
-      if (_destinoAtual == AppRotas.equipe ||
-          (_destinoAtual == AppRotas.raiz &&
-              contexto.ehResponsavelEquipe &&
-              !contexto.ehAdministrador &&
-              !contexto.ehCoordenador)) {
-        if (widget.responsavelEquipe != null) {
-          return _comBotaoAlternarSeNecessario(
-            contexto: contexto,
-            child: FilaResponsavelEquipeScreen(
-              gateway: widget.responsavelEquipe!,
-              onSair: _sair,
-            ),
-          );
-        }
-      }
-
-      // Coordenador Geral
-      if (_destinoAtual == AppRotas.coordenador ||
-          (_destinoAtual == AppRotas.raiz &&
-              contexto.ehCoordenador &&
-              !contexto.ehAdministrador)) {
-        if (widget.coordenador != null) {
-          return _comBotaoAlternarSeNecessario(
-            contexto: contexto,
-            child: FilaCoordenadorScreen(
-              gateway: widget.coordenador!,
-              onSair: _sair,
-            ),
-          );
-        }
-      }
-
       // Administrador Geral
       if (_destinoAtual == AppRotas.admin ||
-          (_destinoAtual == AppRotas.raiz && contexto.ehAdministrador)) {
+          (_destinoAtual == AppRotas.raiz &&
+              contexto.ehAdministrador &&
+              !contexto.temMultiplosDestinos)) {
         return AdminShell(
           onSair: _sair,
           catalogo: widget.catalogo,
@@ -563,18 +522,6 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
         );
       }
 
-      // Dashboard de Renovação
-      if (_destinoAtual == AppRotas.renovacao && widget.dashboardRenovacao != null) {
-        return _comBotaoAlternarSeNecessario(
-          contexto: contexto,
-          child: DashboardRenovacaoScreen(
-            gateway: widget.dashboardRenovacao!,
-            onSair: _sair,
-          ),
-        );
-      }
-
-      // Voluntário (Minha Ficha)
       String? nomeAuth;
       try {
         nomeAuth = FirebaseAuth.instance.currentUser?.displayName?.trim();
@@ -586,45 +533,225 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           ? nomeAuth
           : null;
 
-      return _comBotaoAlternarSeNecessario(
-        contexto: contexto,
-        child: MinhaFichaScreen(
+      // Destino do corpo no shell único
+      Widget corpo;
+      if (_destinoAtual == AppRotas.perfil) {
+        corpo = EditarPerfilScreen(
+          service: widget.perfilService,
+          dentroDeShell: true,
+          onVoltar: () => _navegarPara(
+            contexto.ehPastorLocal
+                ? AppRotas.pastor
+                : (contexto.ehResponsavelEquipe
+                    ? AppRotas.equipe
+                    : (contexto.ehCoordenador
+                        ? AppRotas.coordenador
+                        : AppRotas.minhaFicha)),
+          ),
+        );
+      } else if ((_destinoAtual == AppRotas.pastor ||
+              (_destinoAtual == AppRotas.raiz &&
+                  contexto.ehPastorLocal &&
+                  !contexto.ehAdministrador &&
+                  !contexto.ehCoordenador)) &&
+          widget.pastor != null) {
+        corpo = FilaPastorScreen(
+          gateway: widget.pastor!,
+          onSair: _sair,
+          dentroDeShell: true,
+        );
+      } else if ((_destinoAtual == AppRotas.equipe ||
+              (_destinoAtual == AppRotas.raiz &&
+                  contexto.ehResponsavelEquipe &&
+                  !contexto.ehAdministrador &&
+                  !contexto.ehCoordenador)) &&
+          widget.responsavelEquipe != null) {
+        corpo = FilaResponsavelEquipeScreen(
+          gateway: widget.responsavelEquipe!,
+          onSair: _sair,
+          dentroDeShell: true,
+        );
+      } else if ((_destinoAtual == AppRotas.coordenador ||
+              (_destinoAtual == AppRotas.raiz &&
+                  contexto.ehCoordenador &&
+                  !contexto.ehAdministrador)) &&
+          widget.coordenador != null) {
+        corpo = FilaCoordenadorScreen(
+          gateway: widget.coordenador!,
+          onSair: _sair,
+          dentroDeShell: true,
+        );
+      } else if (_destinoAtual == AppRotas.renovacao &&
+          widget.dashboardRenovacao != null) {
+        corpo = DashboardRenovacaoScreen(
+          gateway: widget.dashboardRenovacao!,
+          papelInicial: contexto.ehCoordenador
+              ? PapelDashboard.coordenador
+              : (contexto.ehPastorLocal
+                  ? PapelDashboard.pastorLocal
+                  : (contexto.ehResponsavelEquipe
+                      ? PapelDashboard.responsavelEquipe
+                      : PapelDashboard.voluntario)),
+          onSair: _sair,
+        );
+      } else {
+        // Voluntário (Minha Ficha)
+        corpo = MinhaFichaScreen(
           fichaGateway: _obterFichaGateway(),
           catalogoGateway: _obterCatalogoGateway(),
           participacaoGateway: _obterParticipacaoGateway(),
           termoGateway: _obterTermoGateway(),
           onSair: _sair,
           userName: nomeValido,
-        ),
+          dentroDeShell: true,
+        );
+      }
+
+      final menuItens = _construirItensMenu(contexto);
+      int indiceSelecionado =
+          menuItens.indexWhere((it) => it.route == _destinoAtual);
+      if (indiceSelecionado < 0) {
+        indiceSelecionado = 0;
+      }
+
+      return AppShell(
+        items: menuItens,
+        selectedIndex: indiceSelecionado,
+        onDestinationSelected: (idx) {
+          final rota = menuItens[idx].route;
+          if (rota != null) {
+            _navegarPara(rota);
+          }
+        },
+        userName: nomeValido ?? 'Voluntário',
+        userRole: _obterPapelExibicao(contexto),
+        userStatus: 'ATIVA',
+        onLogout: _sair,
+        topBarActions: [
+          IconButton(
+            tooltip: 'Editar Perfil',
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => _navegarPara(AppRotas.perfil),
+          ),
+        ],
+        body: corpo,
       );
     },
   );
 
-  Widget _comBotaoAlternarSeNecessario({
-    required ContextoAcesso contexto,
-    required Widget child,
-  }) {
-    if (!contexto.temMultiplosDestinos) return child;
-    return Stack(
-      children: [
-        child,
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: FloatingActionButton.extended(
-            heroTag: 'alternar_area_hub',
-            onPressed: () => _navegarPara(AppRotas.destinos),
-            backgroundColor: AppColors.navy900,
-            icon: const Icon(Icons.swap_horiz, color: Colors.white),
-            label: const Text(
-              'Alternar Área',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
+  List<AppNavItem> _construirItensMenu(ContextoAcesso contexto) {
+    final itens = <AppNavItem>[];
+    final rotasAdicionadas = <String>{};
+
+    void adicionar(AppNavItem item) {
+      if (item.route != null && rotasAdicionadas.contains(item.route)) return;
+      if (item.route != null) rotasAdicionadas.add(item.route!);
+      itens.add(item);
+    }
+
+    if (contexto.ehVoluntario) {
+      adicionar(
+        const AppNavItem(
+          label: 'Minha Ficha',
+          icon: Icons.badge_outlined,
+          selectedIcon: Icons.badge,
+          route: AppRotas.minhaFicha,
         ),
-      ],
+      );
+    }
+
+    if (contexto.ehPastorLocal) {
+      adicionar(
+        const AppNavItem(
+          label: 'Fila do Pastor',
+          icon: Icons.how_to_reg_outlined,
+          selectedIcon: Icons.how_to_reg,
+          route: AppRotas.pastor,
+        ),
+      );
+    }
+
+    if (contexto.ehResponsavelEquipe) {
+      adicionar(
+        const AppNavItem(
+          label: 'Fila da Equipe',
+          icon: Icons.groups_outlined,
+          selectedIcon: Icons.groups,
+          route: AppRotas.equipe,
+        ),
+      );
+    }
+
+    if (contexto.ehCoordenador) {
+      adicionar(
+        const AppNavItem(
+          label: 'Fila do Coordenador',
+          icon: Icons.verified_outlined,
+          selectedIcon: Icons.verified,
+          route: AppRotas.coordenador,
+        ),
+      );
+    }
+
+    if (contexto.ehPastorLocal ||
+        contexto.ehResponsavelEquipe ||
+        contexto.ehCoordenador ||
+        contexto.ehAdministrador) {
+      adicionar(
+        const AppNavItem(
+          label: 'Renovações',
+          icon: Icons.autorenew_outlined,
+          selectedIcon: Icons.autorenew,
+          route: AppRotas.renovacao,
+        ),
+      );
+    }
+
+    if (contexto.ehAdministrador) {
+      adicionar(
+        const AppNavItem(
+          label: 'Administração',
+          icon: Icons.admin_panel_settings_outlined,
+          selectedIcon: Icons.admin_panel_settings,
+          route: AppRotas.admin,
+        ),
+      );
+    }
+
+    if (contexto.temMultiplosDestinos) {
+      adicionar(
+        const AppNavItem(
+          label: 'Alternar Área',
+          icon: Icons.swap_horiz,
+          selectedIcon: Icons.swap_horiz,
+          route: AppRotas.destinos,
+        ),
+      );
+    }
+
+    adicionar(
+      const AppNavItem(
+        label: 'Meu Perfil',
+        icon: Icons.account_circle_outlined,
+        selectedIcon: Icons.account_circle,
+        route: AppRotas.perfil,
+      ),
     );
+
+    return itens;
   }
+
+  String _obterPapelExibicao(ContextoAcesso contexto) {
+    if (contexto.ehAdministrador) return 'Administrador';
+    if (contexto.ehCoordenador) return 'Coordenador Geral';
+    if (contexto.ehPastorLocal && contexto.ehResponsavelEquipe) {
+      return 'Pastor Local / Resp. Equipe';
+    }
+    if (contexto.ehPastorLocal) return 'Pastor Local';
+    if (contexto.ehResponsavelEquipe) return 'Responsável de Equipe';
+    return 'Voluntário';
+  }
+
 
   FichaGateway _obterFichaGateway() {
     if (widget.ficha != null) return widget.ficha!;
@@ -876,6 +1003,17 @@ class _CadastroState extends State<Cadastro> {
     }
   }
 
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _obterStreamIgrejas() {
+    try {
+      return FirebaseFirestore.instance
+          .collection('igrejas')
+          .where('ativo', isEqualTo: true)
+          .snapshots();
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext c) => Scaffold(
     appBar: AppBar(title: const Text('Cadastre-se')),
@@ -910,11 +1048,11 @@ class _CadastroState extends State<Cadastro> {
                 formatters: [CpfInputFormatter()],
               ),
               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance
-                    .collection('igrejas')
-                    .where('ativo', isEqualTo: true)
-                    .snapshots(),
+                stream: _obterStreamIgrejas(),
                 builder: (_, s) {
+                  if (s.connectionState == ConnectionState.none) {
+                    return const SizedBox.shrink();
+                  }
                   if (s.hasError) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 14),
@@ -1150,38 +1288,18 @@ class _LoginState extends State<Login> {
                   }
                 },
               ),
-              const SizedBox(height: AppSpacing.s16),
-              Row(
-                children: [
-                  const Expanded(child: Divider(color: AppColors.border, height: 1)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
-                    child: Text(
-                      'ou',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  const Expanded(child: Divider(color: AppColors.border, height: 1)),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.s16),
+              const SizedBox(height: AppSpacing.s12),
               SecondaryButton(
-                label: 'Entrar com Google',
-                icon: Icons.login,
+                label: 'Cadastre-se',
                 isFullWidth: true,
                 onPressed: carregando
                     ? null
-                    : () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Login com Google não configurado no momento.',
-                            ),
+                    : () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => Cadastro(widget.auth),
                           ),
-                        );
-                      },
+                        ),
               ),
             ],
           ),

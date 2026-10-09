@@ -75,7 +75,7 @@ class PrimaryButton extends StatelessWidget {
             icon: icon,
             color: effectiveOnPressed != null
                 ? Colors.white
-                : AppColors.textSecondary,
+                : AppColors.textDisabled,
             isFullWidth: isFullWidth,
           );
 
@@ -97,7 +97,7 @@ class PrimaryButton extends StatelessWidget {
         ),
       ),
       backgroundColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.disabled)) {
+        if (states.contains(WidgetState.disabled) && !isLoading) {
           return AppColors.border;
         }
         if (states.contains(WidgetState.pressed)) {
@@ -110,13 +110,13 @@ class PrimaryButton extends StatelessWidget {
       }),
       foregroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
-          return AppColors.textSecondary;
+          return AppColors.textDisabled;
         }
         return Colors.white;
       }),
       side: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.focused)) {
-          return const BorderSide(color: AppColors.navy900, width: 2.0);
+          return const BorderSide(color: AppColors.focusDark, width: 2.0);
         }
         return BorderSide.none;
       }),
@@ -164,7 +164,7 @@ class SecondaryButton extends StatelessWidget {
             icon: icon,
             color: effectiveOnPressed != null
                 ? AppColors.textPrimary
-                : AppColors.textSecondary,
+                : AppColors.textDisabled,
             isFullWidth: isFullWidth,
           );
 
@@ -199,7 +199,7 @@ class SecondaryButton extends StatelessWidget {
       }),
       foregroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
-          return AppColors.textSecondary;
+          return AppColors.textDisabled;
         }
         return AppColors.textPrimary;
       }),
@@ -211,7 +211,7 @@ class SecondaryButton extends StatelessWidget {
           );
         }
         if (states.contains(WidgetState.focused)) {
-          return const BorderSide(color: AppColors.blue600, width: 2.0);
+          return const BorderSide(color: AppColors.focusLight, width: 2.0);
         }
         if (states.contains(WidgetState.hovered)) {
           return const BorderSide(
@@ -268,7 +268,7 @@ class ApproveButton extends StatelessWidget {
             icon: icon,
             color: effectiveOnPressed != null
                 ? Colors.white
-                : AppColors.textSecondary,
+                : AppColors.textDisabled,
             isFullWidth: isFullWidth,
           );
 
@@ -290,7 +290,7 @@ class ApproveButton extends StatelessWidget {
         ),
       ),
       backgroundColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.disabled)) {
+        if (states.contains(WidgetState.disabled) && !isLoading) {
           return AppColors.border;
         }
         if (states.contains(WidgetState.pressed)) {
@@ -303,13 +303,13 @@ class ApproveButton extends StatelessWidget {
       }),
       foregroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
-          return AppColors.textSecondary;
+          return AppColors.textDisabled;
         }
         return Colors.white;
       }),
       side: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.focused)) {
-          return const BorderSide(color: AppColors.navy900, width: 2.0);
+          return const BorderSide(color: AppColors.focusDark, width: 2.0);
         }
         return BorderSide.none;
       }),
@@ -357,7 +357,7 @@ class DangerButton extends StatelessWidget {
             icon: icon,
             color: effectiveOnPressed != null
                 ? Colors.white
-                : AppColors.textSecondary,
+                : AppColors.textDisabled,
             isFullWidth: isFullWidth,
           );
 
@@ -379,7 +379,7 @@ class DangerButton extends StatelessWidget {
         ),
       ),
       backgroundColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.disabled)) {
+        if (states.contains(WidgetState.disabled) && !isLoading) {
           return AppColors.border;
         }
         if (states.contains(WidgetState.pressed)) {
@@ -392,13 +392,13 @@ class DangerButton extends StatelessWidget {
       }),
       foregroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
-          return AppColors.textSecondary;
+          return AppColors.textDisabled;
         }
         return Colors.white;
       }),
       side: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.focused)) {
-          return const BorderSide(color: AppColors.navy900, width: 2.0);
+          return const BorderSide(color: AppColors.focusDark, width: 2.0);
         }
         return BorderSide.none;
       }),

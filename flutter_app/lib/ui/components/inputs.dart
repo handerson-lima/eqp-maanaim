@@ -74,7 +74,9 @@ class AppTextField extends StatelessWidget {
             Text(
               label,
               style: AppTypography.label.copyWith(
-                color: enabled ? AppColors.textPrimary : AppColors.textSecondary,
+                color: enabled
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
               ),
             ),
             if (isRequired) ...[
@@ -94,87 +96,90 @@ class AppTextField extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.s8),
         // Campo de entrada
-        TextFormField(
-          key: key != null ? ValueKey('field_$key') : null,
-          controller: controller,
-          initialValue: initialValue,
-          enabled: enabled,
-          readOnly: readOnly,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          inputFormatters: inputFormatters,
-          maxLines: maxLines,
-          minLines: minLines,
-          onChanged: onChanged,
-          onFieldSubmitted: onSubmitted,
-          validator: validator,
-          focusNode: focusNode,
-          autofocus: autofocus,
-          style: AppTypography.body.copyWith(
-            color: enabled ? AppColors.textPrimary : AppColors.textSecondary,
-          ),
-          decoration: InputDecoration(
-            hintText: hintText,
-            helperText: helperText,
-            errorText: errorText,
-            prefixIcon: prefixIcon,
-            suffixIcon: suffixIcon,
-            isDense: false,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.s16,
-              vertical: 12,
+        Semantics(
+          label: isRequired ? '$label, obrigatório' : label,
+          child: TextFormField(
+            key: key != null ? ValueKey('field_$key') : null,
+            controller: controller,
+            initialValue: initialValue,
+            enabled: enabled,
+            readOnly: readOnly,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            inputFormatters: inputFormatters,
+            maxLines: maxLines,
+            minLines: minLines,
+            onChanged: onChanged,
+            onFieldSubmitted: onSubmitted,
+            validator: validator,
+            focusNode: focusNode,
+            autofocus: autofocus,
+            style: AppTypography.body.copyWith(
+              color: enabled ? AppColors.textPrimary : AppColors.textSecondary,
             ),
-            filled: true,
-            fillColor: enabled ? AppColors.surface : AppColors.background,
-            border: OutlineInputBorder(
-              borderRadius: AppGeometry.inputBorderRadius,
-              borderSide: const BorderSide(
-                color: AppColors.borderInteractive,
-                width: AppGeometry.borderWidth,
+            decoration: InputDecoration(
+              hintText: hintText,
+              helperText: helperText,
+              errorText: errorText,
+              prefixIcon: prefixIcon,
+              suffixIcon: suffixIcon,
+              isDense: false,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s16,
+                vertical: 12,
               ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: AppGeometry.inputBorderRadius,
-              borderSide: const BorderSide(
-                color: AppColors.borderInteractive,
-                width: AppGeometry.borderWidth,
+              filled: true,
+              fillColor: enabled ? AppColors.surface : AppColors.background,
+              border: OutlineInputBorder(
+                borderRadius: AppGeometry.inputBorderRadius,
+                borderSide: const BorderSide(
+                  color: AppColors.borderInteractive,
+                  width: AppGeometry.borderWidth,
+                ),
               ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: AppGeometry.inputBorderRadius,
-              borderSide: const BorderSide(
-                color: AppColors.blue600,
-                width: 2.0,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: AppGeometry.inputBorderRadius,
+                borderSide: const BorderSide(
+                  color: AppColors.borderInteractive,
+                  width: AppGeometry.borderWidth,
+                ),
               ),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: AppGeometry.inputBorderRadius,
-              borderSide: const BorderSide(
-                color: AppColors.border,
-                width: AppGeometry.borderWidth,
+              focusedBorder: OutlineInputBorder(
+                borderRadius: AppGeometry.inputBorderRadius,
+                borderSide: const BorderSide(
+                  color: AppColors.focusLight,
+                  width: 2.0,
+                ),
               ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: AppGeometry.inputBorderRadius,
-              borderSide: const BorderSide(
+              disabledBorder: OutlineInputBorder(
+                borderRadius: AppGeometry.inputBorderRadius,
+                borderSide: const BorderSide(
+                  color: AppColors.border,
+                  width: AppGeometry.borderWidth,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: AppGeometry.inputBorderRadius,
+                borderSide: const BorderSide(
+                  color: AppColors.danger,
+                  width: AppGeometry.borderWidth,
+                ),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: AppGeometry.inputBorderRadius,
+                borderSide: const BorderSide(
+                  color: AppColors.danger,
+                  width: 2.0,
+                ),
+              ),
+              errorStyle: AppTypography.caption.copyWith(
                 color: AppColors.danger,
-                width: AppGeometry.borderWidth,
+                fontWeight: FontWeight.w500,
               ),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: AppGeometry.inputBorderRadius,
-              borderSide: const BorderSide(
-                color: AppColors.danger,
-                width: 2.0,
+              helperStyle: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
               ),
-            ),
-            errorStyle: AppTypography.caption.copyWith(
-              color: AppColors.danger,
-              fontWeight: FontWeight.w500,
-            ),
-            helperStyle: AppTypography.caption.copyWith(
-              color: AppColors.textSecondary,
             ),
           ),
         ),
@@ -226,7 +231,9 @@ class AppDropdownField<T> extends StatelessWidget {
             Text(
               label,
               style: AppTypography.label.copyWith(
-                color: enabled ? AppColors.textPrimary : AppColors.textSecondary,
+                color: enabled
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
               ),
             ),
             if (isRequired) ...[
@@ -249,6 +256,7 @@ class AppDropdownField<T> extends StatelessWidget {
         Semantics(
           label: label,
           hint: hintText,
+          button: true,
           child: DropdownButtonFormField<T>(
             initialValue: value,
             items: items,

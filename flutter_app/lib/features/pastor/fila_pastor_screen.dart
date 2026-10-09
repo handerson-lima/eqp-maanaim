@@ -12,11 +12,13 @@ class FilaPastorScreen extends StatefulWidget {
     required this.gateway,
     this.onSair,
     this.userName,
+    this.dentroDeShell = false,
   });
 
   final PastorLocalGateway gateway;
   final VoidCallback? onSair;
   final String? userName;
+  final bool dentroDeShell;
 
   @override
   State<FilaPastorScreen> createState() => _FilaPastorScreenState();
@@ -283,6 +285,21 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final corpo = SafeArea(
+      child: _carregando
+          ? const Center(child: CircularProgressIndicator())
+          : _erro != null
+              ? _buildErro()
+              : _buildConteudo(),
+    );
+
+    if (widget.dentroDeShell) {
+      return Container(
+        color: AppColors.background,
+        child: corpo,
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -303,13 +320,7 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
             ),
         ],
       ),
-      body: SafeArea(
-        child: _carregando
-            ? const Center(child: CircularProgressIndicator())
-            : _erro != null
-                ? _buildErro()
-                : _buildConteudo(),
-      ),
+      body: corpo,
     );
   }
 

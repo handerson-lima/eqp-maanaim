@@ -114,3 +114,31 @@ context:
 - `cd flutter_app && flutter test test/ui/theme_tokens_test.dart` -- expected: Todos os testes de tokens e contraste passam.
 - `cd flutter_app && flutter test test/ui_components_test.dart` -- expected: Todos os testes de componentes passam.
 - `cd flutter_app && flutter analyze` -- expected: No issues found.
+
+## Review Findings
+
+Revisão adversarial em 2026-10-09 sobre o diff `19288a7..5f68585` (4 camadas: Blind Hunter, Edge Case Hunter, Verification Gap, Acceptance Auditor).
+
+### Patch (todos aplicados em 2026-10-09)
+
+- [x] [Review][Patch] Anel de foco por superfície (decisão do humano, 2026-10-09: opção 1) — aplicar `focusDark` (#FFFFFF) em Primary/Approve/Danger e `focusLight` (Secondary/inputs), removendo o anel navy [flutter_app/lib/ui/components/buttons.dart:117-122,310-315,399-404] — **aplicado**: buttons.dart usa `AppColors.focusDark`/`focusLight`; theme.dart e inputs.dart usam `focusLight`.
+- [x] [Review][Patch] Spinner de loading invisível em PrimaryButton/ApproveButton/DangerButton [flutter_app/lib/ui/components/buttons.dart:69-72,262-265,351-354] — **aplicado**: `backgroundColor` mantém a cor da marca enquanto `isLoading` (spinner branco passa a contrastar).
+- [x] [Review][Patch] Texto de botões desabilitados com contraste 3,85:1 (<4,5:1) [flutter_app/lib/ui/components/buttons.dart:100-116,292-308,381-397] — **aplicado**: novo token `AppColors.textDisabled` (#475467, 5,95:1 sobre `border`) em buttons.dart e theme.dart.
+- [x] [Review][Patch] Inputs sem associação semântica de rótulo e sem estado de seleção no dropdown [flutter_app/lib/ui/components/inputs.dart:74-98,249-251] — **aplicado**: `AppTextField` envolve o campo em `Semantics(label:)`; `AppDropdownField` declara `button: true`.
+- [x] [Review][Patch] Testes da Story 8.2 verificam presença, não comportamento [flutter_app/test/ui_components_test.dart:504-578,650-673] — **aplicado**: testes passam a resolver o `ButtonStyle` desabilitado/loading, checar wrap a 200%, contorno de foco 2px, semântica do rótulo e navy900 sólido.
+- [x] [Review][Patch] theme.dart não refina outline/outlineVariant e mantém focusColor legado [flutter_app/lib/ui/theme.dart:20-21,33] — **aplicado**: `outline`/`outlineVariant` → `borderInteractive`; `focusColor` expresso via `AppColors.focusLight.withValues(alpha: 0.2)`.
+- [x] [Review][Patch] Comentário do sprint-status contradiz os estados 8-1/8-2 [sprint-status.yaml:89-93] — **aplicado**: comentário atualizado.
+
+### Defer
+
+- [x] [Review][Defer] `AppTextField` interpola o `Key` em `ValueKey('field_$key')` no `TextFormField` interno [flutter_app/lib/ui/components/inputs.dart:98] — deferred: cosmético; `Key.toString()` é determinístico e não há consumidor atual afetado.
+- [x] [Review][Defer] `AppTextField` repassa `controller`+`initialValue` e `minLines`> `maxLines` sem guarda; `AppDropdownField` repassa `value` ausente de `items` [flutter_app/lib/ui/components/inputs.dart:99-100,108,253] — deferred: asserts latentes do Flutter, sem chamador que os acione hoje; diferenciais de robustez do componente.
+- [x] [Review][Defer] `main.dart` engole silenciosamente erro de `FirebaseAuth.instance` com `catch (_) {}` [flutter_app/lib/main.dart:447-452] — deferred: `FirebaseAuth` é inicializado antes de `runApp` em produção; o `catch` só dispara em teste, sem dano ao usuário final demonstrável.
+- [x] [Review][Defer] Texto de marca "Maanaim" adicionado ao `_headerCompacto` do login, fora do Code Map da story [flutter_app/lib/ui/identidade.dart:92-102] — deferred: mudança de composição de UI pertencente à Story 8.4 (shell/acesso público).
+- [x] [Review][Defer] `status_chips.dart` listado como modificado no Code Map/Tasks, mas sem alteração; componente ainda permite `showIcon: false`/`showDot` (chip só-cor) [flutter_app/lib/ui/components/status_chips.dart:25-26,190] — deferred: padrão pré-existente; os novos tokens já propagam via `AppColors.success/warning/danger` e o default é ícone+texto.
+- [x] [Review][Defer] `_buildButtonContent` removeu `overflow: TextOverflow.ellipsis` sem `maxLines` [flutter_app/lib/ui/components/buttons.dart:36-43] — deferred: só afeta rótulo longo/sem quebra; comportamento deliberado para permitir wrap a 200%.
+
+### Rejected
+
+- `false`/spec-only — As afirmações do próprio spec (Review Triage Log com 9 linhas "pass/clean" em `review_loop_iteration: 0` sem evidência, `status: 'done'` no frontmatter antes do review, `[x]` em `status_chips.dart` sem hunk, e alegação de toggle de senha com Semantics em `AppTextField`): a correção exige editar o spec sob revisão, rejeitado por regra. O gap de código do `status_chips` ficou como `defer` acima.
+- `low` — `borderInteractive` (#667085) é idêntico a `textSecondary`, não sendo token semântico distinto (tokens.dart:18,20): sem dano ao usuário e a correção (criar cor nova) não é correção/deleção direta.

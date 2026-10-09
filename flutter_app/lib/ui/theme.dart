@@ -17,8 +17,8 @@ ThemeData temaMaanaim() {
     surface: AppColors.surface,
     onSurface: AppColors.textPrimary,
     onSurfaceVariant: AppColors.textSecondary,
-    outline: AppColors.border,
-    outlineVariant: AppColors.border,
+    outline: AppColors.borderInteractive,
+    outlineVariant: AppColors.borderInteractive,
     error: AppColors.danger,
     onError: Colors.white,
     errorContainer: AppColors.dangerBg,
@@ -30,7 +30,7 @@ ThemeData temaMaanaim() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: AppColors.background,
     canvasColor: AppColors.surface,
-    focusColor: const Color(0x330B6FE8),
+    focusColor: AppColors.focusLight.withValues(alpha: 0.2),
     hoverColor: const Color(0xFFF0F4F8),
     highlightColor: AppColors.blue50,
     dividerColor: AppColors.border,
@@ -48,7 +48,10 @@ ThemeData temaMaanaim() {
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
-        minimumSize: const Size(AppGeometry.minTouchTarget, AppGeometry.minTouchTarget),
+        minimumSize: const Size(
+          AppGeometry.minTouchTarget,
+          AppGeometry.minTouchTarget,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: AppGeometry.buttonBorderRadius,
         ),
@@ -101,10 +104,7 @@ ThemeData temaMaanaim() {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: AppGeometry.inputBorderRadius,
-        borderSide: const BorderSide(
-          color: AppColors.blue600,
-          width: 2.0,
-        ),
+        borderSide: const BorderSide(color: AppColors.focusLight, width: 2.0),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: AppGeometry.inputBorderRadius,
@@ -115,10 +115,7 @@ ThemeData temaMaanaim() {
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: AppGeometry.inputBorderRadius,
-        borderSide: const BorderSide(
-          color: AppColors.danger,
-          width: 2.0,
-        ),
+        borderSide: const BorderSide(color: AppColors.danger, width: 2.0),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -126,8 +123,11 @@ ThemeData temaMaanaim() {
         backgroundColor: AppColors.blue600,
         foregroundColor: Colors.white,
         disabledBackgroundColor: AppColors.border,
-        disabledForegroundColor: AppColors.textSecondary,
-        minimumSize: const Size(AppGeometry.minTouchTarget, AppGeometry.buttonHeight),
+        disabledForegroundColor: AppColors.textDisabled,
+        minimumSize: const Size(
+          AppGeometry.minTouchTarget,
+          AppGeometry.buttonHeight,
+        ),
         elevation: 0,
         textStyle: AppTypography.button,
         shape: RoundedRectangleBorder(
@@ -139,12 +139,15 @@ ThemeData temaMaanaim() {
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.blue600,
         backgroundColor: AppColors.surface,
-        disabledForegroundColor: AppColors.textSecondary,
+        disabledForegroundColor: AppColors.textDisabled,
         side: const BorderSide(
           color: AppColors.borderInteractive,
           width: AppGeometry.borderWidth,
         ),
-        minimumSize: const Size(AppGeometry.minTouchTarget, AppGeometry.buttonHeight),
+        minimumSize: const Size(
+          AppGeometry.minTouchTarget,
+          AppGeometry.buttonHeight,
+        ),
         elevation: 0,
         textStyle: AppTypography.button,
         shape: RoundedRectangleBorder(
@@ -155,7 +158,10 @@ ThemeData temaMaanaim() {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.blue600,
-        minimumSize: const Size(AppGeometry.minTouchTarget, AppGeometry.buttonHeight),
+        minimumSize: const Size(
+          AppGeometry.minTouchTarget,
+          AppGeometry.buttonHeight,
+        ),
         textStyle: AppTypography.button,
         shape: RoundedRectangleBorder(
           borderRadius: AppGeometry.buttonBorderRadius,
