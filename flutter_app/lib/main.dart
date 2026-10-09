@@ -395,19 +395,14 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
   }
 
   Future<ContextoAcesso> _resolverContexto() async {
-    if (widget.contextoAcesso != null) {
-      final service = ContextoAcessoService(widget.contextoAcesso!);
-      _contextoService = service;
-      return service.carregarContexto();
-    }
     try {
-      final service = ContextoAcessoService(
-        FirebaseContextoAcessoGateway(FirebaseFunctions.instance),
-      );
+      final gateway = widget.contextoAcesso ??
+          FirebaseContextoAcessoGateway(FirebaseFunctions.instance);
+      final service = ContextoAcessoService(gateway);
       _contextoService = service;
       return await service.carregarContexto();
     } catch (_) {
-      // Fallback para testes unitários ou ambientes sem Firebase ativo
+      // Fallback resiliente com base nas claims autenticadas ou testes unitários
       final ehAdmin = await widget.auth.possuiAdministracao();
       final ehCoord = await widget.auth.possuiCoordenacao();
       return ContextoAcesso(
