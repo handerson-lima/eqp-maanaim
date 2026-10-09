@@ -28,6 +28,7 @@ class InicioVoluntarioScreen extends StatefulWidget {
     this.pdfTermoGateway,
     this.onNavegarMinhaFicha,
     this.onNavegarRenovacao,
+    this.onNavegarSolicitarEquipe,
     this.userName,
     this.dentroDeShell = false,
   });
@@ -39,6 +40,7 @@ class InicioVoluntarioScreen extends StatefulWidget {
   final PdfTermoGateway? pdfTermoGateway;
   final VoidCallback? onNavegarMinhaFicha;
   final VoidCallback? onNavegarRenovacao;
+  final VoidCallback? onNavegarSolicitarEquipe;
   final String? userName;
   final bool dentroDeShell;
 
@@ -117,6 +119,10 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
   }
 
   void _abrirModalSolicitacao() {
+    if (widget.onNavegarSolicitarEquipe != null) {
+      widget.onNavegarSolicitarEquipe!();
+      return;
+    }
     SolicitarEquipeModal.exibir(
       context: context,
       equipesCatalogo: _equipesCatalogo,

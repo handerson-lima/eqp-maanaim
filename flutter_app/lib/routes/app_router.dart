@@ -13,6 +13,7 @@ abstract final class AppRotas {
   static const String admin = '/admin';
   static const String renovacao = '/renovacao';
   static const String perfil = '/perfil';
+  static const String solicitarEquipe = '/solicitar-equipe';
   static const String destinos = '/destinos';
   static const String acessoNegado = '/acesso-negado';
 
@@ -88,6 +89,7 @@ class AppRouteGuard {
       case AppRotas.inicio:
       case AppRotas.minhaFicha:
       case AppRotas.perfil:
+      case AppRotas.solicitarEquipe:
       case AppRotas.destinos:
         // Rotas acessíveis a qualquer usuário autenticado (voluntário)
         return RotaAutorizada(caminho: caminho, parametros: uri.queryParameters);

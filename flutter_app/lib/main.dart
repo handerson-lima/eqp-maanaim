@@ -18,6 +18,7 @@ import 'features/admin/admin_shell.dart';
 import 'features/voluntario/ficha_service.dart';
 import 'features/voluntario/inicio_voluntario_screen.dart';
 import 'features/voluntario/minha_ficha_screen.dart';
+import 'features/voluntario/solicitacao_equipe_screen.dart';
 import 'features/voluntario/participacao_service.dart';
 import 'features/termo/termo_service.dart';
 import 'features/pastor/pastor_service.dart';
@@ -626,6 +627,15 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
                       : PapelDashboard.voluntario)),
           onSair: _sair,
         );
+      } else if (destino == AppRotas.solicitarEquipe) {
+        // Voluntário (Solicitação de Equipe - S03 em Etapas)
+        corpo = SolicitacaoEquipeScreen(
+          fichaGateway: _obterFichaGateway(),
+          catalogoGateway: _obterCatalogoGateway(),
+          participacaoGateway: _obterParticipacaoGateway(),
+          termoGateway: _obterTermoGateway(),
+          onConcluido: () => _navegarPara(AppRotas.inicio),
+        );
       } else if (destino == AppRotas.minhaFicha) {
         // Voluntário (Minha Ficha - S03/S09)
         corpo = MinhaFichaScreen(
@@ -646,6 +656,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           termoGateway: _obterTermoGateway(),
           onNavegarMinhaFicha: () => _navegarPara(AppRotas.minhaFicha),
           onNavegarRenovacao: () => _navegarPara(AppRotas.renovacao),
+          onNavegarSolicitarEquipe: () => _navegarPara(AppRotas.solicitarEquipe),
           userName: nomeValido,
           dentroDeShell: true,
         );
