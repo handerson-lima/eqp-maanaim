@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('Design Tokens Canônicos (Fase 1)', () {
-    test('Cores canônicas correspondem à especificação normativa', () {
+  group('Design Tokens Canônicos e Acessíveis (Story 8.2)', () {
+    test('Cores canônicas e semânticas acessíveis correspondem à especificação normativa', () {
       expect(AppColors.navy900, const Color(0xFF082C49));
       expect(AppColors.navy800, const Color(0xFF0D3859));
       expect(AppColors.blue600, const Color(0xFF0B6FE8));
@@ -12,13 +12,16 @@ void main() {
       expect(AppColors.surface, const Color(0xFFFFFFFF));
       expect(AppColors.background, const Color(0xFFF5F7FA));
       expect(AppColors.border, const Color(0xFFDDE3EA));
+      expect(AppColors.borderInteractive, const Color(0xFF667085));
       expect(AppColors.textPrimary, const Color(0xFF172033));
       expect(AppColors.textSecondary, const Color(0xFF667085));
-      expect(AppColors.success, const Color(0xFF16A34A));
+      expect(AppColors.focusLight, const Color(0xFF0B6FE8));
+      expect(AppColors.focusDark, const Color(0xFFFFFFFF));
+      expect(AppColors.success, const Color(0xFF16794A));
       expect(AppColors.successBg, const Color(0xFFEAF8EF));
-      expect(AppColors.warning, const Color(0xFFF59E0B));
+      expect(AppColors.warning, const Color(0xFF9A6700));
       expect(AppColors.warningBg, const Color(0xFFFFF6DE));
-      expect(AppColors.danger, const Color(0xFFEF4444));
+      expect(AppColors.danger, const Color(0xFFB42318));
       expect(AppColors.dangerBg, const Color(0xFFFDECEC));
     });
 
@@ -109,12 +112,13 @@ void main() {
       expect(tema.cardTheme.color, AppColors.surface);
     });
 
-    test('Inputs possuem padding adequado, fundo branco e radius canônico', () {
+    test('Inputs possuem padding adequado, fundo branco e borda interativa', () {
       final inputTheme = tema.inputDecorationTheme;
       expect(inputTheme.filled, isTrue);
       expect(inputTheme.fillColor, AppColors.surface);
       final border = inputTheme.border as OutlineInputBorder;
       expect(border.borderRadius, AppGeometry.inputBorderRadius);
+      expect(border.borderSide.color, AppColors.borderInteractive);
     });
 
     test('Botões atendem tamanho mínimo de 44px para WCAG AA', () {
@@ -124,7 +128,7 @@ void main() {
       expect(minSize?.width, greaterThanOrEqualTo(44.0));
     });
 
-    test('Contraste WCAG 2.2 AA verificado matematicamente', () {
+    test('Contraste WCAG 2.2 AA verificado matematicamente para todos os pares normativos', () {
       double contrastRatio(Color fg, Color bg) {
         final l1 = fg.computeLuminance();
         final l2 = bg.computeLuminance();
@@ -145,7 +149,35 @@ void main() {
       final contrastButtonPrimary = contrastRatio(Colors.white, AppColors.blue600);
       expect(contrastButtonPrimary, greaterThanOrEqualTo(4.5)); // Atende AA
 
-      // 4. Sidebar institucional (Texto branco em navy900)
+      // 4. Botão aprovação (Texto branco em success #16794A)
+      final contrastApprove = contrastRatio(Colors.white, AppColors.success);
+      expect(contrastApprove, greaterThanOrEqualTo(4.5)); // Atende AA
+
+      // 5. Botão perigo (Texto branco em danger #B42318)
+      final contrastDanger = contrastRatio(Colors.white, AppColors.danger);
+      expect(contrastDanger, greaterThanOrEqualTo(4.5)); // Atende AA
+
+      // 6. Chip sucesso (#16794A em successBg #EAF8EF)
+      final contrastChipSuccess = contrastRatio(AppColors.success, AppColors.successBg);
+      expect(contrastChipSuccess, greaterThanOrEqualTo(4.5)); // Atende AA
+
+      // 7. Chip atenção (#9A6700 em warningBg #FFF6DE)
+      final contrastChipWarning = contrastRatio(AppColors.warning, AppColors.warningBg);
+      expect(contrastChipWarning, greaterThanOrEqualTo(4.5)); // Atende AA
+
+      // 8. Chip erro (#B42318 em dangerBg #FDECEC)
+      final contrastChipDanger = contrastRatio(AppColors.danger, AppColors.dangerBg);
+      expect(contrastChipDanger, greaterThanOrEqualTo(4.5)); // Atende AA
+
+      // 9. Borda interativa (#667085 em surface #FFFFFF)
+      final contrastBorderInteractive = contrastRatio(AppColors.borderInteractive, AppColors.surface);
+      expect(contrastBorderInteractive, greaterThanOrEqualTo(3.0)); // Atende controle/foco ≥ 3:1
+
+      // 10. Foco em seleção clara (blue600 em blue50)
+      final contrastFocusLight = contrastRatio(AppColors.focusLight, AppColors.blue50);
+      expect(contrastFocusLight, greaterThanOrEqualTo(3.0)); // Atende foco ≥ 3:1
+
+      // 11. Sidebar institucional (Texto branco em navy900)
       final contrastSidebar = contrastRatio(Colors.white, AppColors.navy900);
       expect(contrastSidebar, greaterThanOrEqualTo(7.0)); // Atende AAA
     });

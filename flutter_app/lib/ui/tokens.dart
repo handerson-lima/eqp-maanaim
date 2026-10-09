@@ -15,18 +15,23 @@ abstract final class AppColors {
   static const Color surface = Color(0xFFFFFFFF);
   static const Color background = Color(0xFFF5F7FA);
   static const Color border = Color(0xFFDDE3EA);
+  static const Color borderInteractive = Color(0xFF667085); // limites de controles interativos (WCAG ≥ 3:1)
   static const Color textPrimary = Color(0xFF172033);
   static const Color textSecondary = Color(0xFF667085);
   static const Color neutral50 = Color(0xFFF9FAFB); // fundos neutros muito claros
   static const Color neutral100 = Color(0xFFF3F4F6); // chips/etiquetas neutras
   static const Color neutral150 = Color(0xFFF8FAFC); // containers informativos neutros
 
-  // Semânticos (Status e Feedback)
-  static const Color success = Color(0xFF16A34A);
+  // Foco Acessível (WCAG 2.2 AA ≥ 3:1)
+  static const Color focusLight = Color(0xFF0B6FE8); // anel de foco em superfícies claras
+  static const Color focusDark = Color(0xFFFFFFFF); // anel de foco em superfícies escuras (navy)
+
+  // Semânticos Acessíveis (Status e Feedback - WCAG 2.2 AA ≥ 4.5:1 para texto normal)
+  static const Color success = Color(0xFF16794A);
   static const Color successBg = Color(0xFFEAF8EF);
-  static const Color warning = Color(0xFFF59E0B);
+  static const Color warning = Color(0xFF9A6700);
   static const Color warningBg = Color(0xFFFFF6DE);
-  static const Color danger = Color(0xFFEF4444);
+  static const Color danger = Color(0xFFB42318);
   static const Color dangerBg = Color(0xFFFDECEC);
 }
 

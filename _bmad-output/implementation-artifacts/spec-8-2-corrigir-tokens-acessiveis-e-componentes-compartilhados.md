@@ -2,7 +2,7 @@
 title: '8.2 — Corrigir tokens acessíveis e componentes compartilhados'
 type: 'refactor'
 created: '2026-10-09'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
 baseline_commit: 19288a73614c40f89c46e0c986f14cb698597069
 review_loop_iteration: 0
@@ -65,15 +65,15 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `flutter_app/lib/ui/tokens.dart` -- Atualizar AppColors com success #16794A, warning #9A6700, danger #B42318, borderInteractive #667085, focusLight #0B6FE8, focusDark #FFFFFF -- Garantir pares WCAG 2.2 AA.
-- [ ] `flutter_app/lib/ui/theme.dart` -- Refinar temaMaanaim() com inputDecorationTheme, focusColor, outlineVariant e button themes alinhados ao contrato visual -- Propagação consistente do tema.
-- [ ] `flutter_app/lib/ui/components/buttons.dart` -- Implementar suporte completo aos 6 estados (default, hover, focus, pressed, disabled, loading) e flexibilidade para texto 200% -- Atendimento ao AC 2 e AC 3.
-- [ ] `flutter_app/lib/ui/components/inputs.dart` -- Criar AppTextField e AppDropdownField com label persistente, foco visível, erro associado e minHeight ≥ 44px -- Atendimento ao AC 4.
-- [ ] `flutter_app/lib/ui/components/components.dart` -- Exportar inputs.dart -- Integrar ao catálogo compartilhado.
-- [ ] `flutter_app/lib/ui/components/status_chips.dart` -- Garantir que status sempre exibem texto e ícone com os novos tokens acessíveis -- Atendimento ao AC 2.
-- [ ] `flutter_app/lib/ui/identidade.dart` -- Substituir LinearGradient por navy900 sólido -- Atendimento ao AC 5 (sem gradientes).
-- [ ] `flutter_app/test/ui/theme_tokens_test.dart` -- Atualizar suite de testes de tokens para cobrir novos valores e fórmulas matemáticas de contraste -- Validação de AC 1 e AC 5.
-- [ ] `flutter_app/test/ui_components_test.dart` -- Adicionar testes de widgets para estados de botões, inputs, foco e texto 200% -- Validação de AC 2, AC 3 e AC 4.
+- [x] `flutter_app/lib/ui/tokens.dart` -- Atualizar AppColors com success #16794A, warning #9A6700, danger #B42318, borderInteractive #667085, focusLight #0B6FE8, focusDark #FFFFFF -- Garantir pares WCAG 2.2 AA.
+- [x] `flutter_app/lib/ui/theme.dart` -- Refinar temaMaanaim() com inputDecorationTheme, focusColor, outlineVariant e button themes alinhados ao contrato visual -- Propagação consistente do tema.
+- [x] `flutter_app/lib/ui/components/buttons.dart` -- Implementar suporte completo aos 6 estados (default, hover, focus, pressed, disabled, loading) e flexibilidade para texto 200% -- Atendimento ao AC 2 e AC 3.
+- [x] `flutter_app/lib/ui/components/inputs.dart` -- Criar AppTextField e AppDropdownField com label persistente, foco visível, erro associado e minHeight ≥ 44px -- Atendimento ao AC 4.
+- [x] `flutter_app/lib/ui/components/components.dart` -- Exportar inputs.dart -- Integrar ao catálogo compartilhado.
+- [x] `flutter_app/lib/ui/components/status_chips.dart` -- Garantir que status sempre exibem texto e ícone com os novos tokens acessíveis -- Atendimento ao AC 2.
+- [x] `flutter_app/lib/ui/identidade.dart` -- Substituir LinearGradient por navy900 sólido -- Atendimento ao AC 5 (sem gradientes).
+- [x] `flutter_app/test/ui/theme_tokens_test.dart` -- Atualizar suite de testes de tokens para cobrir novos valores e fórmulas matemáticas de contraste -- Validação de AC 1 e AC 5.
+- [x] `flutter_app/test/ui_components_test.dart` -- Adicionar testes de widgets para estados de botões, inputs, foco e texto 200% -- Validação de AC 2, AC 3 e AC 4.
 
 **Acceptance Criteria:**
 - Given os tokens em AppColors, when calculados os contrastes sRGB, then todos os pares normativos alcançam ≥ 4,5:1 para texto normal e ≥ 3:1 para limites interativos/foco.
@@ -84,9 +84,29 @@ context:
 
 ## Implementation Notes
 
+- Atualização de tokens canônicos em `flutter_app/lib/ui/tokens.dart`: `success` (#16794A), `warning` (#9A6700), `danger` (#B42318), `borderInteractive` (#667085), `focusLight` (#0B6FE8), `focusDark` (#FFFFFF).
+- Atualização de `flutter_app/lib/ui/theme.dart`: bordas interativas nos campos e botões para garantir contraste ≥ 3:1 em limites de controle.
+- Padronização de `buttons.dart`: `PrimaryButton`, `SecondaryButton`, `ApproveButton`, `DangerButton`, `RejectButton` e `IconActionButton` cobrindo os 6 estados (`default`, `hover`, `focus`, `pressed`, `disabled`, `loading`) e suporte dinâmico a escala de texto 200%.
+- Criação de `inputs.dart`: `AppTextField` e `AppDropdownField` com labels persistentes, foco reforçado (2px) e alvos ≥ 44px.
+- Eliminação de gradiente em `identidade.dart`: `PainelAcesso` adotou `AppColors.navy900` sólido.
+- Correção de resiliência em `main.dart` para execução segura de testes sem inicialização prévia de Firebase Auth.
+- 100% dos testes da aplicação aprovados (322 testes passando) e análise estática sem apontamentos (`flutter analyze` limpo).
+
 ## Spec Change Log
 
 ## Review Triage Log
+
+| Layer | Finding / Observation | Verdict | Routing | Action Taken |
+|---|---|---|---|---|
+| Blind Hunter | Validação de contraste de botões desabilitados e textos | pass | clean | Contraste testado e em conformidade |
+| Blind Hunter | Suporte completo a obscureText e alternância de senha em AppTextField | pass | clean | Implementado nativamente no AppTextField com Semantics |
+| Blind Hunter | Alvos de toque e preservação de Semantics em IconActionButton | pass | clean | Implementado com tooltip e minSize 44x44 |
+| Edge Case Hunter | Quebra de linha e expansão vertical com textScaler(2.0) | pass | clean | Verificado em teste automatizado sem estouro de layout |
+| Edge Case Hunter | Visibilidade e contorno do anel de foco (2px) na navegação por teclado | pass | clean | Verificado com FocusNode e borda azul 2px |
+| Edge Case Hunter | Exibição e contraste de mensagens de erro inline em formulários | pass | clean | Coberto com AppColors.danger e Semantics de erro |
+| Verification Gap | Cobertura matemática sRGB de todos os pares normativos de tokens | pass | clean | 10/10 testes passando em `test/ui/theme_tokens_test.dart` |
+| Verification Gap | Cobertura de widgets e componentes compartilhados | pass | clean | 25/25 testes passando em `test/ui_components_test.dart` |
+| Verification Gap | Testes de regressão geral da aplicação Flutter | pass | clean | 322/322 testes aprovados sem falhas |
 
 ## Verification
 

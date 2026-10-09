@@ -23,14 +23,7 @@ class PainelAcesso extends StatelessWidget {
         constraints: BoxConstraints(minHeight: minHeight),
         padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 48),
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.navy900,
-              Color(0xFF04192B),
-            ],
-          ),
+          color: AppColors.navy900,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -96,6 +89,18 @@ class PainelAcesso extends StatelessWidget {
               transparente: true,
             ),
             const SizedBox(height: AppSpacing.s8),
+            const Text(
+              'Maanaim',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontFamilyFallback: AppTypography.fontFallbacks,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s4),
             const Text(
               'Gestão de Voluntários',
               textAlign: TextAlign.center,

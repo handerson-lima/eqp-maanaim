@@ -88,14 +88,14 @@ ThemeData temaMaanaim() {
       border: OutlineInputBorder(
         borderRadius: AppGeometry.inputBorderRadius,
         borderSide: const BorderSide(
-          color: AppColors.border,
+          color: AppColors.borderInteractive,
           width: AppGeometry.borderWidth,
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: AppGeometry.inputBorderRadius,
         borderSide: const BorderSide(
-          color: AppColors.border,
+          color: AppColors.borderInteractive,
           width: AppGeometry.borderWidth,
         ),
       ),
@@ -141,7 +141,7 @@ ThemeData temaMaanaim() {
         backgroundColor: AppColors.surface,
         disabledForegroundColor: AppColors.textSecondary,
         side: const BorderSide(
-          color: AppColors.border,
+          color: AppColors.borderInteractive,
           width: AppGeometry.borderWidth,
         ),
         minimumSize: const Size(AppGeometry.minTouchTarget, AppGeometry.buttonHeight),

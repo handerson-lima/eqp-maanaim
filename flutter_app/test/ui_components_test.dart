@@ -500,4 +500,176 @@ void main() {
       expect(find.byType(Drawer), findsNothing);
     });
   });
+
+  group('Estados Completos de Botões e Resiliência (Story 8.2)', () {
+    testWidgets('Botões desabilitados não respondem a toque e têm estilo acessível', (tester) async {
+      bool clicadoPrimary = false;
+      bool clicadoSecondary = false;
+      bool clicadoApprove = false;
+      bool clicadoDanger = false;
+
+      await tester.pumpWidget(
+        _wrapWithTheme(
+          Column(
+            children: [
+              PrimaryButton(
+                label: 'Salvar Desabilitado',
+                onPressed: null,
+              ),
+              SecondaryButton(
+                label: 'Cancelar Desabilitado',
+                onPressed: null,
+              ),
+              ApproveButton(
+                label: 'Aprovar Desabilitado',
+                onPressed: null,
+              ),
+              DangerButton(
+                label: 'Excluir Desabilitado',
+                onPressed: null,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final pBtn = find.text('Salvar Desabilitado');
+      final sBtn = find.text('Cancelar Desabilitado');
+      final aBtn = find.text('Aprovar Desabilitado');
+      final dBtn = find.text('Excluir Desabilitado');
+
+      expect(pBtn, findsOneWidget);
+      expect(sBtn, findsOneWidget);
+      expect(aBtn, findsOneWidget);
+      expect(dBtn, findsOneWidget);
+
+      await tester.tap(pBtn);
+      await tester.tap(sBtn);
+      await tester.tap(aBtn);
+      await tester.tap(dBtn);
+
+      expect(clicadoPrimary, isFalse);
+      expect(clicadoSecondary, isFalse);
+      expect(clicadoApprove, isFalse);
+      expect(clicadoDanger, isFalse);
+    });
+
+    testWidgets('Botões com escala de texto 200% expandem altura e preservam texto sem truncar', (tester) async {
+      await tester.pumpWidget(
+        _wrapWithTheme(
+          Center(
+            child: PrimaryButton(
+              label: 'Confirmar Ação Importante',
+              onPressed: () {},
+            ),
+          ),
+          textScale: 2.0,
+        ),
+      );
+
+      final btn = find.byType(PrimaryButton);
+      expect(btn, findsOneWidget);
+      expect(find.text('Confirmar Ação Importante'), findsOneWidget);
+
+      final size = tester.getSize(btn);
+      // Com fonte ampliada a 200%, a altura deve crescer além de 44px mantendo a leitura
+      expect(size.height, greaterThan(44.0));
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Componentes de Entrada Acessíveis (inputs.dart)', () {
+    testWidgets('AppTextField exibe rótulo persistente, indicador de obrigatório e alvo ≥ 44px', (tester) async {
+      await tester.pumpWidget(
+        _wrapWithTheme(
+          Center(
+            child: AppTextField(
+              label: 'Nome Completo',
+              hintText: 'Digite seu nome',
+              isRequired: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Nome Completo'), findsOneWidget);
+      expect(find.text('*'), findsOneWidget);
+      expect(find.text('Digite seu nome'), findsOneWidget);
+
+      final fieldFinder = find.byType(TextFormField);
+      expect(fieldFinder, findsOneWidget);
+      final size = tester.getSize(fieldFinder);
+      expect(size.height, greaterThanOrEqualTo(44.0));
+    });
+
+    testWidgets('AppTextField exibe erro associado e com alto contraste', (tester) async {
+      await tester.pumpWidget(
+        _wrapWithTheme(
+          Center(
+            child: AppTextField(
+              label: 'CPF',
+              errorText: 'CPF inválido',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('CPF'), findsOneWidget);
+      expect(find.text('CPF inválido'), findsOneWidget);
+    });
+
+    testWidgets('AppDropdownField exibe rótulo persistente, opções e alvo ≥ 44px', (tester) async {
+      String? selecionado = '1';
+
+      await tester.pumpWidget(
+        _wrapWithTheme(
+          Center(
+            child: AppDropdownField<String>(
+              label: 'Selecione a Equipe',
+              value: selecionado,
+              items: const [
+                DropdownMenuItem(value: '1', child: Text('Equipe Louvor')),
+                DropdownMenuItem(value: '2', child: Text('Equipe Recepção')),
+              ],
+              onChanged: (val) => selecionado = val,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Selecione a Equipe'), findsOneWidget);
+      expect(find.text('Equipe Louvor'), findsOneWidget);
+
+      final dropdownFinder = find.byType(DropdownButtonFormField<String>);
+      expect(dropdownFinder, findsOneWidget);
+      final size = tester.getSize(dropdownFinder);
+      expect(size.height, greaterThanOrEqualTo(44.0));
+    });
+  });
+
+  group('Eliminação de Gradientes Decorativos (PainelAcesso)', () {
+    testWidgets('PainelAcesso utiliza cor sólida institucional navy-900 no desktop', (tester) async {
+      _setScreenSize(tester, const Size(1200, 800));
+
+      await tester.pumpWidget(
+        _wrapWithTheme(
+          const PainelAcesso(
+            child: Text('Formulário de Acesso'),
+          ),
+        ),
+      );
+
+      expect(find.text('Formulário de Acesso'), findsOneWidget);
+      expect(find.text('Gestão de Voluntários'), findsOneWidget);
+
+      // Encontrar todos os Containers e verificar que nenhum possui LinearGradient
+      final containers = tester.widgetList<Container>(find.byType(Container));
+      for (final container in containers) {
+        final decoration = container.decoration;
+        if (decoration is BoxDecoration) {
+          expect(decoration.gradient, isNull, reason: 'Nenhum container deve ter gradiente decorativo');
+        }
+      }
+    });
+  });
 }

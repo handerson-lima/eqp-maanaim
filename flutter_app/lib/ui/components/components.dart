@@ -8,3 +8,4 @@ export 'feedback_orientacao_card.dart';
 export 'responsive_data_table.dart';
 export 'cpf_formatter.dart';
 export 'logo_maanaim.dart';
+export 'inputs.dart';

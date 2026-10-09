@@ -444,7 +444,12 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           onSair: _sair,
         );
       }
-      final nomeAuth = FirebaseAuth.instance.currentUser?.displayName?.trim();
+      String? nomeAuth;
+      try {
+        nomeAuth = FirebaseAuth.instance.currentUser?.displayName?.trim();
+      } catch (_) {
+        // Firebase não inicializado em testes unitários ou sem contexto
+      }
       final nomeValido = (nomeAuth != null &&
               nomeAuth.isNotEmpty &&
               !nomeAuth.contains('@') &&
