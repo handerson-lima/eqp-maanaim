@@ -91,7 +91,7 @@ development_status:
   epic-8: in-progress
   8-1-consolidar-contrato-visual-e-inventario-de-dados: done
   8-2-corrigir-tokens-acessiveis-e-componentes-compartilhados: review
-  8-3-resolver-contexto-de-acesso-e-rotas-por-capacidades: backlog
+  8-3-resolver-contexto-de-acesso-e-rotas-por-capacidades: review
   8-4-aplicar-shell-unico-e-corrigir-acesso-publico: backlog
   8-5-construir-inicio-do-voluntario: backlog
   8-6-recompor-dashboards-e-filas-dos-responsaveis: backlog

@@ -62,3 +62,5 @@ export { executarRotinaRetencao } from './commands/executarRotinaRetencao.js';
 export { consultarConformidadeRetencao } from './commands/consultarConformidadeRetencao.js';
 export { expurgarRascunhosScheduled } from './triggers/expurgarRascunhosScheduled.js';
 export { consultarSolicitacoesPendentesGlobal } from './commands/consultarSolicitacoesPendentesGlobal.js';
+export { obterContextoAcesso } from './commands/obterContextoAcesso.js';
+

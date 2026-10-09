@@ -27,6 +27,14 @@ import 'features/renovacao/dashboard_renovacao_service.dart';
 import 'features/auditoria/auditoria_service.dart';
 import 'features/privacidade/retencao_service.dart';
 import 'features/admin/solicitacoes_pendentes_service.dart';
+import 'features/auth/contexto_acesso_model.dart';
+import 'features/auth/contexto_acesso_service.dart';
+import 'features/auth/acesso_negado_screen.dart';
+import 'features/auth/seletor_destino_capacidades.dart';
+import 'routes/app_router.dart';
+import 'features/pastor/fila_pastor_screen.dart';
+import 'features/responsavel_equipe/fila_responsavel_equipe_screen.dart';
+import 'features/renovacao/dashboard_renovacao_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,6 +112,7 @@ Future<void> main() async {
       retencao: CloudFunctionsRetencaoGateway(functions: functions),
       solicitacoesPendentes:
           FirebaseSolicitacoesPendentesGateway(functions: functions),
+      contextoAcesso: FirebaseContextoAcessoGateway(functions),
     ),
   );
 }
@@ -122,6 +131,8 @@ class MaanaimApp extends StatelessWidget {
   const MaanaimApp(
     this.auth, {
     super.key,
+    this.contextoAcesso,
+    this.rotaInicial,
     this.catalogo,
     this.seed,
     this.pessoas,
@@ -139,6 +150,8 @@ class MaanaimApp extends StatelessWidget {
     this.retencao,
   });
   final AuthService auth;
+  final ContextoAcessoGateway? contextoAcesso;
+  final String? rotaInicial;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
   final PessoasGateway? pessoas;
@@ -160,6 +173,8 @@ class MaanaimApp extends StatelessWidget {
     theme: temaMaanaim(),
     home: RaizSessao(
       auth,
+      contextoAcesso: contextoAcesso,
+      rotaInicial: rotaInicial,
       catalogo: catalogo,
       seed: seed,
       pessoas: pessoas,
@@ -180,11 +195,13 @@ class MaanaimApp extends StatelessWidget {
 }
 
 /// Raiz da aplicação: ouve `authStateChanges` para restaurar sessão
-/// ao recarregar e rotear automaticamente entre login, rascunho e admin.
+/// ao recarregar e rotear automaticamente por capacidades.
 class RaizSessao extends StatefulWidget {
   const RaizSessao(
     this.auth, {
     super.key,
+    this.contextoAcesso,
+    this.rotaInicial,
     this.catalogo,
     this.seed,
     this.pessoas,
@@ -202,6 +219,8 @@ class RaizSessao extends StatefulWidget {
     this.retencao,
   });
   final AuthService auth;
+  final ContextoAcessoGateway? contextoAcesso;
+  final String? rotaInicial;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
   final PessoasGateway? pessoas;
@@ -283,6 +302,8 @@ class _RaizSessaoState extends State<RaizSessao> {
       }
       return AreaAutenticada(
         widget.auth,
+        contextoAcesso: widget.contextoAcesso,
+        rotaInicial: widget.rotaInicial,
         catalogo: widget.catalogo,
         seed: widget.seed,
         pessoas: widget.pessoas,
@@ -303,14 +324,12 @@ class _RaizSessaoState extends State<RaizSessao> {
   );
 }
 
-/// Perfil de acesso resolvido a partir das claims da sessão, preservando o
-/// menor privilégio: administrador > coordenador > voluntário.
-enum _PerfilAcesso { administrador, coordenador, voluntario }
-
 class AreaAutenticada extends StatefulWidget {
   const AreaAutenticada(
     this.auth, {
     super.key,
+    this.contextoAcesso,
+    this.rotaInicial,
     this.catalogo,
     this.seed,
     this.pessoas,
@@ -328,6 +347,8 @@ class AreaAutenticada extends StatefulWidget {
     this.retencao,
   });
   final AuthService auth;
+  final ContextoAcessoGateway? contextoAcesso;
+  final String? rotaInicial;
   final CatalogoGateway? catalogo;
   final SeedGateway? seed;
   final PessoasGateway? pessoas;
@@ -348,20 +369,47 @@ class AreaAutenticada extends StatefulWidget {
 }
 
 class _AreaAutenticadaState extends State<AreaAutenticada> {
-  late Future<_PerfilAcesso> _autorizacao = _resolverPerfil();
+  late Future<ContextoAcesso> _autorizacao = _resolverContexto();
+  late String _destinoAtual = widget.rotaInicial ?? AppRotas.raiz;
 
-  Future<_PerfilAcesso> _resolverPerfil() async {
-    if (await widget.auth.possuiAdministracao()) {
-      return _PerfilAcesso.administrador;
+  Future<ContextoAcesso> _resolverContexto() async {
+    if (widget.contextoAcesso != null) {
+      return widget.contextoAcesso!.obterContextoAcesso();
     }
-    if (await widget.auth.possuiCoordenacao()) {
-      return _PerfilAcesso.coordenador;
+    try {
+      final gateway = FirebaseContextoAcessoGateway(FirebaseFunctions.instance);
+      return await gateway.obterContextoAcesso();
+    } catch (_) {
+      // Fallback para testes unitários ou ambientes sem Firebase ativo
+      final ehAdmin = await widget.auth.possuiAdministracao();
+      final ehCoord = await widget.auth.possuiCoordenacao();
+      return ContextoAcesso(
+        uid: widget.auth.emailAtual ?? 'usuario',
+        email: widget.auth.emailAtual,
+        capacidades: {
+          CapacidadeAcesso.voluntario,
+          if (ehAdmin) CapacidadeAcesso.administrador,
+          if (ehCoord) CapacidadeAcesso.coordenador,
+          if (widget.pastor != null && !ehAdmin && !ehCoord) CapacidadeAcesso.pastorLocal,
+          if (widget.responsavelEquipe != null && !ehAdmin && !ehCoord) CapacidadeAcesso.responsavelEquipe,
+        },
+        ehAdministrador: ehAdmin,
+        ehCoordenador: ehCoord,
+        ehPastorLocal: widget.pastor != null && !ehAdmin && !ehCoord,
+        ehResponsavelEquipe: widget.responsavelEquipe != null && !ehAdmin && !ehCoord,
+        ehVoluntario: true,
+        igrejas: const [],
+        equipes: const [],
+      );
     }
-    return _PerfilAcesso.voluntario;
   }
 
   void _retentar() => setState(() {
-    _autorizacao = _resolverPerfil();
+    _autorizacao = _resolverContexto();
+  });
+
+  void _navegarPara(String destino) => setState(() {
+    _destinoAtual = destino;
   });
 
   Future<void> _sair() async {
@@ -380,7 +428,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<_PerfilAcesso>(
+  Widget build(BuildContext context) => FutureBuilder<ContextoAcesso>(
     future: _autorizacao,
     builder: (context, estado) {
       if (estado.hasError) {
@@ -413,15 +461,91 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           body: SafeArea(
             child: Center(
               child: Semantics(
-                label: 'Carregando autorização',
+                label: 'Carregando contexto de acesso',
                 child: const CircularProgressIndicator(),
               ),
             ),
           ),
         );
       }
-      final perfil = estado.data!;
-      if (perfil == _PerfilAcesso.administrador) {
+      final contexto = estado.data!;
+      final avaliacao = const AppRouteGuard().avaliar(_destinoAtual, contexto);
+
+      if (avaliacao is RotaNaoAutorizada) {
+        return AcessoNegadoScreen(
+          capacidadeNecessaria: avaliacao.capacidadeFaltante,
+          onVoltar: () => _navegarPara(
+            contexto.temMultiplosDestinos ? AppRotas.destinos : AppRotas.raiz,
+          ),
+          onSair: _sair,
+        );
+      }
+
+      // Se usuário tem múltiplos papéis e está na raiz ou pediu o seletor de destinos:
+      if (_destinoAtual == AppRotas.destinos ||
+          (_destinoAtual == AppRotas.raiz && contexto.temMultiplosDestinos)) {
+        return SeletorDestinoCapacidades(
+          contexto: contexto,
+          onNavegarPastor: () => _navegarPara(AppRotas.pastor),
+          onNavegarEquipe: () => _navegarPara(AppRotas.equipe),
+          onNavegarCoordenador: () => _navegarPara(AppRotas.coordenador),
+          onNavegarAdmin: () => _navegarPara(AppRotas.admin),
+          onNavegarVoluntario: () => _navegarPara(AppRotas.minhaFicha),
+          onNavegarRenovacao: () => _navegarPara(AppRotas.renovacao),
+          onSair: _sair,
+        );
+      }
+
+      // Pastor Local
+      if (_destinoAtual == AppRotas.pastor ||
+          (_destinoAtual == AppRotas.raiz &&
+              contexto.ehPastorLocal &&
+              !contexto.ehAdministrador &&
+              !contexto.ehCoordenador)) {
+        if (widget.pastor != null) {
+          return _comBotaoAlternarSeNecessario(
+            contexto: contexto,
+            child: FilaPastorScreen(gateway: widget.pastor!, onSair: _sair),
+          );
+        }
+      }
+
+      // Responsável de Equipe
+      if (_destinoAtual == AppRotas.equipe ||
+          (_destinoAtual == AppRotas.raiz &&
+              contexto.ehResponsavelEquipe &&
+              !contexto.ehAdministrador &&
+              !contexto.ehCoordenador)) {
+        if (widget.responsavelEquipe != null) {
+          return _comBotaoAlternarSeNecessario(
+            contexto: contexto,
+            child: FilaResponsavelEquipeScreen(
+              gateway: widget.responsavelEquipe!,
+              onSair: _sair,
+            ),
+          );
+        }
+      }
+
+      // Coordenador Geral
+      if (_destinoAtual == AppRotas.coordenador ||
+          (_destinoAtual == AppRotas.raiz &&
+              contexto.ehCoordenador &&
+              !contexto.ehAdministrador)) {
+        if (widget.coordenador != null) {
+          return _comBotaoAlternarSeNecessario(
+            contexto: contexto,
+            child: FilaCoordenadorScreen(
+              gateway: widget.coordenador!,
+              onSair: _sair,
+            ),
+          );
+        }
+      }
+
+      // Administrador Geral
+      if (_destinoAtual == AppRotas.admin ||
+          (_destinoAtual == AppRotas.raiz && contexto.ehAdministrador)) {
         return AdminShell(
           onSair: _sair,
           catalogo: widget.catalogo,
@@ -438,18 +562,23 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           retencao: widget.retencao,
         );
       }
-      if (perfil == _PerfilAcesso.coordenador && widget.coordenador != null) {
-        return FilaCoordenadorScreen(
-          gateway: widget.coordenador!,
-          onSair: _sair,
+
+      // Dashboard de Renovação
+      if (_destinoAtual == AppRotas.renovacao && widget.dashboardRenovacao != null) {
+        return _comBotaoAlternarSeNecessario(
+          contexto: contexto,
+          child: DashboardRenovacaoScreen(
+            gateway: widget.dashboardRenovacao!,
+            onSair: _sair,
+          ),
         );
       }
+
+      // Voluntário (Minha Ficha)
       String? nomeAuth;
       try {
         nomeAuth = FirebaseAuth.instance.currentUser?.displayName?.trim();
-      } catch (_) {
-        // Firebase não inicializado em testes unitários ou sem contexto
-      }
+      } catch (_) {}
       final nomeValido = (nomeAuth != null &&
               nomeAuth.isNotEmpty &&
               !nomeAuth.contains('@') &&
@@ -457,16 +586,45 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           ? nomeAuth
           : null;
 
-      return MinhaFichaScreen(
-        fichaGateway: _obterFichaGateway(),
-        catalogoGateway: _obterCatalogoGateway(),
-        participacaoGateway: _obterParticipacaoGateway(),
-        termoGateway: _obterTermoGateway(),
-        onSair: _sair,
-        userName: nomeValido,
+      return _comBotaoAlternarSeNecessario(
+        contexto: contexto,
+        child: MinhaFichaScreen(
+          fichaGateway: _obterFichaGateway(),
+          catalogoGateway: _obterCatalogoGateway(),
+          participacaoGateway: _obterParticipacaoGateway(),
+          termoGateway: _obterTermoGateway(),
+          onSair: _sair,
+          userName: nomeValido,
+        ),
       );
     },
   );
+
+  Widget _comBotaoAlternarSeNecessario({
+    required ContextoAcesso contexto,
+    required Widget child,
+  }) {
+    if (!contexto.temMultiplosDestinos) return child;
+    return Stack(
+      children: [
+        child,
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            heroTag: 'alternar_area_hub',
+            onPressed: () => _navegarPara(AppRotas.destinos),
+            backgroundColor: AppColors.navy900,
+            icon: const Icon(Icons.swap_horiz, color: Colors.white),
+            label: const Text(
+              'Alternar Área',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   FichaGateway _obterFichaGateway() {
     if (widget.ficha != null) return widget.ficha!;
