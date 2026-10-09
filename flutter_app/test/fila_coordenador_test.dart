@@ -227,4 +227,182 @@ void main() {
 
     expect(find.byType(FilaCoordenadorScreen), findsOneWidget);
   });
+
+  testWidgets('Story 8.6: Coordenador Desktop (1280x800) renderiza 4 KPIs e DataTable com colunas e proporção de equipes', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final gateway = MemoriaCoordenadorGateway(
+      pendenciasIniciais: [itemExemplo1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Aguardando aprovação'), findsOneWidget);
+    expect(find.text('Renovações'), findsOneWidget);
+    expect(find.text('Ativos'), findsOneWidget);
+    expect(find.text('Expirados'), findsOneWidget);
+    expect(find.byType(DataTable), findsOneWidget);
+    expect(find.text('Voluntário'), findsOneWidget);
+    expect(find.text('Igreja'), findsOneWidget);
+    expect(find.text('CPF'), findsOneWidget);
+    expect(find.text('Data de Envio'), findsOneWidget);
+    expect(find.text('Proporção de Equipes'), findsOneWidget);
+    expect(find.text('Equipes'), findsOneWidget);
+    expect(find.text('1/2 equipes aprovadas'), findsOneWidget);
+    expect(find.byKey(const Key('btnAprovar_ficha-01')), findsOneWidget);
+    expect(find.byKey(const Key('btnRecusar_ficha-01')), findsOneWidget);
+  });
+
+  testWidgets('Story 8.6: Coordenador Mobile (390x844) renderiza cartões com touch targets acessíveis (>=44px)', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final gateway = MemoriaCoordenadorGateway(
+      pendenciasIniciais: [itemExemplo1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    final btnAprovar = tester.getRect(find.byKey(const Key('btnAprovar_ficha-01')));
+    final btnRecusar = tester.getRect(find.byKey(const Key('btnRecusar_ficha-01')));
+    expect(btnAprovar.height, greaterThanOrEqualTo(44.0));
+    expect(btnRecusar.height, greaterThanOrEqualTo(44.0));
+    expect(find.byKey(const Key('proporcaoEquipes_ficha-01')), findsOneWidget);
+    expect(find.text('1/2 equipes aprovadas'), findsOneWidget);
+  });
+
+  testWidgets('Story 8.6: Calcula proporção 2/3 equipes aprovadas sem inferir histórico', (tester) async {
+    final part3 = const ParticipacaoItemCoordenador(
+      participacaoId: 'part-03',
+      equipeId: 'eq-estacionamento',
+      nomeEquipe: 'Estacionamento',
+      estado: 'AGUARDANDO_COORDENADOR',
+      proximaAcao: 'Aguardando coordenador',
+      responsavelNome: 'Pr. Marcos',
+      elegivelAtivacao: true,
+    );
+
+    final item3Equipes = ItemFilaCoordenador(
+      fichaId: 'ficha-tripla',
+      voluntarioUid: 'vol-tripla',
+      voluntarioNome: 'Renata Castro',
+      profissao: 'Arquiteta',
+      cpfMascarado: '333.***.***-44',
+      igrejaId: 'igreja-central',
+      nomeIgreja: 'Igreja Central',
+      versaoFicha: 1,
+      enviadoEm: '2026-10-06T10:00:00Z',
+      participacoes: [part1, part2, part3], // 2 elegíveis (part1 e part3), 1 recusada (part2)
+    );
+
+    final gateway = MemoriaCoordenadorGateway(
+      pendenciasIniciais: [item3Equipes],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('proporcaoEquipes_ficha-tripla')), findsOneWidget);
+    expect(find.text('2/3 equipes aprovadas'), findsOneWidget);
+  });
+
+  testWidgets('Story 8.6: Clique no KPI Renovações filtra solicitações e toggle desfaz', (tester) async {
+    final partRenov = const ParticipacaoItemCoordenador(
+      participacaoId: 'part-renov',
+      equipeId: 'eq-musica',
+      nomeEquipe: 'Música',
+      estado: 'AGUARDANDO_COORDENADOR',
+      proximaAcao: 'Aguardando',
+      elegivelAtivacao: true,
+      isRenovacaoAnual: true,
+      anoVigencia: 2026,
+    );
+
+    final itemRenov = ItemFilaCoordenador(
+      fichaId: 'ficha-renov',
+      voluntarioUid: 'vol-renov',
+      voluntarioNome: 'Daniel Moreira',
+      profissao: 'Músico',
+      cpfMascarado: '444.***.***-55',
+      igrejaId: 'igreja-central',
+      nomeIgreja: 'Igreja Central',
+      versaoFicha: 1,
+      enviadoEm: '2026-10-06T10:00:00Z',
+      participacoes: [partRenov],
+    );
+
+    final gateway = MemoriaCoordenadorGateway(
+      pendenciasIniciais: [itemExemplo1, itemRenov],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lucas Oliveira'), findsOneWidget);
+    expect(find.text('Daniel Moreira'), findsOneWidget);
+
+    await tester.tap(find.text('Renovações'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Exibindo apenas solicitações de Renovação Anual'), findsOneWidget);
+    expect(find.text('Lucas Oliveira'), findsNothing);
+    expect(find.text('Daniel Moreira'), findsOneWidget);
+
+    await tester.tap(find.text('Limpar filtro'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lucas Oliveira'), findsOneWidget);
+    expect(find.text('Daniel Moreira'), findsOneWidget);
+  });
+
+  testWidgets('Story 8.6: Seletor de Ano filtra itens da fila do coordenador', (tester) async {
+    final part2025 = const ParticipacaoItemCoordenador(
+      participacaoId: 'part-2025',
+      equipeId: 'eq-musica',
+      nomeEquipe: 'Música',
+      estado: 'AGUARDANDO_COORDENADOR',
+      proximaAcao: 'Aguardando',
+      elegivelAtivacao: true,
+      isRenovacaoAnual: true,
+      anoVigencia: 2025,
+    );
+
+    final item2025 = ItemFilaCoordenador(
+      fichaId: 'ficha-2025',
+      voluntarioUid: 'vol-2025',
+      voluntarioNome: 'Voluntário Ano 2025',
+      profissao: 'Contador',
+      cpfMascarado: '555.***.***-66',
+      igrejaId: 'igreja-central',
+      nomeIgreja: 'Igreja Central',
+      versaoFicha: 1,
+      enviadoEm: '2025-10-06T10:00:00Z',
+      participacoes: [part2025],
+    );
+
+    final gateway = MemoriaCoordenadorGateway(
+      pendenciasIniciais: [itemExemplo1, item2025],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lucas Oliveira'), findsOneWidget);
+    expect(find.text('Voluntário Ano 2025'), findsOneWidget);
+
+    // Seleciona Ano 2025 no Dropdown
+    await tester.tap(find.byKey(const Key('dropdownFiltroAno')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ano 2025').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lucas Oliveira'), findsNothing);
+    expect(find.text('Voluntário Ano 2025'), findsOneWidget);
+  });
 }

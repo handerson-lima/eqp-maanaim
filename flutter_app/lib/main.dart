@@ -558,6 +558,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           widget.pastor != null) {
         corpo = FilaPastorScreen(
           gateway: widget.pastor!,
+          dashboardRenovacaoGateway: widget.dashboardRenovacao,
           onSair: _sair,
           dentroDeShell: true,
         );
@@ -569,6 +570,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           widget.responsavelEquipe != null) {
         corpo = FilaResponsavelEquipeScreen(
           gateway: widget.responsavelEquipe!,
+          dashboardRenovacaoGateway: widget.dashboardRenovacao,
           onSair: _sair,
           dentroDeShell: true,
         );
@@ -579,6 +581,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           widget.coordenador != null) {
         corpo = FilaCoordenadorScreen(
           gateway: widget.coordenador!,
+          dashboardRenovacaoGateway: widget.dashboardRenovacao,
           onSair: _sair,
           dentroDeShell: true,
         );

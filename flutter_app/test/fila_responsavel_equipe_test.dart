@@ -225,4 +225,134 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Story 8.6: Responsável Desktop (1280x800) renderiza 4 KPIs e DataTable com colunas completas', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final gateway = MemoriaResponsavelEquipeGateway(
+      pendenciasIniciais: [itemExemplo1],
+      equipesIniciais: [equipe1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pendências'), findsOneWidget);
+    expect(find.text('Renovações'), findsOneWidget);
+    expect(find.text('Ativos'), findsOneWidget);
+    expect(find.text('Próximos do vencimento'), findsOneWidget);
+    expect(find.byType(DataTable), findsOneWidget);
+    expect(find.text('Voluntário'), findsOneWidget);
+    expect(find.text('Igreja'), findsOneWidget);
+    expect(find.descendant(of: find.byType(DataTable), matching: find.text('Equipe')), findsOneWidget);
+    expect(find.text('Data de Envio'), findsOneWidget);
+    expect(find.byKey(const Key('btnAprovar_part-01')), findsOneWidget);
+  });
+
+  testWidgets('Story 8.6: Responsável Mobile (390x844) renderiza cartões com touch targets acessíveis (>=44px)', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final gateway = MemoriaResponsavelEquipeGateway(
+      pendenciasIniciais: [itemExemplo1],
+      equipesIniciais: [equipe1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    final btnAprovar = tester.getRect(find.byKey(const Key('btnAprovar_part-01')));
+    final btnRecusar = tester.getRect(find.byKey(const Key('btnRecusar_part-01')));
+    expect(btnAprovar.height, greaterThanOrEqualTo(44.0));
+    expect(btnRecusar.height, greaterThanOrEqualTo(44.0));
+  });
+
+  testWidgets('Story 8.6: Restringe pendências estritamente às equipes vigentes do responsável', (tester) async {
+    final gateway = MemoriaResponsavelEquipeGateway(
+      pendenciasIniciais: [
+        itemExemplo1,
+        const ItemFilaResponsavelEquipe(
+          participacaoId: 'part-estranha',
+          fichaId: 'ficha-99',
+          voluntarioUid: 'vol-99',
+          voluntarioNome: 'Voluntário de Outra Área',
+          equipeId: 'eq-seguranca',
+          nomeEquipe: 'Segurança',
+          igrejaId: 'igreja-01',
+          nomeIgreja: 'Igreja Central',
+          estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE',
+          proximaAcao: 'Aguardando',
+          versao: 1,
+          enviadoEm: '2026-10-06T12:00:00Z',
+        ),
+      ],
+      equipesIniciais: [equipe1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gabriel Santos'), findsOneWidget);
+    expect(find.text('Voluntário de Outra Área'), findsNothing);
+  });
+
+  testWidgets('Story 8.6: Clique no KPI Renovações filtra a lista do responsável', (tester) async {
+    final itemRenov = const ItemFilaResponsavelEquipe(
+      participacaoId: 'part-renov-01',
+      fichaId: 'ficha-renov-01',
+      voluntarioUid: 'vol-renov-01',
+      voluntarioNome: 'Aline Rocha',
+      equipeId: 'eq-cozinha',
+      nomeEquipe: 'Cozinha',
+      igrejaId: 'igreja-01',
+      nomeIgreja: 'Igreja Central',
+      estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE',
+      proximaAcao: 'Aguardando',
+      versao: 1,
+      enviadoEm: '2026-10-06T12:00:00Z',
+      isRenovacaoAnual: true,
+      anoVigencia: 2026,
+    );
+
+    final gateway = MemoriaResponsavelEquipeGateway(
+      pendenciasIniciais: [itemExemplo1, itemRenov],
+      equipesIniciais: [equipe1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gabriel Santos'), findsOneWidget);
+    expect(find.text('Aline Rocha'), findsOneWidget);
+
+    await tester.tap(find.text('Renovações'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Exibindo apenas solicitações de Renovação Anual'), findsOneWidget);
+    expect(find.text('Gabriel Santos'), findsNothing);
+    expect(find.text('Aline Rocha'), findsOneWidget);
+
+    await tester.tap(find.text('Limpar filtro'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gabriel Santos'), findsOneWidget);
+    expect(find.text('Aline Rocha'), findsOneWidget);
+  });
+
+  testWidgets('Story 8.6: Erro de carregamento exibe mensagem sem exibir 0 espúrio nos KPIs', (tester) async {
+    final gateway = MemoriaResponsavelEquipeGateway(
+      erroAoObterFila: Exception('Serviço indisponível'),
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Não foi possível carregar a fila de equipe. Tente novamente.'), findsOneWidget);
+    expect(find.text('Tentar novamente'), findsOneWidget);
+    expect(find.text('Pendências'), findsNothing);
+    expect(find.byType(DataTable), findsNothing);
+  });
 }

@@ -205,4 +205,116 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Story 8.6: Pastor Desktop (1280x800) renderiza 4 KPIs e DataTable com colunas completas', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final gateway = MemoriaPastorLocalGateway(
+      pendenciasIniciais: [itemExemplo1],
+      igrejasIniciais: [igreja1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pendências'), findsOneWidget);
+    expect(find.text('Renovações'), findsOneWidget);
+    expect(find.text('Ativos'), findsOneWidget);
+    expect(find.text('Próximos do vencimento'), findsOneWidget);
+    expect(find.byType(DataTable), findsOneWidget);
+    expect(find.text('Voluntário'), findsOneWidget);
+    expect(find.descendant(of: find.byType(DataTable), matching: find.text('Igreja')), findsOneWidget);
+    expect(find.text('Equipe(s)'), findsOneWidget);
+    expect(find.text('Data de Envio'), findsOneWidget);
+    expect(find.byKey(const Key('btnAprovar_ficha-01')), findsOneWidget);
+  });
+
+  testWidgets('Story 8.6: Agregação "Todas as igrejas" agrega estritamente igrejas com vínculos vigentes do pastor', (tester) async {
+    final gateway = MemoriaPastorLocalGateway(
+      pendenciasIniciais: [
+        itemExemplo1,
+        itemExemplo2,
+        ItemFilaPastor(
+          id: 'pendencia-fora-03',
+          fichaId: 'ficha-fora-03',
+          voluntarioUid: 'vol-fora-03',
+          voluntarioNome: 'Invasor Fora de Escopo',
+          igrejaId: 'igreja-estranha',
+          nomeIgreja: 'Igreja Não Pertencente',
+          estado: 'AGUARDANDO_PASTOR_LOCAL',
+          proximaAcao: 'Aguardando',
+          ano: 2026,
+          equipes: const [],
+          enviadoEm: '2026-10-06T12:00:00Z',
+          versao: 1,
+        ),
+      ],
+      igrejasIniciais: [igreja1, igreja2],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Carlos Eduardo Silva'), findsOneWidget);
+    expect(find.text('Mariana Lima'), findsOneWidget);
+    expect(find.text('Invasor Fora de Escopo'), findsNothing);
+  });
+
+  testWidgets('Story 8.6: Clique no KPI Renovações filtra a lista e toggle restaura', (tester) async {
+    final itemRenovacao = ItemFilaPastor(
+      id: 'pendencia-renov-01',
+      fichaId: 'ficha-renov-01',
+      voluntarioUid: 'vol-renov-01',
+      voluntarioNome: 'Renato Santos',
+      igrejaId: 'igreja-01',
+      nomeIgreja: 'Igreja Central',
+      estado: 'AGUARDANDO_PASTOR_LOCAL',
+      proximaAcao: 'Aguardando',
+      ano: 2026,
+      equipes: const [EquipeFilaPastor(equipeId: 'eq-01', nomeEquipe: 'Acolhimento')],
+      enviadoEm: '2026-10-06T12:00:00Z',
+      versao: 1,
+      isRenovacaoAnual: true,
+    );
+
+    final gateway = MemoriaPastorLocalGateway(
+      pendenciasIniciais: [itemExemplo1, itemRenovacao],
+      igrejasIniciais: [igreja1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Carlos Eduardo Silva'), findsOneWidget);
+    expect(find.text('Renato Santos'), findsOneWidget);
+
+    await tester.tap(find.text('Renovações'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Exibindo apenas solicitações de Renovação Anual'), findsOneWidget);
+    expect(find.text('Carlos Eduardo Silva'), findsNothing);
+    expect(find.text('Renato Santos'), findsOneWidget);
+
+    await tester.tap(find.text('Limpar filtro'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Carlos Eduardo Silva'), findsOneWidget);
+    expect(find.text('Renato Santos'), findsOneWidget);
+  });
+
+  testWidgets('Story 8.6: Erro do gateway exibe mensagem amigável sem exibir 0 espúrio nos KPIs', (tester) async {
+    final gateway = MemoriaPastorLocalGateway(
+      erroAoObterFila: Exception('Falha de rede'),
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Não foi possível carregar a fila pastoral. Tente novamente.'), findsOneWidget);
+    expect(find.text('Tentar novamente'), findsOneWidget);
+    expect(find.text('Pendências'), findsNothing);
+    expect(find.byType(DataTable), findsNothing);
+  });
 }

@@ -233,15 +233,18 @@ class MemoriaPastorLocalGateway implements PastorLocalGateway {
   MemoriaPastorLocalGateway({
     List<ItemFilaPastor>? pendenciasIniciais,
     List<IgrejaEscopoPastor>? igrejasIniciais,
+    this.erroAoObterFila,
   })  : _pendencias = List.of(pendenciasIniciais ?? []),
         _igrejas = List.of(igrejasIniciais ?? []);
 
   final List<ItemFilaPastor> _pendencias;
   final List<IgrejaEscopoPastor> _igrejas;
+  final Exception? erroAoObterFila;
   final Map<String, ResultadoDecisaoPastor> _recibos = {};
 
   @override
   Future<ResultadoFilaPastor> obterFila() async {
+    if (erroAoObterFila != null) throw erroAoObterFila!;
     return ResultadoFilaPastor(
       pendencias: List.unmodifiable(_pendencias),
       igrejas: List.unmodifiable(_igrejas),

@@ -249,15 +249,18 @@ class MemoriaResponsavelEquipeGateway implements ResponsavelEquipeGateway {
   MemoriaResponsavelEquipeGateway({
     List<ItemFilaResponsavelEquipe>? pendenciasIniciais,
     List<EquipeEscopoResponsavel>? equipesIniciais,
+    this.erroAoObterFila,
   })  : _pendencias = List.of(pendenciasIniciais ?? []),
         _equipes = List.of(equipesIniciais ?? []);
 
   final List<ItemFilaResponsavelEquipe> _pendencias;
   final List<EquipeEscopoResponsavel> _equipes;
+  final Exception? erroAoObterFila;
   final List<EntradaDecidirParticipacaoResponsavel> chamadasDecisao = [];
 
   @override
   Future<ResultadoFilaResponsavelEquipe> obterFila() async {
+    if (erroAoObterFila != null) throw erroAoObterFila!;
     return ResultadoFilaResponsavelEquipe(
       pendencias: List.unmodifiable(_pendencias),
       equipes: List.unmodifiable(_equipes),

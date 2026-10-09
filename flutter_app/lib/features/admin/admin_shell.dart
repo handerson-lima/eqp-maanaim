@@ -200,6 +200,7 @@ class _AdminShellState extends State<AdminShell> {
         ),
         builder: () => FilaCoordenadorScreen(
           gateway: widget.coordenador!,
+          dashboardRenovacaoGateway: widget.dashboardRenovacao,
           onSair: widget.onSair,
           dentroDeShell: true,
         ),
