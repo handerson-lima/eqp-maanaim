@@ -1,0 +1,73 @@
+# Contrato visual consolidado — 8.1
+
+Data: 08/10/2026. **Contrato documental; nenhuma tela homologada.** Fontes: [SPEC](../../specs/spec-gestao-voluntarios-maanaim/SPEC.md), [PRD](../PRD-GESTAO-VOLUNTARIOS-MAANAIM-v1.1.md), [ADs](../architecture/architecture-eqp_maanaim-2026-09-28/ARCHITECTURE-SPINE.md), [precedência](../ux/DESIGN-RULES-FOR-AGENTS.md), [telas](../ux/SCREEN-SPECS.md), [layout](../ux/UX-LAYOUT-SPEC.md), [tokens](../ux/DESIGN-SYSTEM.md), [componentes](../ux/COMPONENT-CATALOG.md). Implementação existente e lacunas estão no [inventário](inventario-dados-ui.md); dados propostos no [companion](../architecture/architecture-eqp_maanaim-2026-09-28/UI-CONTRACTS.md); evidências futuras na [matriz](matriz-validacao-ui.md).
+
+## Decisões e adaptações
+
+O SPEC/ADs vinculam o domínio; conflitos visuais seguem requisitos funcionais/segurança → acessibilidade → SCREEN-SPECS → UX-LAYOUT-SPEC → DESIGN-SYSTEM → imagem → defaults Material. Este documento detalha os mesmos contratos, sem criar precedência concorrente. S01–S09 têm composição na imagem composta; S10–S14 são especificações textuais. Não existe baseline individual homologada.
+
+| Tema | Decisão documental | Implementação responsável |
+|---|---|---|
+| Identidade | Navy #082C49, azul #0B6FE8, topbar branca, superfície clara; sem gradiente, roxo ou glassmorphism. Tokens acessíveis do Design System. | 8.2, 8.4 |
+| Geometria | Sidebar 220, topbar 64, card raio 10, input/botão raio 6, alvo mínimo 44 px; alturas crescem para texto ampliado. | 8.2 |
+| Fontes | Inter com fallback Roboto/sans-serif, escala institucional; Inter não está empacotada no pubspec. 8.2 deve fixar fonte efetivamente distribuída e registrar fonte/DPR nos testes. | 8.2, 8.16 |
+| Assets | Existem `flutter_app/assets/images/logo_maanaim.png`, `logo_maanaim_transparente.png`, `logo_maranata.png`; reutilizar `LogoMaanaim`. A marca disponível Maanaim Natal-RN (vermelha/dourada) difere do mockup; preservá-la sem recolorir/inventar marca. Não há fotografia institucional inventariada: painel navy sólido com marca. Ícones web existentes são de PWA, não fotografia. | 8.4 |
+| Número da ficha | Exemplo do PRD não prova campo persistido. Apresentação aprovada aqui: omitir número/rótulo vazio quando ausente, usando título “Minha Ficha” e nome autorizado; jamais converter UID em número ou fabricar sequência. | 8.5, 8.10 |
+| Dados de identidade | Nome e campos realmente disponíveis/autorizados; idade/foto/telefone não são pré-requisitos visuais. Omitir campos ausentes, sem ampliar coleta. | 8.7 |
+| Negativa ao voluntário | Exatamente “Procure o Pastor da igreja local para mais informações”. Não revelar estado interno, motivo, ator, cor/ícone negativo, tooltip, semântica ou contagem de rejeições. Não esconder participações independentes. | 8.5, 8.7, 8.15 |
+| Vigência | Um ano a partir da aprovação final por ciclo de participação. Não há validade única agregada. Próximo vencimento identifica equipe/ciclo; ausência de data não vira progresso fictício. | 8.5, 8.9, 8.10 |
+| Documento | PDF privado individual por participação aprovada/ciclo e evidência persistida; nunca consolidado. Seleção precede abertura, cada acesso reautoriza. | 8.7, 8.10 |
+| Responsável | Um responsável canônico vigente por igreja/equipe. Seleção múltipla refere-se a várias entidades por pastor, não vários responsáveis simultâneos. | 8.11, 8.12 |
+| Login | E-mail/senha, cadastro e recuperação funcionais. Remover Google/divisor sem integração; OAuth não integra o épico. | 8.4 |
+| Ausência/erro de dados | “Indisponível” ou mensagem contextual; zero só quando consulta completa e autorizada comprovar conjunto vazio. | 8.5, 8.6, 8.13, 8.14 |
+
+## Composição e estados comuns
+
+Mobile <600 px: drawer, topbar, conteúdo em coluna única com padding16; ações quebram linha e permanecem acessíveis. Tablet600–1023: navegação compacta, filtros quebram linha, duas áreas só se constraints permitirem leitura e alvos44; caso contrário empilhar. Desktop≥1024: sidebar220 à esquerda, topbar64 no restante, conteúdo padding24, gap24/seções e16/cards. Apenas um AppShell por rota autenticada. Tabelas viram cartões no mobile, com os mesmos campos/ações autorizados. Login é a exceção pública sem shell. Nunca comprimir texto para simular responsividade.
+
+**E (consulta):** loading identificado → dados/sucesso ou vazio com próxima ação; erro com retry explícito; acesso negado remove dados sensíveis; rede indisponível não exibe resultado novo. **M (mutação):** revisão/confirmar → processamento → resultado persistido/recibo COMPLETO; falha permite recuperação segura; ABORTED/versão alterada recarrega e exige revisão; mesma intenção usa commandId estável, nunca retry silencioso. Dados preenchidos seguros são preservados, segredos/URLs não. Esses estados se aplicam a cada linha marcada E/M abaixo, inclusive tablet.
+
+Menus vêm de capacidades autorizadas: Início/Minha Ficha ao voluntário; filas e dashboards aos vínculos pastorais; coordenação; administração; auditoria/relatórios conforme escopo. Vínculos simultâneos mantêm ambos destinos. Voltar/recarregar/deep link refaz autorização, preserva apenas filtros não sensíveis e nunca papel autoatribuído. Notificação abre detalhe, não decide.
+
+## Wireframes textuais S01–S14
+
+Cada linha fixa ordem espacial, navegação, estados específicos e história que resolve lacunas; fontes/campos estão na linha homônima do inventário. `→` indica ordem vertical; `|` áreas lado a lado, não rotas.
+
+| Tela | Mobile | Tablet | Desktop | Estados e navegação; lacuna responsável |
+|---|---|---|---|---|
+| S01 Login | Marca compacta → Bem-vindo → e-mail/senha → Entrar → recuperação/cadastro | Marca reduzida acima de form central max400 | Painel navy/marca 50% à esquerda \| formulário max400 à direita | M autenticação, erro neutro, sessão carregando; vazio=campos iniciais, não lista. Cadastro/recuperação retornam login; sessão leva a destino por capacidade. 8.4 |
+| S02 Início voluntário | Saudação/estado permitido → próxima ação → KPIs → próximo vencimento identificado → Minhas Equipes | KPIs em linha conforme espaço → vigência → lista | KPIs acima; Minhas Equipes ampla à esquerda \| vigência/próxima ação à direita | E; sem ficha=Iniciar cadastro; rascunho=Continuar; enviado=acompanhar; ativa=ações aplicáveis. Equipe→detalhe; Minha Ficha→S09; solicitar→S03; renovar→S10. Métricas/projeção do início 8.5 |
+| S03 Solicitação | Título → etapa compacta → busca/seleção uma coluna → ações → termo → revisão → envio | Seleção até duas colunas se legível, ações abaixo | Stepper horizontal → grid responsivo → Próximo à direita; revisão igreja/equipes/termo | E/M; catálogo vazio, equipe inativa, termo trocado exige aceite novamente; voltar mantém rascunho. Inicial múltipla; adicional unitária sem modificar ativas. Resultado por participação→S02/S09. 8.8 |
+| S04 Pastor Local | Contexto igreja → KPIs empilhados → pendências em cartões/Analisar | KPIs em duas colunas → filtros → lista adaptada | KPIs no topo → tabela ampla Voluntário/Igreja/Equipes/Enviado/Analisar | E; sem vínculo não é fila vazia; Todas agrega só vínculos vigentes. KPI→lista com mesmo filtro/unidade; Analisar→S05; voltar restaura filtro. Gerais faltantes 8.6, acesso 8.3 |
+| S05 Análise | Identidade → equipes/ciclo → documentos → decisão contextual | Duas áreas somente se couber; senão ordem mobile | Resumo autorizado à esquerda (aprox.1/3) \| equipes/documentos/painel de decisão (2/3) | E/M; etapa/participação/ciclo e consequência explícitos; justificativa conforme comando. Coordenador confirma reunião+aceite. PDF indisponível antes de elegibilidade; conflito exige reanálise; sucesso volta à fila atualizada. 8.7 |
+| S06 Coordenador | Ano/período → KPIs → cartões com aprovadas/solicitadas → Analisar | Filtros quebrados → KPIs2col → tabela adaptada | Filtros no topo → quatro KPIs → tabela Voluntário/Igreja/Equipes aprovadas/Envio/Analisar | E; proporção somente do alvo/ciclo em análise, nunca histórico total; sem dados ≠ zero. Analisar→S05; KPI→conjunto filtrado. 8.6/8.7 |
+| S07 Igrejas | Título/Nova igreja → busca/situação → cartões → formulário na mesma superfície | Filtros em linha se couber → tabela/cards | Título/ação → filtros → tabela Nome/Código/Situação/Pastor/Ações | E/M; código duplicado, conflito, sem responsável; editar preserva histórico; inativar/reativar confirmado; abrir vínculos→S08/histórico. Cadastro/projeção 8.11 |
+| S08 Vínculos | Identidade pastor → busca/checkboxes → selecionadas → revisão → salvar → resultados | Duas seções ou colunas conforme constraints | Identidade topo → lista pesquisável esquerda \| selecionadas/revisão direita → Salvar | E/M; sem mudança não envia; desmarcar atual exige encerramento explícito; substituição contextual; falha parcial por item, retry seletivo; conflito reabre revisão daquele item. Retorna igreja/equipe/histórico. 8.12 |
+| S09 Minha Ficha | Resumo/dados → Editar → seletor equipe/ciclo → documento/resumo → abrir/baixar → histórico | Dados e documentos em seções; preview opcional | Resumo e seletor acima → preview neutro amplo \| metadados/baixar/histórico | E/M acesso ao PDF; sem aprovação=indisponível; URL expirada requer nova autorização, preview falhou mantém download autorizado. Editar→formulário separado; voltar→S02. 8.10 |
+| S10 Renovação | Escolhas → cada equipe com vigência/janela/Sim/Não → revisão → enviar → resultados | Stepper compacto, escolhas e revisão na mesma página | Stepper horizontal → lista por equipe → revisão de continuam/encerram → enviar | E/M; escolha ausente não é Sim; janela fechada e conflito do servidor; retomada mostra escolha persistida. Resultado→acompanhamento/S02; preserva ciclos anteriores. 8.9 |
+| S11 Equipes | Título/Nova → busca/situação → cartões com responsável único → formulário | Filtros → tabela/cards conforme espaço | Título/ação → filtros → tabela Equipe/Situação/Responsável/Ações | E/M; sem responsável explícito, nome longo, concorrência; vínculos/histórico separados. Carga inicial não sobrescreve dados editados. 8.11 |
+| S12 Auditoria | Filtros colapsáveis rotulados → cartões → próxima página → detalhe sanitizado | Filtros quebrados → tabela adaptada | Período/ator/ação/entidade → tabela data/ator/perfil/ação/alvo/resultado → paginação | E; antes/depois permitido no detalhe; cursor inválido reinicia consulta informando usuário; datas com fuso. Voltar preserva filtros seguros; ator não é voluntário-alvo. 8.13 |
+| S13 Termos | Publicar → cards versão/publicação/situação/pendentes → documento/histórico | Lista/tabela responsiva → revisão da publicação | Header/Publicar → tabela versões/publicação/situação/pendentes → detalhe com hash | E/M; ausente ≠ zero; publicação imutável/revisada; universo incompleto explicitado; novo aceite ativo ainda requer contrato backend 8.14. Termo→documento; voluntário→aceite contextual. |
+| S14 Relatórios | Filtros rotulados → resumo com unidade → cartões → paginação | Filtros quebrados → resumo → tabela adaptada | Equipe/igreja/situação/período/pastor/voluntário/ano → resumo → tabela/paginação | E; filtros autorizados e totais completos; cursor reset ao mudar filtros; drilldown→S09/S05 só se permitido. Sem exportação nesta entrega. Cursor/novos filtros 8.13 |
+
+## Superfícies complementares
+
+Todas usam E; M quando há ação persistente. Mobile segue ordem em coluna; tablet usa seções/filtros quebrados; desktop usa header/filtros/tabela ou formulário legível, mantendo o mesmo shell e navegação autorizada.
+
+| Superfície | Composição/estados específicos e navegação | Lacuna responsável |
+|---|---|---|
+| Cadastro/recuperação | Marca → formulário → feedback neutro → voltar ao login; M com validação, processamento e resposta sem enumerar contas. | 8.4, 8.15 |
+| Fila Responsável de Equipe | Contexto equipe → KPIs → tabela desktop/cards mobile; E, vínculo perdido remove dados; Analisar→S05, várias equipes autorizadas. | 8.3, 8.6, 8.7 |
+| Editar Perfil | Header → campos existentes → salvar/cancelar → retorno origem; M, sem shell duplicado, preservação segura no erro. | 8.4, 8.15 |
+| Pessoas e Papéis | Busca → lista/tabela → pessoa → confirmação de papel; M, acesso admin, nunca autoatribuição. | 8.15 |
+| Solicitações por Equipe | Header/filtro → grupos abertos/fechados → detalhe; E, rótulos de domínio traduzidos e autorizados. | 8.15 |
+| Dashboard de Renovação | Contexto/ano → métricas explicitamente de renovação → itens → ciclo/S10 ou S05 conforme capacidade; E, janela e estado indisponível distintos. | 8.6, 8.15 |
+| Retenção/Privacidade | Header → indicadores → detalhe permitido → confirmação contextual; M, sem jargão no título, acesso negado limpa dados. | 8.15 |
+| Cancelamento parcial/total | Alvo/equipes afetadas → consequência/motivo aplicável → confirmação única → resultado; M, retorno ficha/acompanhamento. Mensagem neutra quando ator responsável. | 8.15 |
+| Reativação | Participação elegível/histórico → solicitar novo ciclo → resultado/acompanhamento; M, anteriores finais não reabrem. | 8.15 |
+| Termo/aceite/comprovantes | Versão/conteúdo → declaração explícita → aceitar → comprovante; M, versão trocada exige releitura; volta à jornada de origem. | 8.8, 8.14, 8.15 |
+| Shell/sessão/contexto | Loading de contexto → menu autorizado e destino → erro/retry ou login se sessão ausente; negação remove conteúdo. Mobile drawer, tablet compacto, desktop sidebar; perfil→Editar Perfil. | 8.2–8.4 |
+
+## Verificação futura
+
+Cada história de tela compara hierarquia, espaçamento, densidade e estados ao contrato nos três breakpoints; testa texto200%, teclado, foco, leitor de tela e alvos44. 8.16 integra as evidências da matriz. Documentar esses contratos em 8.1 não prova acessibilidade ou fidelidade da aplicação existente.

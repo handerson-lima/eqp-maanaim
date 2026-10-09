@@ -1,5 +1,7 @@
 # COMPONENT CATALOG --- Flutter UI
 
+Contrato consolidado: [contrato visual](../correcao-ui/contrato-visual-ui.md), [inventário](../correcao-ui/inventario-dados-ui.md) e [contratos de dados](../architecture/architecture-eqp_maanaim-2026-09-28/UI-CONTRACTS.md). Estado: especificação documental de 8.1; implementação e homologação permanecem futuras.
+
 **Objetivo:** orientar agents BMAD na criação de componentes
 reutilizáveis, sem impor implementação prematura.
 

@@ -1,6 +1,8 @@
 # UX LAYOUT SPEC --- Gestão de Voluntários do Maanaim
 
-**Versão:** 1.0
+Contrato consolidado: [contrato visual](../correcao-ui/contrato-visual-ui.md), [inventário](../correcao-ui/inventario-dados-ui.md) e [contratos de dados](../architecture/architecture-eqp_maanaim-2026-09-28/UI-CONTRACTS.md). Estado: especificação documental de 8.1; implementação e homologação permanecem futuras.
+
+**Versão:** 1.1
 
 ## 1. App Shell
 
@@ -41,18 +43,17 @@ LayoutBuilder/constraints.
 Desktop em composição aproximadamente 50/50: - painel institucional à
 esquerda com imagem, logo, nome do produto e frase; - painel claro à
 direita; - card/form de login com largura \~360--400px; - e-mail, senha,
-recuperação de senha, botão Entrar; - divisor "ou"; - login Google
-quando habilitado.
+recuperação de senha, cadastro e botão Entrar; sem divisor/Google nesta entrega. Fotografia ausente usa navy sólido.
 
 Mobile: - remover/reduzir painel fotográfico; - logo no topo; -
 formulário em largura disponível; - padding 20--24px.
 
 ## 4. Dashboard do Voluntário
 
-TopBar: - avatar/nome; - número da ficha; - chip de situação.
+TopBar: - avatar/nome; - número persistido da ficha quando disponível; - chip de situação.
 
-Conteúdo: 1. KPIs "Minhas Equipes": ativas, em aprovação, rejeitadas; 2.
-card "Validade da Ficha" com data, dias restantes e progresso; 3. lista
+Conteúdo: 1. KPIs de participações ativas e em acompanhamento permitido, sem revelar decisões negativas; 2.
+card "Próximo vencimento" identifica equipe/ciclo com data, dias restantes e progresso persistidos; cada equipe mantém sua própria vigência; 3. lista
 das equipes com status, data contextual e chevron; 4. priorizar clareza
 sobre densidade.
 
@@ -77,10 +78,10 @@ Equipes, Enviado em, Ações; - ação primária por linha: `Analisar`.
 ## 7. Análise da Ficha
 
 Layout desktop em duas áreas: - esquerda: resumo do voluntário + acesso
-ao PDF; - direita: equipes solicitadas, documentos e painel de decisão.
+a documentos autorizados (PDF por participação aprovada); - direita: equipes solicitadas, documentos e painel de decisão.
 
 Painel de decisão: - Aprovar em verde; - Rejeitar em vermelho; -
-observação opcional; - status atual visível no topo.
+justificativa conforme comando/etapa, sem torná-la opcional quando obrigatória; - status atual visível no topo.
 
 No mobile, empilhar na ordem: identidade → equipes → documentos →
 decisão.
@@ -116,7 +117,7 @@ Status com chip. Edição e ações secundárias com ícones discretos.
 
 ## 11. Minha Ficha / PDF
 
--   header da página com `Baixar PDF`;
+-   header, dados da ficha e seletor de participação/ciclo antes de `Baixar PDF`; nova autorização para cada abertura/download;
 -   preview do documento em container escuro/neutro;
 -   PDF deve ter identidade visual institucional, porém priorizar
     legibilidade e impressão;

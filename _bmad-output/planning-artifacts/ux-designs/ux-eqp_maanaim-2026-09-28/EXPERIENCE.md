@@ -3,14 +3,14 @@ name: Sistema de Gestão de Voluntários do Maanaim
 status: final
 sources:
   - ../../PRD-GESTAO-VOLUNTARIOS-MAANAIM-v1.1.md
-updated: 2026-09-28
+updated: 2026-10-08
 ---
 
 # Experiência — Gestão de Voluntários do Maanaim
 
 ## Foundation
 
-Web responsiva/PWA em Flutter para celular, tablet e desktop. `DESIGN.md` é a referência visual; este documento define comportamento. A experiência assume usuários ocasionais, linguagem direta e ações críticas sempre rastreáveis.
+Web responsiva/PWA em Flutter para celular, tablet e desktop. O pacote normativo `../../ux/` e o contrato consolidado vinculado abaixo são a referência visual; este documento define comportamento. A experiência assume usuários ocasionais, linguagem direta e ações críticas sempre rastreáveis.
 
 ## Information Architecture
 
@@ -32,7 +32,7 @@ No desktop, menu lateral; em celular, menu compacto. O papel ativo é visível e
 | Fazer | Evitar |
 |---|---|
 | “Aguardando decisão do Pastor Local de Goianinha.” | “Em processamento.” |
-| “Segurança não foi aprovada. As outras equipes seguem em análise.” | “Solicitação rejeitada.” |
+| “Procure o Pastor da igreja local para mais informações” | “Solicitação rejeitada.” |
 | “Sua participação em Recepção vence em 31/12/2026.” | “Expira em breve!” |
 | “Esta ação será registrada no histórico.” | Linguagem técnica sobre regras internas |
 
@@ -45,7 +45,7 @@ No desktop, menu lateral; em celular, menu compacto. O papel ativo é visível e
 | Aprovação | apresenta vínculo usado, estado atual, justificativa e assinatura autenticada; ação só aparece quando autorizada |
 | Troca de responsável | mostra responsável atual, data de vigência e pendências que serão redirecionadas; decisões passadas ficam intactas |
 | Linha do tempo | ordenação cronológica, sem editar/excluir; abre detalhes de evento quando permitido |
-| PDF | sempre gerado a partir de eventos persistidos, não de texto digitado na tela |
+| PDF | um documento privado por participação aprovada/ciclo, gerado de evidências persistidas e reautorizado a cada abertura/download |
 
 ## State Patterns
 
@@ -64,13 +64,13 @@ No desktop, menu lateral; em celular, menu compacto. O papel ativo é visível e
 
 - Ação crítica: revisar → informar justificativa quando aplicável → confirmar → aguardar resultado do backend → ver evento registrado.
 - Filtros de fila preservam igreja/equipe e ciclo; URL/deep link reabre a mesma superfície quando permitido.
-- Ação por equipe não atua em lote por padrão. Operações administrativas em lote exigem confirmação com contagem e itens afetados.
+- Ação por equipe não atua em lote por padrão. Operações administrativas em lote exigem confirmação com contagem e itens afetados, resultado individual e retry apenas dos itens elegíveis. Não há atomicidade global; conflito exige nova revisão daquele item.
 - Notificações levam ao detalhe, não executam decisões.
 
 ## Accessibility Floor
 
 - WCAG 2.2 AA; contraste e foco visível conforme `DESIGN.md`.
-- Leitor de tela anuncia papel, entidade, equipe, estado e próxima ação.
+- Leitor de tela anuncia somente papel, entidade, equipe, estado e próxima ação autorizados ao público; também preserva a mensagem neutra canônica.
 - Alvos de toque ≥ 44 px; navegação integral por teclado no web.
 - Cor nunca é o único sinal de aprovação, rejeição ou vencimento.
 - Datas apresentam formato local e, em eventos, data/hora com fuso configurado.
@@ -121,3 +121,7 @@ Falha: se a janela anual estiver fechada, a tela informa a situação e o canal 
 - **[ASSUMPTION]** Janelas, prazos e regras de expiração serão configuráveis por ciclo anual.
 - **[ASSUMPTION]** Cancelamento e reativação exibem motivo obrigatório quando realizados por responsáveis; a matriz exata de motivos fica na arquitetura/story.
 - **[ASSUMPTION]** Notificações in-app/PWA são o canal mínimo; WhatsApp permanece fora do escopo inicial.
+
+## Contrato consolidado em 08/10/2026
+
+[Contrato visual](../../correcao-ui/contrato-visual-ui.md), [Design System](../../ux/DESIGN-SYSTEM.md) e [contratos de integração](../../architecture/architecture-eqp_maanaim-2026-09-28/UI-CONTRACTS.md) detalham estas regras. O pacote ux/ prevalece sobre defaults Material e exemplos legados; preservam-se SPEC e ADs. 8.1 consolida documentação, sem homologar UI.

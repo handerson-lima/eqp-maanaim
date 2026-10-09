@@ -1,6 +1,8 @@
 # DESIGN SYSTEM --- Gestão de Voluntários do Maanaim
 
-**Versão:** 1.0\
+Contrato consolidado: [contrato visual](../correcao-ui/contrato-visual-ui.md), [inventário](../correcao-ui/inventario-dados-ui.md) e [contratos de dados](../architecture/architecture-eqp_maanaim-2026-09-28/UI-CONTRACTS.md). Estado: especificação documental de 8.1; implementação e homologação permanecem futuras.
+
+**Versão:** 1.1\
 **Referência normativa:** `references/maanaim-ui-reference.png`
 
 ## 1. Direção visual
@@ -8,11 +10,11 @@
 O produto deve transmitir sobriedade, confiança, organização e
 modernidade. A interface é institucional, limpa e funcional. Evitar
 aparência de template genérico, excesso de decoração, glassmorphism,
-gradientes chamativos, sombras pesadas e cards desnecessários.
+gradientes decorativos, sombras pesadas e cards desnecessários.
 
 A imagem de referência é normativa. Quando houver conflito entre uma
 decisão visual genérica do agente e a referência, prevalece a
-referência, salvo incompatibilidade funcional documentada.
+referência, observada a precedência de DESIGN-RULES-FOR-AGENTS: funcional/segurança e acessibilidade vêm antes da imagem.
 
 ## 2. Linguagem visual
 
@@ -29,8 +31,7 @@ referência, salvo incompatibilidade funcional documentada.
 
 ## 3. Tokens recomendados
 
-> Valores são alvos visuais para implementação; pequenos ajustes são
-> permitidos para acessibilidade/Flutter.
+> Valores canônicos documentais. A história 8.2 implementará as variantes acessíveis abaixo; defaults Flutter não podem substituir esta escala.
 
 ### Cores
 
@@ -43,11 +44,11 @@ referência, salvo incompatibilidade funcional documentada.
 -   `border`: #DDE3EA
 -   `text-primary`: #172033
 -   `text-secondary`: #667085
--   `success`: #16A34A
+-   `success`: #16794A
 -   `success-bg`: #EAF8EF
--   `warning`: #F59E0B
+-   `warning`: #9A6700
 -   `warning-bg`: #FFF6DE
--   `danger`: #EF4444
+-   `danger`: #B42318
 -   `danger-bg`: #FDECEC
 
 ### Tipografia
@@ -67,13 +68,13 @@ Padrões: - padding de página desktop: 24px - gap entre seções:
 
 ### Geometria
 
--   Sidebar desktop: \~220px
--   Top bar: 60--64px
--   Input: 42--46px
--   Botão: 40--44px
--   Table row: 44--50px
--   Radius card: 8--10px
--   Radius input/button: 5--7px
+-   Sidebar desktop: 220px
+-   Top bar: 64px
+-   Input: mínimo 44px
+-   Botão: mínimo 44px
+-   Table row: mínimo 48px; cresce com texto
+-   Radius card: 10px
+-   Radius input/button: 6px
 -   Border: 1px
 
 ## 4. Componentes visuais
@@ -100,8 +101,7 @@ mínima.
 
 ### Status chips
 
-Formato compacto. Nunca depender somente da cor: sempre mostrar texto.
-Exemplos: `ATIVA`, `EM APROVAÇÃO`, `REJEITADA`, `EXPIRADA`.
+Formato compacto. Nunca depender somente da cor: sempre mostrar texto e ícone. Estados internos negativos só aparecem para responsáveis autorizados. Ao voluntário, decisão negativa/cancelamento por responsável mostra exatamente “Procure o Pastor da igreja local para mais informações”, sem estado, motivo ou ator, inclusive em acessibilidade e contagens.
 
 ### Tabelas
 
@@ -119,7 +119,7 @@ nunca substitui texto em ações críticas sem tooltip/label.
 
 -   contraste mínimo WCAG AA;
 -   foco visível;
--   alvos interativos \>= 44px quando possível;
+-   alvos interativos >= 44px;
 -   status com texto além de cor;
 -   navegação por teclado no Web;
 -   labels persistentes nos formulários;
