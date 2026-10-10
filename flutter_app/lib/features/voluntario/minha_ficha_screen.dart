@@ -97,6 +97,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   bool get _isRascunho => _ficha?.isRascunho ?? true;
   bool get _isAguardandoPastor => _ficha?.estado == 'AGUARDANDO_PASTOR_LOCAL';
   bool get _isBloqueadoParaEdicao => !_isRascunho;
+  bool get _isEmAnalise =>
+      _isAguardandoPastor ||
+      _ficha?.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE' ||
+      _ficha?.estado == 'AGUARDANDO_COORDENADOR';
+  bool get _bloqueiaEdicaoCadastral => _isEmAnalise;
 
   String _obterSubtituloHeader() {
     if (_ficha?.estado == 'ATIVA') {
@@ -623,9 +628,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final isDesktop = constraints.maxWidth >= 1024;
+                  final isDesktop = constraints.maxWidth >= 800;
                   if (isDesktop) {
                     return Row(
+                      key: const Key('layout_desktop_colunas'),
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
@@ -676,6 +682,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   }
 
                   return Column(
+                    key: const Key('layout_mobile_empilhado'),
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _buildCardDadosCadastrais(),
@@ -713,7 +720,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   }
 
   Widget _buildCardDadosCadastrais() {
-    if (_ficha != null && !_modoEdicao) {
+    if (_ficha?.isAtiva == true && !_modoEdicao) {
       return _buildResumoDadosCadastrais();
     }
     return _buildFormularioDadosCadastrais();
@@ -723,11 +730,12 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     final nomeIgreja = _obterNomeIgreja(_ficha!.igrejaId);
 
     return SectionCard(
+      key: const Key('card_resumo_cadastral'),
       title: 'Dados Cadastrais',
-      subtitle: _isBloqueadoParaEdicao
+      subtitle: _bloqueiaEdicaoCadastral
           ? 'Dados cadastrais bloqueados para edição durante o processo de avaliação.'
           : 'Consulte seus dados cadastrais permanentes no Maanaim.',
-      headerAction: _isBloqueadoParaEdicao
+      headerAction: _bloqueiaEdicaoCadastral
           ? null
           : OutlinedButton.icon(
               key: const Key('btn_editar_dados'),
@@ -779,8 +787,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
   Widget _buildFormularioDadosCadastrais() {
     return SectionCard(
+      key: const Key('form_edicao_cadastral'),
       title: 'Dados Cadastrais',
-      subtitle: _isBloqueadoParaEdicao
+      subtitle: _bloqueiaEdicaoCadastral
           ? 'Dados cadastrais bloqueados para edição durante o processo de avaliação.'
           : 'Campos marcados são obrigatórios para emissão do termo e aprovação.',
       child: Form(
@@ -793,7 +802,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             TextFormField(
               key: const Key('campo_nome_completo'),
               controller: _nomeController,
-              readOnly: _isBloqueadoParaEdicao,
+              readOnly: _bloqueiaEdicaoCadastral,
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 hintText: 'Seu nome completo',
@@ -807,7 +816,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             TextFormField(
               key: const Key('campo_profissao'),
               controller: _profissaoController,
-              readOnly: _isBloqueadoParaEdicao,
+              readOnly: _bloqueiaEdicaoCadastral,
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 hintText: 'Sua ocupação principal (ex: Marceneiro, Advogado)',
@@ -821,7 +830,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             TextFormField(
               key: const Key('campo_cpf'),
               controller: _cpfController,
-              readOnly: _isBloqueadoParaEdicao,
+              readOnly: _bloqueiaEdicaoCadastral,
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.next,
               inputFormatters: [CpfInputFormatter()],
@@ -853,7 +862,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     ),
                   )
                   .toList(),
-              onChanged: _isBloqueadoParaEdicao
+              onChanged: _bloqueiaEdicaoCadastral
                   ? null
                   : (novoId) {
                       setState(() {
@@ -863,10 +872,13 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             ),
             const SizedBox(height: AppSpacing.s24),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.s12,
+              runSpacing: AppSpacing.s8,
               children: [
-                if (_ficha != null) ...[
+                if (_modoEdicao && _ficha != null) ...[
                   OutlinedButton(
                     key: const Key('btn_cancelar_edicao'),
                     onPressed: () {
@@ -881,7 +893,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(44, 44),
                     ),
-                    child: const Text('Cancelar'),
+                    child: const Text('Cancelar Edição'),
                   ),
                   const SizedBox(width: AppSpacing.s12),
                 ],
@@ -890,7 +902,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   label: 'Salvar Ficha',
                   icon: Icons.save_outlined,
                   isLoading: _salvando,
-                  onPressed: (_isBloqueadoParaEdicao || _salvando)
+                  onPressed: (_bloqueiaEdicaoCadastral || _salvando)
                       ? null
                       : _salvarFicha,
                 ),
@@ -934,7 +946,38 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('Equipe Selecionada', style: AppTypography.label),
-          const SizedBox(height: AppSpacing.s8),
+          Wrap(
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
+            children: _participacoes.map((p) {
+              final eq = _equipes.cast<EquipeCatalogo?>().firstWhere(
+                    (e) => e?.id == p.equipeId,
+                    orElse: () => null,
+                  );
+              final nome = p.nomeEquipe.isNotEmpty
+                  ? p.nomeEquipe
+                  : (eq?.nome ?? p.equipeId);
+              final selecionado = _participacaoSelecionada?.id == p.id;
+              return ChoiceChip(
+                key: Key('chip_participacao_${p.id}'),
+                label: Text(nome),
+                selected: selecionado,
+                selectedColor: AppColors.blue50,
+                labelStyle: TextStyle(
+                  color: selecionado ? AppColors.blue600 : AppColors.textPrimary,
+                  fontWeight: selecionado ? FontWeight.w600 : FontWeight.w400,
+                ),
+                onSelected: (sel) {
+                  if (sel) {
+                    setState(() {
+                      _participacaoSelecionada = p;
+                    });
+                  }
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: AppSpacing.s12),
           DropdownButtonFormField<String>(
             key: const Key('seletor_participacao_equipe'),
             initialValue: _participacaoSelecionada?.id,

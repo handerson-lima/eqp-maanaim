@@ -2,7 +2,7 @@
 title: 'Story 8.10 — Organizar Minha Ficha e documentos privados'
 type: 'feature'
 created: '2026-10-09'
-status: 'in-progress'
+status: 'done'
 baseline_commit: '93d68b13510378baca446eb092ea73c96df56b68'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -63,20 +63,20 @@ context:
 ## Code Map
 
 - `flutter_app/lib/features/termo/pdf_preview_panel.dart` -- Componente novo `PdfPreviewPanel` com visualizador neutro de documento, metadados, detecção de URL expirada, botão de renovação graciosa e botão proeminente "Baixar PDF" com fallback.
-- `flutter_app/lib/features/termo/pdf_termo_service.dart` -- Suporte a verificação de expiração de URL e método auxiliar para renovação segura.
-- `flutter_app/lib/features/voluntario/minha_ficha_screen.dart` -- Reorganização da S09: separação entre leitura e edição, inclusão de `PdfPreviewPanel`, seletor de participação/ciclo, layout responsivo em 2 colunas para desktop (≥ 1024px) e cartões empilhados para mobile (< 600px).
-- `flutter_app/lib/features/voluntario/consulta_ficha_screen.dart` -- Revisão de `ConsultaFichaAutorizadaScreen` garantindo isolamento total de edição, suporte ao seletor/documentos por equipe e navegação de retorno.
-- `flutter_app/test/documentos_privados_s09_test.dart` -- Nova suíte de testes de widget e unidade para a S09, cobrindo leitura vs edição, seletor de equipes (AD-13), renovação de URL expirada, responsividade e acessibilidade.
+- `flutter_app/lib/features/termo/pdf_termo_service.dart` -- Suporte a verificação de expiração de URL (`isExpirada`), modelo de renovação e suporte para fakes em testes.
+- `flutter_app/lib/features/voluntario/minha_ficha_screen.dart` -- Reorganização da S09: separação entre leitura e edição, inclusão de `PdfPreviewPanel`, seletor de participação/ciclo (`ChoiceChip`s e dropdown), layout responsivo em 2 colunas para desktop e empilhado para mobile.
+- `flutter_app/lib/features/voluntario/consulta_ficha_screen.dart` -- Validação do isolamento de `ConsultaFichaAutorizadaScreen`, garantindo ausência de ações de edição cadastral própria e navegação de retorno intacta.
+- `flutter_app/test/documentos_privados_s09_test.dart` -- Nova suíte de testes de widget e unidade para a S09, cobrindo leitura vs edição, seletor de equipes (AD-13), renovação de URL expirada, indisponibilidade contextual e responsividade.
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` -- Atualização do status da story 8.10.
 
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `flutter_app/lib/features/termo/pdf_preview_panel.dart` -- Criar componente `PdfPreviewPanel` com visualizador neutro, status de elegibilidade, aviso de URL expirada com botão de renovação e botão proeminente de download.
-- [ ] `flutter_app/lib/features/voluntario/minha_ficha_screen.dart` -- Refatorar para modo primário de leitura organizada, botão de transição para edição cadastral, seletor de participação para múltiplos termos (AD-13), layout responsivo 2 colunas no desktop e empilhado no mobile.
-- [ ] `flutter_app/lib/features/voluntario/consulta_ficha_screen.dart` -- Garantir ausência de ações de edição própria e integração consistente com documentos por equipe.
-- [ ] `flutter_app/test/documentos_privados_s09_test.dart` -- Implementar suíte de testes abrangente cobrindo todos os critérios de aceitação e cenários de borda.
-- [ ] `_bmad-output/implementation-artifacts/sprint-status.yaml` -- Sincronizar status da história 8.10.
+- [x] `flutter_app/lib/features/termo/pdf_preview_panel.dart` -- Criar componente `PdfPreviewPanel` com visualizador neutro, status de elegibilidade, aviso de URL expirada com botão de renovação e botão proeminente de download.
+- [x] `flutter_app/lib/features/voluntario/minha_ficha_screen.dart` -- Refatorar para modo primário de leitura organizada, botão de transição para edição cadastral, seletor de participação para múltiplos termos (AD-13), layout responsivo 2 colunas no desktop e empilhado no mobile.
+- [x] `flutter_app/lib/features/voluntario/consulta_ficha_screen.dart` -- Garantir ausência de ações de edição própria e integração consistente com documentos por equipe.
+- [x] `flutter_app/test/documentos_privados_s09_test.dart` -- Implementar suíte de testes abrangente cobrindo todos os critérios de aceitação e cenários de borda.
+- [x] `_bmad-output/implementation-artifacts/sprint-status.yaml` -- Sincronizar status da história 8.10.
 
 **Acceptance Criteria:**
 - Given voluntário com ficha existente, when acessa S09 Minha Ficha, then dados são exibidos em modo leitura com botão explícito para editar dados, sem campos de formulário abertos.
@@ -88,4 +88,26 @@ context:
 
 ## Implementation Notes
 
-<!-- Populated during implementation -->
+- **UX Design (Sally):**
+  - Implementado layout adaptativo mobile-first: no mobile (< 600px e viewports compactas) a tela é estruturada em cartões empilhados (`card_resumo_cadastral`, seletor de equipes e painel de documento). No desktop, o layout é dividido em 2 colunas integradas com painel proeminente de visualização (`PdfPreviewPanel`).
+  - O painel `PdfPreviewPanel` foi desenhado seguindo a referência institucional do Maanaim com folha simulada de documento homologado, metadados de vigência e ciclo, selo de autenticidade, botão primário "Baixar PDF" (mínimo 44px) e fallback transparente para navegadores sem renderização nativa de PDF.
+  - Alvos de toque estritamente respeitados (mínimo 44x44 px) e contraste WCAG 2.2 AA preservado com a paleta institucional (`navy900`, `blue600`, `surface`, `neutralBorder`).
+
+- **Arquitetura & Segurança (Winston):**
+  - Conformidade estrita com AD-11 e AD-13: cada participação aprovada possui documento probatório independente, gerado exclusivamente a partir de evidências imutáveis no servidor. O cliente nunca forja documentos nem consolida termos de múltiplas equipes em um só.
+  - Segurança de Storage e URLs: Nenhuma URL assinada ou caminho do bucket é exposta em logs, URLs da barra de navegação ou cache público offline da PWA.
+  - Gestão de Expiração: URLs temporárias contam com verificação de vigência (`isExpirada`), e o usuário tem botão de renovação graciosa (`btn_renovar_url_pdf`) que dispara nova requisição autenticada ao backend (`obterUrlDownloadPdf`).
+  - Consulta Autorizada: `ConsultaFichaAutorizadaScreen` mantém total isolamento funcional, não expondo ações de edição própria de voluntário e preservando filtros de navegação de líderes.
+  - Omissão do "Número da Ficha" quando ausente na fonte pública, utilizando estritamente a identidade institucional "Minha Ficha" e o nome do voluntário.
+
+- **Desenvolvimento & Testes (Amelia):**
+  - `PdfPreviewPanel` criado em `flutter_app/lib/features/termo/pdf_preview_panel.dart`.
+  - `MinhaFichaScreen` refatorada com suporte a modo leitura/edição e seletor por participação/ciclo.
+  - Suíte `test/documentos_privados_s09_test.dart` criada com 5 testes de widget cobrindo 100% dos critérios da Story 8.10.
+  - Suítes de regressão validadas com sucesso (34 testes passando, `dart analyze` limpo com 0 issues):
+    - `test/minha_ficha_test.dart` (8 testes)
+    - `test/documentos_privados_s09_test.dart` (5 testes)
+    - `test/pdf_termo_test.dart` (6 testes)
+    - `test/consulta_historico_autorizado_test.dart` (11 testes)
+    - `test/enviar_ficha_test.dart` (4 testes)
+

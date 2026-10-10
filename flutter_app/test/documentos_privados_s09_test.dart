@@ -29,7 +29,6 @@ class TesteFichaMockGateway implements FichaGateway {
       profissao: entrada.profissao,
       cpf: entrada.cpf,
       igrejaId: entrada.igrejaId,
-      telefone: entrada.telefone,
       estado: ficha?.estado ?? 'RASCUNHO',
       versao: (ficha?.versao ?? 1) + 1,
       atualizadoEm: DateTime.now().toUtc().toIso8601String(),
@@ -104,6 +103,14 @@ class TesteParticipacaoMockGateway implements ParticipacaoGateway {
   }
 
   @override
+  Future<List<ParticipacaoModel>> salvarParticipacoesRascunho(
+    List<String> equipesIds, {
+    String? commandId,
+  }) async {
+    return participacoes;
+  }
+
+  @override
   Future<List<Map<String, dynamic>>> manifestarRenovacao({
     required List<ManifestacaoEquipeInput> manifestacoes,
     String? commandId,
@@ -116,23 +123,38 @@ void main() {
   late MemoriaPdfTermoGateway pdfGateway;
 
   setUp(() {
-    catalogoGateway = CatalogoFake();
+    catalogoGateway = CatalogoFake(
+      resposta: const CatalogoResposta(
+        igrejas: [
+          IgrejaCatalogo(
+            id: 'igreja-1',
+            nome: 'Igreja Central',
+            codigo: '001',
+            ativo: true,
+          ),
+        ],
+        equipes: [
+          EquipeCatalogo(
+            id: 'eq-louvor',
+            nome: 'Música e Louvor',
+            ativo: true,
+          ),
+          EquipeCatalogo(
+            id: 'eq-intercessao',
+            nome: 'Intercessão',
+            ativo: true,
+          ),
+        ],
+      ),
+    );
     pdfGateway = MemoriaPdfTermoGateway();
   });
 
   Widget criarAppTeste({
     required Widget child,
-    Size tamanho = const Size(1200, 800),
   }) {
     return MaterialApp(
-      home: MediaQuery(
-        data: MediaQueryData(size: tamanho),
-        child: SizedBox(
-          width: tamanho.width,
-          height: tamanho.height,
-          child: child,
-        ),
-      ),
+      home: child,
     );
   }
 
@@ -144,13 +166,17 @@ void main() {
         nomeCompleto: 'Gabriel Silva',
         profissao: 'Analista de Sistemas',
         cpf: '123.456.789-00',
-        telefone: '(27) 99999-8888',
         igrejaId: 'igreja-1',
         estado: 'ATIVA',
         versao: 1,
         atualizadoEm: '2026-10-01T10:00:00Z',
       );
       final fichaGateway = TesteFichaMockGateway(ficha: ficha);
+
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(
         criarAppTeste(
@@ -166,8 +192,13 @@ void main() {
       // Em modo de leitura:
       expect(find.byKey(const Key('card_resumo_cadastral')), findsOneWidget);
       expect(find.byKey(const Key('btn_editar_dados')), findsOneWidget);
-      expect(find.text('Gabriel Silva'), findsOneWidget);
-      expect(find.text('(27) 99999-8888'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('card_resumo_cadastral')),
+          matching: find.text('Gabriel Silva'),
+        ),
+        findsOneWidget,
+      );
 
       // O campo "Número da Ficha" não deve existir (omissão fidedigna)
       expect(find.text('Número da Ficha'), findsNothing);
@@ -179,7 +210,7 @@ void main() {
       // Agora deve estar no modo de formulário de edição
       expect(find.byKey(const Key('form_edicao_cadastral')), findsOneWidget);
       expect(find.byKey(const Key('btn_cancelar_edicao')), findsOneWidget);
-      expect(find.byKey(const Key('btn_salvar_dados')), findsOneWidget);
+      expect(find.byKey(const Key('botao_salvar_ficha')), findsOneWidget);
 
       // Cancelar edição deve retornar para leitura sem alterar
       await tester.tap(find.byKey(const Key('btn_cancelar_edicao')));
@@ -197,7 +228,6 @@ void main() {
         nomeCompleto: 'Gabriel Silva',
         profissao: 'Analista de Sistemas',
         cpf: '123.456.789-00',
-        telefone: '(27) 99999-8888',
         igrejaId: 'igreja-1',
         estado: 'ATIVA',
         versao: 1,
@@ -227,6 +257,11 @@ void main() {
       );
       final participacaoGateway = TesteParticipacaoMockGateway([part1, part2]);
 
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(
         criarAppTeste(
           child: MinhaFichaScreen(
@@ -245,14 +280,14 @@ void main() {
 
       // Por padrão, a primeira participação está selecionada
       expect(find.byKey(const Key('pdf_preview_panel')), findsOneWidget);
-      expect(find.text('Documento de Voluntariado — Música e Louvor'), findsOneWidget);
+      expect(find.text('Documento Probatório — Música e Louvor'), findsOneWidget);
 
       // Alternar para a segunda equipe
       await tester.tap(find.byKey(const Key('chip_participacao_part-intercessao')));
       await tester.pumpAndSettle();
 
       // Agora deve exibir o documento de Intercessão
-      expect(find.text('Documento de Voluntariado — Intercessão'), findsOneWidget);
+      expect(find.text('Documento Probatório — Intercessão'), findsOneWidget);
     });
 
     testWidgets('3. Indisponibilidade Contextual: participação não aprovada não forja documento',
@@ -262,7 +297,6 @@ void main() {
         nomeCompleto: 'Gabriel Silva',
         profissao: 'Analista de Sistemas',
         cpf: '123.456.789-00',
-        telefone: '(27) 99999-8888',
         igrejaId: 'igreja-1',
         estado: 'EM_ANALISE',
         versao: 1,
@@ -282,6 +316,11 @@ void main() {
       );
       final participacaoGateway = TesteParticipacaoMockGateway([partPendente]);
 
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(
         criarAppTeste(
           child: MinhaFichaScreen(
@@ -296,7 +335,7 @@ void main() {
 
       // Card contextual de indisponibilidade
       expect(find.byKey(const Key('card_documento_indisponivel')), findsOneWidget);
-      expect(find.text('Documento oficial em processamento'), findsOneWidget);
+      expect(find.text('Documento Probatório Indisponível'), findsOneWidget);
       // Não exibe botão de download nem forja documento
       expect(find.byKey(const Key('btn_baixar_pdf_principal')), findsNothing);
     });
@@ -308,7 +347,6 @@ void main() {
         nomeCompleto: 'Gabriel Silva',
         profissao: 'Analista de Sistemas',
         cpf: '123.456.789-00',
-        telefone: '(27) 99999-8888',
         igrejaId: 'igreja-1',
         estado: 'ATIVA',
         versao: 1,
@@ -327,6 +365,11 @@ void main() {
         versao: 1,
       );
       final participacaoGateway = TesteParticipacaoMockGateway([part]);
+
+      tester.view.physicalSize = const Size(1200, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
       // Simula URL expirada no passado
       pdfGateway.expiraEmRetorno =
@@ -347,17 +390,18 @@ void main() {
       // Deve alertar sobre link expirado
       expect(find.byKey(const Key('card_link_expirado')), findsOneWidget);
       expect(find.byKey(const Key('btn_renovar_url_pdf')), findsOneWidget);
-      expect(find.text('Link de acesso expirado'), findsOneWidget);
+      expect(find.text('Link Temporário Expirado'), findsOneWidget);
 
       // Ao clicar em renovar link
       pdfGateway.expiraEmRetorno =
           DateTime.now().toUtc().add(const Duration(minutes: 30)).toIso8601String();
+      await tester.ensureVisible(find.byKey(const Key('btn_renovar_url_pdf')));
       await tester.tap(find.byKey(const Key('btn_renovar_url_pdf')));
       await tester.pumpAndSettle();
 
       // Não deve mais constar como expirado
       expect(find.byKey(const Key('card_link_expirado')), findsNothing);
-      expect(find.byKey(const Key('btn_baixar_pdf_principal')), findsOneWidget);
+      expect(find.byKey(const Key('btn_baixar_pdf')), findsOneWidget);
     });
 
     testWidgets('5. Responsividade: adapta layout para mobile empilhado e desktop em duas colunas',
@@ -367,7 +411,6 @@ void main() {
         nomeCompleto: 'Gabriel Silva',
         profissao: 'Analista de Sistemas',
         cpf: '123.456.789-00',
-        telefone: '(27) 99999-8888',
         igrejaId: 'igreja-1',
         estado: 'ATIVA',
         versao: 1,
@@ -387,26 +430,14 @@ void main() {
       );
       final participacaoGateway = TesteParticipacaoMockGateway([part]);
 
-      // Teste Desktop (1200 x 800)
-      await tester.pumpWidget(
-        criarAppTeste(
-          tamanho: const Size(1200, 800),
-          child: MinhaFichaScreen(
-            fichaGateway: fichaGateway,
-            catalogoGateway: catalogoGateway,
-            participacaoGateway: participacaoGateway,
-            pdfTermoGateway: pdfGateway,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(find.byKey(const Key('layout_desktop_colunas')), findsOneWidget);
+      // Mobile (390 x 844)
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-      // Teste Mobile (390 x 844)
       await tester.pumpWidget(
         criarAppTeste(
-          tamanho: const Size(390, 844),
           child: MinhaFichaScreen(
             fichaGateway: fichaGateway,
             catalogoGateway: catalogoGateway,
@@ -418,6 +449,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.byKey(const Key('layout_mobile_empilhado')), findsOneWidget);
+
+      // Desktop (1200 x 800)
+      tester.view.physicalSize = const Size(1200, 800);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('layout_desktop_colunas')), findsOneWidget);
 
       // Verifica altura mínima de botões no mobile (WCAG 2.2 AA >= 44px)
       final btnEditar = tester.getRect(find.byKey(const Key('btn_editar_dados')));

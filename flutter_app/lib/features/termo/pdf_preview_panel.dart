@@ -180,6 +180,7 @@ class _PdfPreviewPanelState extends State<PdfPreviewPanel> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      key: const Key('pdf_preview_panel'),
       constraints: BoxConstraints(minHeight: widget.alturaMinima),
       padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
@@ -321,6 +322,7 @@ class _PdfPreviewPanelState extends State<PdfPreviewPanel> {
 
   Widget _buildIndisponivelNaoAprovada(ParticipacaoModel p) {
     return Container(
+      key: const Key('card_documento_indisponivel'),
       padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
         color: AppColors.background,
@@ -381,6 +383,7 @@ class _PdfPreviewPanelState extends State<PdfPreviewPanel> {
 
   Widget _buildUrlExpirada() {
     return Container(
+      key: const Key('card_link_expirado'),
       padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
         color: AppColors.warningBg,
@@ -506,8 +509,11 @@ class _PdfPreviewPanelState extends State<PdfPreviewPanel> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Cabeçalho institucional do documento
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.s8,
+                runSpacing: AppSpacing.s4,
                 children: [
                   const Text(
                     'MAANAIM • VOLUNTARIADO',
