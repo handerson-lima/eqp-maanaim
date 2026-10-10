@@ -1,4 +1,4 @@
-import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore, type QuerySnapshot } from 'firebase-admin/firestore';
 import { podeAdministrar } from '../domain/autoridadeAdministrativa.js';
 import {
   ComandoDivergenteError,
@@ -17,8 +17,8 @@ import {
   type ContextoSeedCatalogo,
   type EquipeCatalogo,
   type IgrejaCatalogo,
-  type ResumoCatalogo,
   type ResultadoSemeadura,
+  type ResumoCatalogo,
 } from '../domain/catalogo.js';
 import { DATASET_CATALOGO } from '../domain/seedCatalogo.js';
 
@@ -197,3 +197,4 @@ export async function lerCatalogo(
     equipes: pesquisarEquipes(equipes, termo),
   };
 }
+

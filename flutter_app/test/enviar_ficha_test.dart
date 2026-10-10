@@ -179,6 +179,25 @@ class CatalogoMockGateway implements CatalogoGateway {
     required bool ativo,
     String? correlationId,
   }) async {}
+
+  @override
+  Future<void> salvarIgreja({
+    required String commandId,
+    required String nome,
+    required String codigo,
+    required int expectedVersion,
+    String? igrejaId,
+    String? correlationId,
+  }) async {}
+
+  @override
+  Future<void> salvarEquipe({
+    required String commandId,
+    required String nome,
+    required int expectedVersion,
+    String? equipeId,
+    String? correlationId,
+  }) async {}
 }
 
 void main() {

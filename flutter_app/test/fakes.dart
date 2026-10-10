@@ -188,6 +188,86 @@ class CatalogoFake implements CatalogoGateway {
       );
     }
   }
+
+  int salvasIgreja = 0;
+  int salvasEquipe = 0;
+  bool salvarIgrejaFalhar = false;
+  bool salvarEquipeFalhar = false;
+  String? erroSalvarIgrejaMsg;
+  String? erroSalvarEquipeMsg;
+
+  @override
+  Future<void> salvarIgreja({
+    required String commandId,
+    String? igrejaId,
+    required String codigo,
+    required String nome,
+    required int expectedVersion,
+    String? correlationId,
+  }) async {
+    if (salvarIgrejaFalhar) {
+      throw Exception(erroSalvarIgrejaMsg ?? 'falha ao salvar igreja');
+    }
+    salvasIgreja++;
+    final lista = List<IgrejaCatalogo>.from(resposta?.igrejas ?? []);
+    if (igrejaId != null) {
+      final idx = lista.indexWhere((i) => i.id == igrejaId);
+      if (idx >= 0) {
+        lista[idx] = lista[idx].copyWith(
+          codigo: codigo,
+          nome: nome,
+          versao: expectedVersion + 1,
+        );
+      }
+    } else {
+      lista.add(IgrejaCatalogo(
+        id: 'ig_${lista.length + 1}',
+        codigo: codigo,
+        nome: nome,
+        ativo: true,
+        versao: 1,
+      ));
+    }
+    resposta = CatalogoResposta(
+      igrejas: lista,
+      equipes: resposta?.equipes ?? [],
+    );
+  }
+
+  @override
+  Future<void> salvarEquipe({
+    required String commandId,
+    String? equipeId,
+    required String nome,
+    required int expectedVersion,
+    String? correlationId,
+  }) async {
+    if (salvarEquipeFalhar) {
+      throw Exception(erroSalvarEquipeMsg ?? 'falha ao salvar equipe');
+    }
+    salvasEquipe++;
+    final lista = List<EquipeCatalogo>.from(resposta?.equipes ?? []);
+    if (equipeId != null) {
+      final idx = lista.indexWhere((e) => e.id == equipeId);
+      if (idx >= 0) {
+        lista[idx] = lista[idx].copyWith(
+          nome: nome,
+          versao: expectedVersion + 1,
+        );
+      }
+    } else {
+      lista.add(EquipeCatalogo(
+        id: 'eq_${lista.length + 1}',
+        nome: nome,
+        ativo: true,
+        versao: 1,
+      ));
+    }
+    resposta = CatalogoResposta(
+      igrejas: resposta?.igrejas ?? [],
+      equipes: lista,
+    );
+  }
 }
 
 class PessoasFake implements PessoasGateway {

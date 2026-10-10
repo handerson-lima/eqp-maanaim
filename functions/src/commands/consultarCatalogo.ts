@@ -2,15 +2,17 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { podeAdministrar } from '../domain/autoridadeAdministrativa.js';
 import { lerCatalogo } from '../repositories/catalogo.js';
+import { lerCatalogoAdmin } from '../repositories/catalogoAdmin.js';
 
-type Entrada = { termo?: unknown };
+type Entrada = { termo?: unknown; modo?: unknown };
 
 const indisponivel = (code: 'permission-denied' | 'invalid-argument') =>
   new HttpsError(code, 'Operação administrativa indisponível.');
 
 /**
- * Consulta read-only do catálogo, exclusiva de administrador autorizado.
- * Devolve igrejas como "Nome - Código" e equipes, ordenadas por nome.
+ * Consulta autorizada do catálogo, exclusiva de administrador autorizado.
+ * Retorna dados completos com igrejas, equipes, dados mínimos de responsáveis vigentes
+ * e versões para controle de concorrência.
  */
 export const consultarCatalogo = onCall(
   { enforceAppCheck: true },
@@ -29,6 +31,11 @@ export const consultarCatalogo = onCall(
       .doc(request.auth.uid)
       .get();
     if (!podeAdministrar(ator.data())) throw indisponivel('permission-denied');
-    return lerCatalogo(db, typeof input.termo === 'string' ? input.termo : '');
+
+    const termo = typeof input.termo === 'string' ? input.termo : '';
+    if (input.modo === 'simples') {
+      return lerCatalogo(db, termo);
+    }
+    return lerCatalogoAdmin(db, termo);
   },
 );

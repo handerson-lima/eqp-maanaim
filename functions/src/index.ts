@@ -14,6 +14,8 @@ export { semearCatalogoInicial } from './commands/semearCatalogoInicial.js';
 export { consultarCatalogo } from './commands/consultarCatalogo.js';
 export { alternarStatusIgreja } from './commands/alternarStatusIgreja.js';
 export { alternarStatusEquipe } from './commands/alternarStatusEquipe.js';
+export { salvarIgreja } from './commands/salvarIgreja.js';
+export { salvarEquipe } from './commands/salvarEquipe.js';
 export { salvarPessoa } from './commands/salvarPessoa.js';
 export { gerenciarPapeis } from './commands/gerenciarPapeis.js';
 export { consultarPessoas } from './commands/consultarPessoas.js';

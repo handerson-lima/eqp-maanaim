@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../../ui/identidade.dart';
 
 import '../auth/auth_service.dart';
-import 'consulta_catalogo.dart';
 import 'catalogo_service.dart';
+import 'igrejas_screen.dart';
+import 'equipes_screen.dart';
 import 'pessoas_papeis.dart';
 import 'pessoas_service.dart';
 import 'seed_catalogo.dart';
@@ -74,25 +75,52 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   int _indice = 0;
 
+  void _navegarPara(String label) {
+    final abas = _abas;
+    final idx = abas.indexWhere((a) => a.item.label == label);
+    if (idx >= 0) setState(() => _indice = idx);
+  }
+
   List<_AbaAdmin> get _abas => [
     _AbaAdmin(
       item: const AppNavItem(
-        label: 'Catálogo',
-        icon: Icons.list_alt_outlined,
-        selectedIcon: Icons.list_alt,
+        label: 'Igrejas',
+        icon: Icons.church_outlined,
+        selectedIcon: Icons.church,
       ),
       builder: () => widget.catalogo != null
-          ? ConsultaCatalogo(widget.catalogo!)
+          ? IgrejasScreen(
+              gateway: widget.catalogo!,
+              onNavegarVinculos: (_) => _navegarPara('Vínculos e Responsáveis'),
+            )
           : const Center(
               child: Padding(
                 padding: EdgeInsets.all(AppSpacing.cardPadding),
-                child: Text('Serviço de catálogo indisponível.'),
+                child: Text('Serviço de igrejas indisponível.'),
               ),
             ),
     ),
     _AbaAdmin(
       item: const AppNavItem(
-        label: 'Seed',
+        label: 'Equipes',
+        icon: Icons.groups_outlined,
+        selectedIcon: Icons.groups,
+      ),
+      builder: () => widget.catalogo != null
+          ? EquipesScreen(
+              gateway: widget.catalogo!,
+              onNavegarVinculos: (_) => _navegarPara('Vínculos e Responsáveis'),
+            )
+          : const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.cardPadding),
+                child: Text('Serviço de equipes indisponível.'),
+              ),
+            ),
+    ),
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Carga inicial do catálogo',
         icon: Icons.cloud_upload_outlined,
         selectedIcon: Icons.cloud_upload,
       ),

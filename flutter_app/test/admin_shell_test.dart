@@ -1,5 +1,6 @@
 import 'package:eqp_maanaim/features/admin/admin_shell.dart';
-import 'package:eqp_maanaim/features/admin/consulta_catalogo.dart';
+import 'package:eqp_maanaim/features/admin/igrejas_screen.dart';
+import 'package:eqp_maanaim/features/admin/equipes_screen.dart';
 import 'package:eqp_maanaim/features/admin/seed_catalogo.dart';
 import 'package:eqp_maanaim/features/admin/termos_screen.dart';
 import 'package:eqp_maanaim/features/admin/catalogo_service.dart';
@@ -49,7 +50,7 @@ void main() {
       await tester.pumpWidget(_shell(onSair: () {}, escala: 2));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.byType(ConsultaCatalogo), findsOneWidget);
+      expect(find.byType(IgrejasScreen), findsOneWidget);
     });
   }
 
@@ -67,8 +68,8 @@ void main() {
       // Papel ativo e usuário visíveis
       expect(find.text('Administrador'), findsOneWidget);
       expect(find.text('Administração'), findsOneWidget);
-      // Catálogo carregado por padrão
-      expect(find.byType(ConsultaCatalogo), findsOneWidget);
+      // Igrejas carregado por padrão
+      expect(find.byType(IgrejasScreen), findsOneWidget);
 
       // Clicar em sair
       await tester.tap(find.byIcon(Icons.logout).first);
@@ -76,13 +77,24 @@ void main() {
       expect(saiu, isTrue);
     });
 
-    testWidgets('navega para Seed ao clicar no destino', (tester) async {
+    testWidgets('navega para Equipes ao clicar no destino', (tester) async {
       _definirTamanho(tester, const Size(1200, 800));
       await tester.pumpWidget(_shell(onSair: () {}));
       await tester.pumpAndSettle();
 
-      // Clicar no destino Seed
-      await tester.tap(find.text('Seed'));
+      // Clicar no destino Equipes
+      await tester.tap(find.text('Equipes'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EquipesScreen), findsOneWidget);
+    });
+
+    testWidgets('navega para Carga inicial do catálogo ao clicar no destino', (tester) async {
+      _definirTamanho(tester, const Size(1200, 800));
+      await tester.pumpWidget(_shell(onSair: () {}));
+      await tester.pumpAndSettle();
+
+      // Clicar no destino Carga inicial do catálogo
+      await tester.tap(find.text('Carga inicial do catálogo'));
       await tester.pumpAndSettle();
       expect(find.byType(SeedCatalogo), findsOneWidget);
     });
@@ -114,8 +126,9 @@ void main() {
       await tester.pumpAndSettle();
       // Drawer contém papel e itens
       expect(find.text('Maanaim'), findsOneWidget);
-      expect(find.text('Catálogo'), findsOneWidget);
-      expect(find.text('Seed'), findsOneWidget);
+      expect(find.text('Igrejas'), findsOneWidget);
+      expect(find.text('Equipes'), findsOneWidget);
+      expect(find.text('Carga inicial do catálogo'), findsOneWidget);
       expect(find.text('Termos'), findsOneWidget);
       expect(find.text('Sair'), findsOneWidget);
 
@@ -125,7 +138,7 @@ void main() {
       expect(saiu, isTrue);
     });
 
-    testWidgets('navega para Termos via drawer mobile', (tester) async {
+    testWidgets('navega para Equipes via drawer mobile', (tester) async {
       _definirTamanho(tester, const Size(400, 700));
       await tester.pumpWidget(_shell(onSair: () {}));
       await tester.pumpAndSettle();
@@ -133,9 +146,10 @@ void main() {
       await tester.tap(find.byIcon(Icons.menu));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Termos'));
+      await tester.tap(find.text('Equipes'));
       await tester.pumpAndSettle();
-      expect(find.byType(TermosScreen), findsOneWidget);
+      expect(find.byType(EquipesScreen), findsOneWidget);
     });
   });
 }
+

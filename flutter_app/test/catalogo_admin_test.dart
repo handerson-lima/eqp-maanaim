@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:eqp_maanaim/features/admin/admin_shell.dart';
 import 'package:eqp_maanaim/features/admin/catalogo_service.dart';
 import 'package:eqp_maanaim/features/admin/consulta_catalogo.dart';
+import 'package:eqp_maanaim/features/admin/igrejas_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -108,7 +109,7 @@ void main() {
     expect(gateway.chamadas, 2);
   });
 
-  testWidgets('AdminShell conecta a consulta de catálogo', (tester) async {
+  testWidgets('AdminShell conecta a gestão de catálogo com destinos dedicados', (tester) async {
     await tester.pumpWidget(MaterialApp(
         home: AdminShell(
             onSair: () {},
@@ -117,8 +118,9 @@ void main() {
                     igrejas: _igrejas, equipes: _equipes)),
             seed: SeedFake())));
     await tester.pumpAndSettle();
-    expect(find.byType(ConsultaCatalogo), findsOneWidget);
-    expect(find.text('Igapó - 240001'), findsOneWidget);
+    expect(find.byType(IgrejasScreen), findsOneWidget);
+    expect(find.text('Igapó'), findsWidgets);
+    expect(find.textContaining('240001'), findsWidgets);
   });
 
   group('Story 7.2: Inativação e reativação com modal acessível', () {

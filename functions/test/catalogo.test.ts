@@ -15,6 +15,10 @@ import {
   validarAlternarStatusIgreja,
   validarAlternarStatusEquipe,
   hashAlternarStatus,
+  validarSalvarIgreja,
+  validarSalvarEquipe,
+  hashSalvarIgreja,
+  hashSalvarEquipe,
   type DatasetCatalogo,
   type EquipeCatalogo,
   type IgrejaCatalogo,
@@ -234,4 +238,163 @@ describe('Story 7.2: validação e hash de alternar status de catálogo', () => 
     expect(h1).not.toBe(h4);
   });
 });
+
+describe('Story 8.11: criação, edição e validações de catálogo', () => {
+  const commandIdValido = 'cmd_1234567890abcdef';
+
+  it('valida criação e edição de igreja com código String de 6 dígitos', () => {
+    const criacao = validarSalvarIgreja({
+      commandId: commandIdValido,
+      codigo: '240099',
+      nome: 'Igreja Nova Esperança',
+      expectedVersion: 0,
+    });
+    expect(criacao).toEqual({
+      commandId: commandIdValido,
+      igrejaId: undefined,
+      codigo: '240099',
+      nome: 'Igreja Nova Esperança',
+      expectedVersion: 0,
+      correlationId: undefined,
+    });
+
+    const edicao = validarSalvarIgreja({
+      commandId: commandIdValido,
+      igrejaId: 'ig_existente',
+      codigo: '240099',
+      nome: 'Igreja Atualizada',
+      expectedVersion: 2,
+      correlationId: 'corr_salvar',
+    });
+    expect(edicao).toEqual({
+      commandId: commandIdValido,
+      igrejaId: 'ig_existente',
+      codigo: '240099',
+      nome: 'Igreja Atualizada',
+      expectedVersion: 2,
+      correlationId: 'corr_salvar',
+    });
+  });
+
+  it('rejeita código de igreja inválido ou não estrito a 6 dígitos numéricos', () => {
+    expect(() =>
+      validarSalvarIgreja({
+        commandId: commandIdValido,
+        codigo: '123',
+        nome: 'Igreja Teste',
+        expectedVersion: 0,
+      }),
+    ).toThrowError(/Código de igreja inválido/);
+
+    expect(() =>
+      validarSalvarIgreja({
+        commandId: commandIdValido,
+        codigo: '240001a',
+        nome: 'Igreja Teste',
+        expectedVersion: 0,
+      }),
+    ).toThrowError(/Código de igreja inválido/);
+  });
+
+  it('rejeita nome de igreja inválido ou expectedVersion negativo', () => {
+    expect(() =>
+      validarSalvarIgreja({
+        commandId: commandIdValido,
+        codigo: '240099',
+        nome: 'A',
+        expectedVersion: 0,
+      }),
+    ).toThrowError(/Nome de igreja inválido/);
+
+    expect(() =>
+      validarSalvarIgreja({
+        commandId: commandIdValido,
+        codigo: '240099',
+        nome: 'Igreja Teste',
+        expectedVersion: -1,
+      }),
+    ).toThrowError(/expectedVersion deve ser um número inteiro/);
+  });
+
+  it('valida criação e edição de equipe', () => {
+    const criacao = validarSalvarEquipe({
+      commandId: commandIdValido,
+      nome: 'Equipe de Intercessão',
+      expectedVersion: 0,
+    });
+    expect(criacao).toEqual({
+      commandId: commandIdValido,
+      equipeId: undefined,
+      nome: 'Equipe de Intercessão',
+      expectedVersion: 0,
+      correlationId: undefined,
+    });
+
+    const edicao = validarSalvarEquipe({
+      commandId: commandIdValido,
+      equipeId: 'eq_1',
+      nome: 'Equipe de Apoio Logístico',
+      expectedVersion: 1,
+    });
+    expect(edicao).toEqual({
+      commandId: commandIdValido,
+      equipeId: 'eq_1',
+      nome: 'Equipe de Apoio Logístico',
+      expectedVersion: 1,
+      correlationId: undefined,
+    });
+  });
+
+  it('rejeita equipe com nome inválido', () => {
+    expect(() =>
+      validarSalvarEquipe({
+        commandId: commandIdValido,
+        nome: '12',
+        expectedVersion: 0,
+      }),
+    ).toThrowError(/Nome de equipe inválido/);
+  });
+
+  it('gera hashes determinísticos e sensíveis para salvarIgreja e salvarEquipe', () => {
+    const hIg1 = hashSalvarIgreja({
+      commandId: commandIdValido,
+      codigo: '240001',
+      nome: 'Igreja Um',
+      expectedVersion: 0,
+    });
+    const hIg2 = hashSalvarIgreja({
+      commandId: commandIdValido,
+      codigo: '240001',
+      nome: 'Igreja Um',
+      expectedVersion: 0,
+    });
+    const hIg3 = hashSalvarIgreja({
+      commandId: commandIdValido,
+      codigo: '240002',
+      nome: 'Igreja Um',
+      expectedVersion: 0,
+    });
+    expect(hIg1).toBe(hIg2);
+    expect(hIg1).not.toBe(hIg3);
+
+    const hEq1 = hashSalvarEquipe({
+      commandId: commandIdValido,
+      nome: 'Apoio',
+      expectedVersion: 0,
+    });
+    const hEq2 = hashSalvarEquipe({
+      commandId: commandIdValido,
+      nome: 'apoio',
+      expectedVersion: 0,
+    });
+    const hEq3 = hashSalvarEquipe({
+      commandId: commandIdValido,
+      nome: 'Som',
+      expectedVersion: 0,
+    });
+    expect(hEq1).toBe(hEq2); // Mesma chave normalizada
+    expect(hEq1).not.toBe(hEq3);
+  });
+});
+
 

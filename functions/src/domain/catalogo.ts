@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { normalizarNome } from './importacaoPastores.js';
+export { normalizarNome };
 
 /** Versão do dataset canônico; incrementada sempre que o catálogo inicial muda. */
 export const VERSAO_DATASET_CATALOGO = 1;
@@ -98,6 +99,79 @@ export type ResultadoAlternarStatus = {
   ativo: boolean;
 };
 
+export class CodigoIgrejaDuplicadoError extends Error {
+  constructor(public readonly codigo: string) {
+    super(`CODIGO_IGREJA_DUPLICADO: ${codigo}`);
+    this.name = 'CodigoIgrejaDuplicadoError';
+  }
+}
+
+export class NomeEquipeDuplicadoError extends Error {
+  constructor(public readonly nome: string) {
+    super(`NOME_EQUIPE_DUPLICADO: ${nome}`);
+    this.name = 'NomeEquipeDuplicadoError';
+  }
+}
+
+export class ConflitoVersaoError extends Error {
+  constructor(mensagem = 'Versão esperada diverge da versão atual.') {
+    super(`CONFLITO_VERSAO: ${mensagem}`);
+    this.name = 'ConflitoVersaoError';
+  }
+}
+
+export type EntradaSalvarIgreja = {
+  commandId: string;
+  correlationId?: string;
+  igrejaId?: string;
+  codigo: string;
+  nome: string;
+  expectedVersion: number;
+};
+
+export type EntradaSalvarEquipe = {
+  commandId: string;
+  correlationId?: string;
+  equipeId?: string;
+  nome: string;
+  expectedVersion: number;
+};
+
+export type ResultadoSalvarCatalogo = {
+  id: string;
+  repetido: boolean;
+  versao: number;
+};
+
+export type ResponsavelResumo = {
+  pessoaId: string;
+  nome: string;
+};
+
+export type IgrejaAdmin = {
+  id: string;
+  codigo: string;
+  nome: string;
+  ativo: boolean;
+  versao: number;
+  rotulo: string;
+  pastorLocal: ResponsavelResumo | null;
+};
+
+export type EquipeAdmin = {
+  id: string;
+  nome: string;
+  nomeNormalizado: string;
+  ativo: boolean;
+  versao: number;
+  responsavel: ResponsavelResumo | null;
+};
+
+export type ResumoCatalogoAdmin = {
+  igrejas: IgrejaAdmin[];
+  equipes: EquipeAdmin[];
+};
+
 export class EntidadeInexistenteError extends Error {
   constructor(public readonly entidade: TipoEntidadeCatalogo, public readonly id: string) {
     super(`ENTIDADE_INEXISTENTE: ${entidade} ${id}`);
@@ -182,6 +256,97 @@ export function hashAlternarStatus(
   ativo: boolean,
 ): string {
   return createHash('sha256').update(`${tipo}:${id}:${ativo ? 'ATIVO' : 'INATIVO'}`).digest('hex');
+}
+
+export function validarSalvarIgreja(dados: unknown): EntradaSalvarIgreja {
+  if (!dados || typeof dados !== 'object') {
+    throw new EntradaInvalidaError('Dados devem ser um objeto');
+  }
+  const d = dados as Record<string, unknown>;
+  const commandId = typeof d.commandId === 'string' ? d.commandId.trim() : '';
+  if (!validarCommandId(commandId)) {
+    throw new EntradaInvalidaError('commandId inválido');
+  }
+  const igrejaId =
+    typeof d.igrejaId === 'string' && d.igrejaId.trim()
+      ? d.igrejaId.trim()
+      : undefined;
+  if (igrejaId && igrejaId.length > 128) {
+    throw new EntradaInvalidaError('igrejaId inválido');
+  }
+  const codigo = typeof d.codigo === 'string' ? d.codigo.trim() : '';
+  if (!REGEX_CODIGO_IGREJA.test(codigo)) {
+    throw new EntradaInvalidaError('Código de igreja inválido (deve ter 6 dígitos numéricos)');
+  }
+  const nome = typeof d.nome === 'string' ? d.nome.trim() : '';
+  if (!nomeValido(nome)) {
+    throw new EntradaInvalidaError('Nome de igreja inválido (mínimo 3 e máximo 160 caracteres)');
+  }
+  const expectedVersion = typeof d.expectedVersion === 'number' ? d.expectedVersion : -1;
+  if (!Number.isInteger(expectedVersion) || expectedVersion < 0) {
+    throw new EntradaInvalidaError('expectedVersion deve ser um número inteiro maior ou igual a 0');
+  }
+  const correlationId =
+    typeof d.correlationId === 'string' && d.correlationId.trim()
+      ? d.correlationId.trim()
+      : undefined;
+  return {
+    commandId,
+    igrejaId,
+    codigo,
+    nome,
+    expectedVersion,
+    correlationId,
+  };
+}
+
+export function validarSalvarEquipe(dados: unknown): EntradaSalvarEquipe {
+  if (!dados || typeof dados !== 'object') {
+    throw new EntradaInvalidaError('Dados devem ser um objeto');
+  }
+  const d = dados as Record<string, unknown>;
+  const commandId = typeof d.commandId === 'string' ? d.commandId.trim() : '';
+  if (!validarCommandId(commandId)) {
+    throw new EntradaInvalidaError('commandId inválido');
+  }
+  const equipeId =
+    typeof d.equipeId === 'string' && d.equipeId.trim()
+      ? d.equipeId.trim()
+      : undefined;
+  if (equipeId && equipeId.length > 128) {
+    throw new EntradaInvalidaError('equipeId inválido');
+  }
+  const nome = typeof d.nome === 'string' ? d.nome.trim() : '';
+  if (!nomeValido(nome)) {
+    throw new EntradaInvalidaError('Nome de equipe inválido (mínimo 3 e máximo 160 caracteres)');
+  }
+  const expectedVersion = typeof d.expectedVersion === 'number' ? d.expectedVersion : -1;
+  if (!Number.isInteger(expectedVersion) || expectedVersion < 0) {
+    throw new EntradaInvalidaError('expectedVersion deve ser um número inteiro maior ou igual a 0');
+  }
+  const correlationId =
+    typeof d.correlationId === 'string' && d.correlationId.trim()
+      ? d.correlationId.trim()
+      : undefined;
+  return {
+    commandId,
+    equipeId,
+    nome,
+    expectedVersion,
+    correlationId,
+  };
+}
+
+export function hashSalvarIgreja(entrada: EntradaSalvarIgreja): string {
+  return createHash('sha256')
+    .update(`SALVAR_IGREJA:${entrada.igrejaId ?? 'NOVA'}:${entrada.codigo}:${entrada.nome}:${entrada.expectedVersion}`)
+    .digest('hex');
+}
+
+export function hashSalvarEquipe(entrada: EntradaSalvarEquipe): string {
+  return createHash('sha256')
+    .update(`SALVAR_EQUIPE:${entrada.equipeId ?? 'NOVA'}:${chaveEquipe(entrada.nome)}:${entrada.expectedVersion}`)
+    .digest('hex');
 }
 
 function nomeValido(nome: string): boolean {

@@ -141,24 +141,26 @@ class AppDataTable<T> extends StatelessWidget {
           );
         }
 
-        // Modo mobile: renderiza em cartões
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (header != null) ...[
-              header!,
-              const SizedBox(height: AppSpacing.s12),
+        // Modo mobile: renderiza em cartões com rolagem vertical
+        return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (header != null) ...[
+                header!,
+                const SizedBox(height: AppSpacing.s12),
+              ],
+              ResponsiveRecordList<T>(
+                items: items,
+                itemBuilder: (ctx, item) {
+                  if (cardBuilder != null) {
+                    return cardBuilder!(ctx, item);
+                  }
+                  return _buildCartaoPadrao(item);
+                },
+              ),
             ],
-            ResponsiveRecordList<T>(
-              items: items,
-              itemBuilder: (ctx, item) {
-                if (cardBuilder != null) {
-                  return cardBuilder!(ctx, item);
-                }
-                return _buildCartaoPadrao(item);
-              },
-            ),
-          ],
+          ),
         );
       },
     );
