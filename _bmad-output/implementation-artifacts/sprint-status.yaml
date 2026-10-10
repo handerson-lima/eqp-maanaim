@@ -102,7 +102,7 @@ development_status:
   8-11-completar-administracao-de-igrejas-e-equipes: done
   8-12-vincular-multiplas-igrejas-a-partir-do-pastor: done
   8-13-completar-filtros-e-paginacao-de-auditoria-relatorios: backlog
-  8-14-exibir-versoes-e-aceites-pendentes-dos-termos: backlog
+  8-14-exibir-versoes-e-aceites-pendentes-dos-termos: done
   8-15-alinhar-superficies-adicionais-e-linguagem: backlog
   8-16-homologar-todas-as-telas-e-impedir-regressoes: backlog
   epic-8-retrospective: optional

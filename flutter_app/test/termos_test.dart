@@ -222,5 +222,193 @@ void main() {
 
       expect(find.text('Não foi possível carregar os termos. Tente novamente.'), findsOneWidget);
     });
+
+    testWidgets('Story 8.14: exibe tabela desktop com colunas canônicas e diferencia pendência operacional de histórico U(V)', (tester) async {
+      _definirTamanho(tester, const Size(1100, 900));
+
+      final fake = TermosFake(
+        termo: TermoVigente(
+          id: 'termo-1',
+          tipoTermo: 'ADESAO_VOLUNTARIADO',
+          titulo: 'Termo de Voluntariado',
+          versaoVigenteId: 'v-2',
+          versaoVigenteNumero: 2,
+          hashSha256: 'sha256-hash-versao-2-completo-canonica-teste',
+          totalVersoes: 2,
+          totalAtivosAtuais: 10,
+          ativosComAceiteVigentePendente: 3,
+          versoes: [
+            VersaoTermo(
+              id: 'v-2',
+              termoId: 'termo-1',
+              numeroVersao: 2,
+              titulo: 'Termo v2 Vigente',
+              conteudo: 'Texto da versão 2',
+              hashSha256: 'sha256-hash-versao-2-completo-canonica-teste',
+              publicadoEm: DateTime.parse('2026-10-10T10:00:00Z'),
+              publicadoPorUid: 'admin-1',
+              imutavel: true,
+              universoRegistrado: true,
+              totalAfetados: 8,
+              aceitosHistorico: 5,
+              pendentesHistorico: 3,
+            ),
+            VersaoTermo(
+              id: 'v-1',
+              termoId: 'termo-1',
+              numeroVersao: 1,
+              titulo: 'Termo v1 Legado',
+              conteudo: 'Texto da versão 1 legado',
+              hashSha256: 'sha256-hash-versao-1-completo-canonica-teste',
+              publicadoEm: DateTime.parse('2026-09-01T10:00:00Z'),
+              publicadoPorUid: 'admin-1',
+              imutavel: true,
+              universoRegistrado: false, // Legado sem snapshot
+              totalAfetados: 0,
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(_tela(fake));
+      await tester.pumpAndSettle();
+
+      // Colunas da AppDataTable no Desktop
+      expect(find.text('Versão'), findsWidgets);
+      expect(find.text('Publicação'), findsWidgets);
+      expect(find.text('Ativos c/ Aceite Pendente'), findsWidgets);
+      expect(find.text('Afetados na Publicação'), findsWidgets);
+      expect(find.text('Ações'), findsWidgets);
+
+      // Pendência operacional vigente exibida para v2
+      expect(find.text('3 de 10'), findsOneWidget);
+
+      // Histórico com U(V) registrado exibido para v2
+      expect(find.text('5 de 8 aceitos (3 pendentes)'), findsOneWidget);
+
+      // Versão legada v1: não inventa zero, exibe explicitamente indisponível
+      expect(
+        find.text('Indisponível — universo histórico não registrado'),
+        findsOneWidget,
+      );
+
+      // Abre detalhes da versão v2
+      final btnDetalhes = find.byTooltip('Histórico e detalhes da versão').first;
+      await tester.ensureVisible(btnDetalhes);
+      await tester.tap(btnDetalhes);
+      await tester.pumpAndSettle();
+
+      // Modal/BottomSheet aberta com hash completo e detalhes do U(V)
+      expect(find.text('Universo Histórico U(v2)'), findsOneWidget);
+      expect(find.textContaining('Afetados na publicação: 8'), findsOneWidget);
+      expect(find.textContaining('sha256-hash-versao-2-completo-canonica-teste'), findsWidgets);
+    });
+
+    testWidgets('Story 8.14: renderiza cartões no mobile (<768px) com métricas e toque acessível', (tester) async {
+      _definirTamanho(tester, const Size(400, 800));
+
+      final fake = TermosFake(
+        termo: TermoVigente(
+          id: 'termo-1',
+          tipoTermo: 'ADESAO_VOLUNTARIADO',
+          titulo: 'Termo de Voluntariado',
+          versaoVigenteId: 'v-2',
+          versaoVigenteNumero: 2,
+          hashSha256: 'sha256-hash-mobile-teste',
+          totalVersoes: 1,
+          totalAtivosAtuais: 5,
+          ativosComAceiteVigentePendente: 2,
+          versoes: [
+            VersaoTermo(
+              id: 'v-2',
+              termoId: 'termo-1',
+              numeroVersao: 2,
+              titulo: 'Termo Vigente Mobile',
+              conteudo: 'Texto para teste mobile',
+              hashSha256: 'sha256-hash-mobile-teste',
+              publicadoEm: DateTime.parse('2026-10-10T10:00:00Z'),
+              publicadoPorUid: 'admin-1',
+              imutavel: true,
+              universoRegistrado: true,
+              totalAfetados: 5,
+              aceitosHistorico: 3,
+              pendentesHistorico: 2,
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(_tela(fake));
+      await tester.pumpAndSettle();
+
+      // No mobile, renderiza cartões com rótulo
+      expect(find.text('Termo Vigente Mobile'), findsWidgets);
+      expect(
+        find.text('Ativos com aceite vigente pendente: 2 de 5'),
+        findsWidgets,
+      );
+      expect(
+        find.text('Histórico da publicação: 3 de 5 aceitaram (2 pendentes)'),
+        findsOneWidget,
+      );
+
+      // Botões mobile disponíveis
+      expect(find.text('Ver Documento'), findsOneWidget);
+      expect(find.text('Histórico / Detalhes'), findsOneWidget);
+    });
+
+    testWidgets('Story 8.14: modal de revisão exibe impacto estimado sobre voluntários ativos', (tester) async {
+      _definirTamanho(tester, const Size(1000, 900));
+
+      final fake = TermosFake(
+        termo: TermoVigente(
+          id: 'termo-1',
+          tipoTermo: 'ADESAO_VOLUNTARIADO',
+          titulo: 'Termo Vigente',
+          versaoVigenteId: 'v-1',
+          versaoVigenteNumero: 1,
+          hashSha256: 'hash-v1',
+          totalVersoes: 1,
+          totalAtivosAtuais: 15, // 15 voluntários ativos
+          ativosComAceiteVigentePendente: 0,
+        ),
+      );
+
+      await tester.pumpWidget(_tela(fake));
+      await tester.pumpAndSettle();
+
+      // Abre formulário de nova versão
+      await tester.tap(find.text('Nova Versão'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Título do Termo *'),
+        'Termo de Adesão v2',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Conteúdo Integral do Termo *'),
+        'Cláusula nova: todos os voluntários devem ter ciência da atualização dos termos.',
+      );
+      await tester.pumpAndSettle();
+
+      // Clica em Revisar e Publicar
+      await tester.tap(find.text('Revisar e Publicar'));
+      await tester.pumpAndSettle();
+
+      // Modal de confirmação exibe o impacto dos ativos
+      expect(find.text('Impacto nos Voluntários Ativos'), findsOneWidget);
+      expect(
+        find.textContaining('15 voluntário(s) em estado ATIVA serão incluídos no universo histórico U(v2)'),
+        findsOneWidget,
+      );
+      expect(find.text('Confirmar e Publicar'), findsOneWidget);
+
+      // Confirma publicação
+      await tester.tap(find.text('Confirmar e Publicar'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('publicada com sucesso!'), findsOneWidget);
+    });
   });
 }
+

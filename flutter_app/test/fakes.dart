@@ -460,6 +460,7 @@ class TermosFake implements TermosGateway {
   int consultas = 0;
   int consultasVigente = 0;
   int publicacoes = 0;
+  int totalVoluntariosAtivosSimulados = 0;
   String? ultimoCommandId;
   String? ultimoTitulo;
   String? ultimoConteudo;
@@ -511,6 +512,13 @@ class TermosFake implements TermosGateway {
       publicadoPorUid: 'uid-admin-fake',
       versaoAnteriorId: termo?.versaoVigenteId,
       imutavel: true,
+      universoRegistrado: true,
+      totalAfetados: totalVoluntariosAtivosSimulados,
+      aceitosHistorico: 0,
+      pendentesHistorico: totalVoluntariosAtivosSimulados,
+      criterio: 'ESTADO_ATIVA_NA_PUBLICACAO',
+      instanteSnapshot: DateTime.now().toUtc(),
+      completo: true,
     );
 
     final listaVersoes = <VersaoTermo>[novaVersao, ...(termo?.versoes ?? const <VersaoTermo>[])];
@@ -527,6 +535,9 @@ class TermosFake implements TermosGateway {
       atualizadoEm: DateTime.now().toUtc(),
       ativo: true,
       versoes: listaVersoes,
+      totalAtivosAtuais: totalVoluntariosAtivosSimulados,
+      ativosComAceiteVigentePendente: totalVoluntariosAtivosSimulados,
+      calculadoEm: DateTime.now().toUtc(),
     );
 
     return ResultadoPublicarTermo(
@@ -536,7 +547,7 @@ class TermosFake implements TermosGateway {
       versaoId: versaoId,
       numeroVersao: proximaVersao,
       hashSha256: hash,
-      totalVoluntariosImpactados: 0,
+      totalVoluntariosImpactados: totalVoluntariosAtivosSimulados,
     );
   }
 }

@@ -121,16 +121,19 @@ export async function publicarTermo(
     // 4. Identificação de voluntários ativos impactados (sem tocar aceites anteriores)
     // Para a primeira versão ou base inicial, se a coleção não existir ou for vazia, total = 0
     let totalVoluntariosImpactados = 0;
+    let fichasAtivasIds: string[] = [];
     try {
       const fichasAtivasSnap = await tx.get(
         db.collection('fichas').where('estado', '==', 'ATIVA'),
       );
       totalVoluntariosImpactados = fichasAtivasSnap.size;
+      fichasAtivasIds = fichasAtivasSnap.docs.map((d) => d.id);
     } catch {
       totalVoluntariosImpactados = 0;
+      fichasAtivasIds = [];
     }
 
-    // 5. Criação do documento imutável da nova versão
+    // 5. Criação do documento imutável da nova versão com snapshot U(V)
     const versaoRef = termoRef.collection('versoes').doc();
     const versaoId = versaoRef.id;
 
@@ -145,6 +148,14 @@ export async function publicarTermo(
       publicadoEm: FieldValue.serverTimestamp(),
       versaoAnteriorId,
       imutavel: true,
+      universoSnapshot: {
+        registrado: true,
+        totalAfetados: totalVoluntariosImpactados,
+        fichasIds: fichasAtivasIds,
+        instante: FieldValue.serverTimestamp(),
+        criterio: 'ESTADO_ATIVA_NA_PUBLICACAO',
+        completo: true,
+      },
     });
 
     // 6. Atualização ou criação do termo canônico pai
@@ -234,6 +245,28 @@ export async function consultarTermosRepo(
   }
 
   const termoData = termoDoc.data() ?? {};
+  const versaoVigenteId = String(termoData.versaoVigenteId ?? '');
+
+  // 1. Apuração da pendência operacional vigente
+  let totalAtivos = 0;
+  let ativosPendentesVigente = 0;
+  const fichasAtivasDocs: Array<{ id: string; termoAceito?: { versaoId?: string } }> = [];
+  try {
+    const fichasAtivasSnap = await db.collection('fichas').where('estado', '==', 'ATIVA').get();
+    totalAtivos = fichasAtivasSnap.size;
+    for (const doc of fichasAtivasSnap.docs) {
+      const d = doc.data();
+      fichasAtivasDocs.push({ id: doc.id, termoAceito: d.termoAceito });
+      if (d.termoAceito?.versaoId !== versaoVigenteId) {
+        ativosPendentesVigente++;
+      }
+    }
+  } catch {
+    totalAtivos = 0;
+    ativosPendentesVigente = 0;
+  }
+
+  // 2. Apuração do histórico de versões e projeção de aceites U(V)
   const versoesSnap = await db
     .collection('termos')
     .doc(termoId)
@@ -241,33 +274,91 @@ export async function consultarTermosRepo(
     .orderBy('numeroVersao', 'desc')
     .get();
 
-  const versoes: VersaoTermoResumo[] = versoesSnap.docs.map((doc) => {
-    const d = doc.data();
-    return {
-      id: doc.id,
-      termoId,
-      numeroVersao: Number(d.numeroVersao ?? 0),
-      titulo: String(d.titulo ?? ''),
-      conteudo: String(d.conteudo ?? ''),
-      hashSha256: String(d.hashSha256 ?? ''),
-      publicadoEm: iso(d.publicadoEm),
-      publicadoPorUid: String(d.publicadoPorUid ?? ''),
-      versaoAnteriorId: (d.versaoAnteriorId as string) || null,
-      imutavel: Boolean(d.imutavel ?? true),
-    };
-  });
+  const versoes: VersaoTermoResumo[] = await Promise.all(
+    versoesSnap.docs.map(async (doc) => {
+      const d = doc.data();
+      const uSnap = d.universoSnapshot;
+      let universoSnapshotInfo: VersaoTermoResumo['universoSnapshot'] = undefined;
+
+      if (uSnap && uSnap.registrado === true) {
+        const totalAfetados = Number(uSnap.totalAfetados ?? 0);
+        const fichasIds: string[] = Array.isArray(uSnap.fichasIds) ? uSnap.fichasIds : [];
+
+        const aceitosSet = new Set<string>();
+        try {
+          const aceitesVersaoSnap = await db
+            .collection('termos')
+            .doc(termoId)
+            .collection('versoes')
+            .doc(doc.id)
+            .collection('aceites')
+            .get();
+          for (const aDoc of aceitesVersaoSnap.docs) {
+            aceitosSet.add(aDoc.id);
+          }
+        } catch {
+          // Continua com verificação nas fichas ativas
+        }
+
+        // Adiciona fichas que possuem termoAceito apontando para esta versão
+        for (const fa of fichasAtivasDocs) {
+          if (fa.termoAceito?.versaoId === doc.id) {
+            aceitosSet.add(fa.id);
+          }
+        }
+
+        const aceitosCount = fichasIds.filter((id) => aceitosSet.has(id)).length;
+        const pendentesCount = Math.max(0, totalAfetados - aceitosCount);
+
+        universoSnapshotInfo = {
+          registrado: true,
+          totalAfetados,
+          aceitosCount,
+          pendentesCount,
+          instante: iso(uSnap.instante),
+          criterio: String(uSnap.criterio ?? 'ESTADO_ATIVA_NA_PUBLICACAO'),
+          completo: Boolean(uSnap.completo ?? true),
+        };
+      } else {
+        // Dados ausentes para versões legadas sem snapshot
+        universoSnapshotInfo = {
+          registrado: false,
+          totalAfetados: 0,
+        };
+      }
+
+      return {
+        id: doc.id,
+        termoId,
+        numeroVersao: Number(d.numeroVersao ?? 0),
+        titulo: String(d.titulo ?? ''),
+        conteudo: String(d.conteudo ?? ''),
+        hashSha256: String(d.hashSha256 ?? ''),
+        publicadoEm: iso(d.publicadoEm),
+        publicadoPorUid: String(d.publicadoPorUid ?? ''),
+        versaoAnteriorId: (d.versaoAnteriorId as string) || null,
+        imutavel: Boolean(d.imutavel ?? true),
+        universoSnapshot: universoSnapshotInfo,
+      };
+    }),
+  );
 
   return {
     id: termoDoc.id,
     tipoTermo: termoData.tipoTermo ?? 'ADESAO_VOLUNTARIADO',
     titulo: String(termoData.titulo ?? ''),
-    versaoVigenteId: String(termoData.versaoVigenteId ?? ''),
+    versaoVigenteId,
     versaoVigenteNumero: Number(termoData.versaoVigenteNumero ?? 0),
     hashSha256: String(termoData.hashSha256 ?? ''),
     totalVersoes: Number(termoData.totalVersoes ?? 0),
     publicadoEm: iso(termoData.criadoEm),
     atualizadoEm: iso(termoData.atualizadoEm),
     ativo: Boolean(termoData.ativo ?? true),
+    pendenciaOperacional: {
+      totalAtivos,
+      pendentesVigente: ativosPendentesVigente,
+      calculadoEm: new Date().toISOString(),
+    },
     versoes,
   };
 }
@@ -358,27 +449,30 @@ export async function aceitarTermoVigenteRepo(
       };
     }
 
-    // 2. Valida se a ficha existe e se está em RASCUNHO
+    // 2. Valida se a ficha existe e se está em RASCUNHO ou ATIVA
     const fichaSnap = await tx.get(fichaRef);
     if (!fichaSnap.exists) {
       throw new FichaNaoEncontradaError();
     }
     const fichaData = fichaSnap.data() ?? {};
-    if (fichaData.estado && fichaData.estado !== 'RASCUNHO') {
-      throw new FichaNaoEditavelError('Apenas fichas em rascunho podem ter o termo aceito.');
+    const estadoFicha = fichaData.estado ?? 'RASCUNHO';
+    if (estadoFicha !== 'RASCUNHO' && estadoFicha !== 'ATIVA') {
+      throw new FichaNaoEditavelError('Apenas fichas em rascunho ou ativas podem ter o termo aceito.');
     }
 
     // 3. Valida se há ao menos uma equipe/participação cadastrada no rascunho
-    const participacoesSnap = await tx.get(
-      db.collection('participacoes').where('fichaId', '==', contexto.uid),
-    );
-    const semParticipacoes =
-      !participacoesSnap ||
-      participacoesSnap.empty === true ||
-      (Array.isArray(participacoesSnap.docs) && participacoesSnap.docs.length === 0);
+    if (estadoFicha === 'RASCUNHO') {
+      const participacoesSnap = await tx.get(
+        db.collection('participacoes').where('fichaId', '==', contexto.uid),
+      );
+      const semParticipacoes =
+        !participacoesSnap ||
+        participacoesSnap.empty === true ||
+        (Array.isArray(participacoesSnap.docs) && participacoesSnap.docs.length === 0);
 
-    if (semParticipacoes) {
-      throw new EquipesNaoSelecionadasError();
+      if (semParticipacoes) {
+        throw new EquipesNaoSelecionadasError();
+      }
     }
 
     // 4. Valida se o termo existe e está ativo
@@ -452,6 +546,17 @@ export async function aceitarTermoVigenteRepo(
       correlationId: contexto.correlationId ?? contexto.commandId,
       imutavel: true,
     });
+
+    // Registra na subcoleção de aceites da versão para auditoria e contagem de U(V)
+    const versaoDocRef = termoRef.collection('versoes').doc(versaoVigenteId);
+    if (typeof versaoDocRef.collection === 'function') {
+      const versaoAceiteRef = versaoDocRef.collection('aceites').doc(contexto.uid);
+      tx.set(versaoAceiteRef, {
+        uid: contexto.uid,
+        aceitoEm: FieldValue.serverTimestamp(),
+        commandId: contexto.commandId,
+      });
+    }
 
     // 7. Atualiza projeção do termo aceito na ficha
     tx.update(fichaRef, {

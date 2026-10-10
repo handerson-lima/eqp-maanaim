@@ -76,7 +76,7 @@ export class FichaNaoEncontradaError extends Error {
 
 export class FichaNaoEditavelError extends Error {
   constructor(
-    mensagem = 'Apenas fichas em rascunho podem ter o termo aceito.',
+    mensagem = 'Apenas fichas em rascunho ou ativas podem ter o termo aceito.',
   ) {
     super(mensagem);
     this.name = 'FichaNaoEditavelError';
@@ -104,6 +104,16 @@ export interface EntradaPublicarTermo {
   payloadHash: string;
 }
 
+export interface UniversoSnapshotInfo {
+  registrado: boolean;
+  totalAfetados: number;
+  aceitosCount?: number;
+  pendentesCount?: number;
+  instante?: string;
+  criterio?: string;
+  completo?: boolean;
+}
+
 export interface VersaoTermoResumo {
   id: string;
   termoId: string;
@@ -115,6 +125,13 @@ export interface VersaoTermoResumo {
   publicadoPorUid: string;
   versaoAnteriorId: string | null;
   imutavel: boolean;
+  universoSnapshot?: UniversoSnapshotInfo;
+}
+
+export interface PendenciaOperacionalInfo {
+  totalAtivos: number;
+  pendentesVigente: number;
+  calculadoEm: string;
 }
 
 export interface TermoResumo {
@@ -128,6 +145,7 @@ export interface TermoResumo {
   publicadoEm: string;
   atualizadoEm: string;
   ativo: boolean;
+  pendenciaOperacional?: PendenciaOperacionalInfo;
   versoes?: VersaoTermoResumo[];
 }
 

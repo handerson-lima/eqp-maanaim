@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../ui/components/buttons.dart';
 import '../../ui/components/layout_elements.dart';
+import '../../ui/components/responsive_data_table.dart';
 import '../../ui/components/status_chips.dart';
 import '../../ui/tokens.dart';
 import '../termo/termo_adesao_model.dart';
@@ -9,6 +10,8 @@ import '../termo/termo_dialog.dart';
 import 'termos_service.dart';
 
 /// Tela administrativa para gestão, publicação e consulta histórica de termos de adesão.
+/// Conforme Story 8.14 (Tela S13): exibe versões, pendências operacionais vigentes,
+/// universo histórico U(V) imutável e modal de revisão com impacto de ativos.
 class TermosScreen extends StatefulWidget {
   const TermosScreen({
     super.key,
@@ -79,6 +82,7 @@ class _TermosScreenState extends State<TermosScreen> {
     final proximaVersao = (_termo?.versaoVigenteNumero ?? 0) + 1;
     final titulo = _tituloController.text.trim();
     final conteudo = _conteudoController.text.trim();
+    final totalAtivosAfetados = _termo?.totalAtivosAtuais ?? 0;
 
     showDialog<bool>(
       context: context,
@@ -91,27 +95,66 @@ class _TermosScreenState extends State<TermosScreen> {
               Flexible(child: Text('Confirmar Publicação')),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Atenção: A publicação da versão $proximaVersao é definitiva e estritamente imutável.',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Atenção: A publicação da versão $proximaVersao é definitiva e estritamente imutável.',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: AppSpacing.s12),
+                  const Text(
+                    'Não será possível editar ou excluir este documento após a confirmação. '
+                    'Correções futuras exigirão uma nova versão.',
+                  ),
+                  const SizedBox(height: AppSpacing.s16),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.s12),
+                    decoration: BoxDecoration(
+                      color: AppColors.blue50,
+                      borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.people_outline, size: 18, color: AppColors.blue600),
+                            const SizedBox(width: AppSpacing.s8),
+                            Text(
+                              'Impacto nos Voluntários Ativos',
+                              style: AppTypography.label.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.navy900,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.s4),
+                        Text(
+                          totalAtivosAfetados > 0
+                              ? '$totalAtivosAfetados voluntário(s) em estado ATIVA serão incluídos no universo histórico U(v$proximaVersao) e terão pendência de aceite da nova versão vigente.'
+                              : 'Nenhum voluntário ativo no momento. O universo U(v$proximaVersao) será constituído vazio.',
+                          style: AppTypography.caption.copyWith(color: AppColors.navy900),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s16),
+                  Text('Título: $titulo', style: AppTypography.body),
+                  const SizedBox(height: AppSpacing.s8),
+                  Text(
+                    'Caracteres: ${conteudo.length}',
+                    style: AppTypography.caption,
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.s12),
-              const Text(
-                'Não será possível editar ou excluir este documento após a confirmação. '
-                'Correções futuras exigirão uma nova versão.',
-              ),
-              const SizedBox(height: AppSpacing.s16),
-              Text('Título: $titulo', style: AppTypography.body),
-              const SizedBox(height: AppSpacing.s8),
-              Text(
-                'Caracteres: ${conteudo.length}',
-                style: AppTypography.caption,
-              ),
-            ],
+            ),
           ),
           actions: [
             SecondaryButton(
@@ -174,6 +217,8 @@ class _TermosScreenState extends State<TermosScreen> {
   }
 
   void _verDetalhesVersao(VersaoTermo versao) {
+    final eAVigente = versao.id == _termo?.versaoVigenteId;
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -194,7 +239,10 @@ class _TermosScreenState extends State<TermosScreen> {
                 children: [
                   Row(
                     children: [
-                      StatusChip(status: 'INATIVA', label: versao.rotuloVersao),
+                      StatusChip(
+                        status: eAVigente ? 'ATIVA' : 'INATIVA',
+                        label: eAVigente ? 'Vigente' : 'Histórico',
+                      ),
                       const SizedBox(width: AppSpacing.s8),
                       Text(
                         'Versão ${versao.numeroVersao}',
@@ -204,6 +252,7 @@ class _TermosScreenState extends State<TermosScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
+                    tooltip: 'Fechar',
                     onPressed: () => Navigator.of(ctx).pop(),
                   ),
                 ],
@@ -213,7 +262,64 @@ class _TermosScreenState extends State<TermosScreen> {
                 versao.titulo,
                 style: AppTypography.h3,
               ),
-              const SizedBox(height: AppSpacing.s8),
+              if (versao.publicadoEm != null) ...[
+                const SizedBox(height: AppSpacing.s4),
+                Text(
+                  'Publicado em: ${versao.publicadoEm!.toLocal().toString().split('.')[0]}',
+                  style: AppTypography.caption,
+                ),
+              ],
+              const SizedBox(height: AppSpacing.s12),
+              // Card de Auditoria e Universo U(V)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.s12),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Universo Histórico U(${versao.rotuloVersao})',
+                      style: AppTypography.label.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.navy900,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s8),
+                    if (versao.universoRegistrado) ...[
+                      Text(
+                        'Afetados na publicação: ${versao.totalAfetados} voluntário(s)',
+                        style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: AppSpacing.s4),
+                      Text(
+                        'Aceites comprovados: ${versao.aceitosHistorico}  |  Pendentes históricos: ${versao.pendentesHistorico}',
+                        style: AppTypography.caption,
+                      ),
+                      if (versao.criterio != null) ...[
+                        const SizedBox(height: AppSpacing.s4),
+                        Text(
+                          'Critério de snapshot: ${versao.criterio}',
+                          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ] else ...[
+                      Text(
+                        'Indisponível — universo histórico não registrado',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s12),
               SelectableText(
                 'Hash SHA-256: ${versao.hashSha256}',
                 style: AppTypography.caption.copyWith(fontFamily: 'monospace'),
@@ -234,6 +340,36 @@ class _TermosScreenState extends State<TermosScreen> {
     );
   }
 
+  void _verDocumentoDialog(VersaoTermo versao) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.description_outlined, color: AppColors.blue600),
+            const SizedBox(width: AppSpacing.s8),
+            Flexible(child: Text('${versao.titulo} (${versao.rotuloVersao})')),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700, maxHeight: 500),
+          child: SingleChildScrollView(
+            child: SelectableText(
+              versao.conteudo,
+              style: AppTypography.body,
+            ),
+          ),
+        ),
+        actions: [
+          PrimaryButton(
+            label: 'Fechar',
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _abrirModeloOficial() {
     const model = TermoAdesaoModel(
       nomeVoluntario: 'NOME DO VOLUNTÁRIO',
@@ -247,6 +383,219 @@ class _TermosScreenState extends State<TermosScreen> {
       dataTexto: 'DATA',
     );
     exibirTermoAdesaoDialog(context, model);
+  }
+
+  Widget _buildCardTermoVigente(VersaoTermo versaoVigente) {
+    return SectionCard(
+      title: 'Termo Vigente',
+      subtitle: versaoVigente.titulo,
+      headerAction: StatusChip(
+        status: 'ATIVA',
+        label: 'Vigente ${versaoVigente.rotuloVersao}',
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.fingerprint, size: 16, color: AppColors.textSecondary),
+              const SizedBox(width: AppSpacing.s4),
+              Expanded(
+                child: SelectableText(
+                  'Hash SHA-256: ${versaoVigente.hashSha256}',
+                  style: AppTypography.caption.copyWith(fontFamily: 'monospace'),
+                ),
+              ),
+            ],
+          ),
+          if (versaoVigente.publicadoEm != null) ...[
+            const SizedBox(height: AppSpacing.s4),
+            Row(
+              children: [
+                const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                const SizedBox(width: AppSpacing.s4),
+                Expanded(
+                  child: Text(
+                    'Publicado em: ${versaoVigente.publicadoEm!.toLocal().toString().split('.')[0]}',
+                    style: AppTypography.caption,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: AppSpacing.s12),
+          // Resumo da Pendência Operacional Vigente
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.s12),
+            decoration: BoxDecoration(
+              color: AppColors.blue50,
+              borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 20, color: AppColors.blue600),
+                const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ativos com aceite vigente pendente: ${_termo!.ativosComAceiteVigentePendente} de ${_termo!.totalAtivosAtuais}',
+                        style: AppTypography.caption.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.navy900,
+                        ),
+                      ),
+                      Text(
+                        'Ativos com aceite concluído: ${_termo!.ativosComAceiteVigenteConcluido} de ${_termo!.totalAtivosAtuais}',
+                        style: AppTypography.caption.copyWith(color: AppColors.navy900),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 180),
+            padding: const EdgeInsets.all(AppSpacing.s12),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: AppGeometry.inputBorderRadius,
+              border: Border.all(color: AppColors.border),
+            ),
+            child: SingleChildScrollView(
+              child: SelectableText(
+                versaoVigente.conteudo,
+                style: AppTypography.body,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Wrap(
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
+            children: [
+              SecondaryButton(
+                label: 'Ver Documento Completo',
+                icon: Icons.visibility_outlined,
+                onPressed: () => _verDetalhesVersao(versaoVigente),
+              ),
+              SecondaryButton(
+                label: 'Modelo Oficial (PDF)',
+                icon: Icons.description_outlined,
+                onPressed: _abrirModeloOficial,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardVersaoMobile(VersaoTermo versao) {
+    final eAVigente = versao.id == _termo?.versaoVigenteId;
+
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s8,
+                      vertical: AppSpacing.s4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.blue50,
+                      borderRadius: BorderRadius.circular(AppGeometry.radiusButton),
+                    ),
+                    child: Text(
+                      versao.rotuloVersao,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.blue600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s8),
+                  StatusChip(
+                    status: eAVigente ? 'ATIVA' : 'INATIVA',
+                    label: eAVigente ? 'Vigente' : 'Histórico',
+                  ),
+                ],
+              ),
+              if (versao.publicadoEm != null)
+                Text(
+                  versao.publicadoEm!.toLocal().toString().split(' ')[0],
+                  style: AppTypography.caption,
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          Text(
+            versao.titulo,
+            style: AppTypography.body.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.navy900,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s4),
+          Text(
+            'SHA-256: ${versao.hashResumido}',
+            style: AppTypography.caption.copyWith(
+              fontFamily: 'monospace',
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          if (eAVigente) ...[
+            Text(
+              'Ativos com aceite vigente pendente: ${_termo!.ativosComAceiteVigentePendente} de ${_termo!.totalAtivosAtuais}',
+              style: AppTypography.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: _termo!.ativosComAceiteVigentePendente > 0
+                    ? AppColors.warning
+                    : AppColors.success,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s4),
+          ],
+          Text(
+            'Histórico da publicação: ${versao.descricaoHistoricoAceites}',
+            style: AppTypography.caption.copyWith(
+              color: versao.universoRegistrado
+                  ? AppColors.textPrimary
+                  : AppColors.textSecondary,
+              fontStyle: versao.universoRegistrado ? FontStyle.normal : FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Wrap(
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
+            children: [
+              SecondaryButton(
+                label: 'Ver Documento',
+                icon: Icons.description_outlined,
+                onPressed: () => _verDocumentoDialog(versao),
+              ),
+              SecondaryButton(
+                label: 'Histórico / Detalhes',
+                icon: Icons.history_outlined,
+                onPressed: () => _verDetalhesVersao(versao),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -264,7 +613,7 @@ class _TermosScreenState extends State<TermosScreen> {
               PageHeader(
                 title: 'Termos e Versões',
                 subtitle:
-                    'Publicação e versionamento imutável dos termos de adesão do Maanaim com trilha de auditoria.',
+                    'Publicação e versionamento imutável dos termos de adesão do Maanaim com trilha de auditoria e métricas de aceite.',
                 action: Wrap(
                   spacing: AppSpacing.s8,
                   runSpacing: AppSpacing.s8,
@@ -363,7 +712,7 @@ class _TermosScreenState extends State<TermosScreen> {
                         ? 'Publicar 1ª Versão do Termo'
                         : 'Publicar Versão v${(_termo?.versaoVigenteNumero ?? 0) + 1}',
                     subtitle:
-                        'O texto publicado será gravado com hash SHA-256 e se tornará imutável.',
+                        'O texto publicado será gravado com snapshot imutável de universo e se tornará estritamente imutável.',
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -470,127 +819,112 @@ class _TermosScreenState extends State<TermosScreen> {
                     ),
                   )
                 else
-                  SectionCard(
-                    title: 'Termo Vigente',
-                    subtitle: versaoVigente.titulo,
-                    headerAction: StatusChip(
-                      status: 'ATIVA',
-                      label: 'Vigente ${versaoVigente.rotuloVersao}',
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.fingerprint, size: 16, color: AppColors.textSecondary),
-                            const SizedBox(width: AppSpacing.s4),
-                            Expanded(
-                              child: SelectableText(
-                                'Hash SHA-256: ${versaoVigente.hashSha256}',
-                                style: AppTypography.caption.copyWith(fontFamily: 'monospace'),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (versaoVigente.publicadoEm != null) ...[
-                          const SizedBox(height: AppSpacing.s4),
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
-                              const SizedBox(width: AppSpacing.s4),
-                              Text(
-                                'Publicado em: ${versaoVigente.publicadoEm!.toLocal().toString().split('.')[0]}',
-                                style: AppTypography.caption,
-                              ),
-                            ],
-                          ),
-                        ],
-                        const SizedBox(height: AppSpacing.s12),
-                        Container(
-                          constraints: const BoxConstraints(maxHeight: 180),
-                          padding: const EdgeInsets.all(AppSpacing.s12),
-                          decoration: BoxDecoration(
-                            color: AppColors.background,
-                            borderRadius: AppGeometry.inputBorderRadius,
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: SingleChildScrollView(
-                            child: SelectableText(
-                              versaoVigente.conteudo,
-                              style: AppTypography.body,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.s12),
-                        SecondaryButton(
-                          label: 'Ver Documento Completo',
-                          icon: Icons.visibility_outlined,
-                          onPressed: () => _verDetalhesVersao(versaoVigente),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildCardTermoVigente(versaoVigente),
 
                 const SizedBox(height: AppSpacing.s24),
 
-                // Seção de Histórico de Versões
+                // Seção de Histórico de Versões em Tabela / Cartões
                 if (_termo != null && _termo!.versoes.isNotEmpty) ...[
                   Text(
                     'Histórico de Versões (${_termo!.totalVersoes})',
                     style: AppTypography.h2,
                   ),
                   const SizedBox(height: AppSpacing.s12),
-                  ..._termo!.versoes.map((versao) {
-                    final eAVigente = versao.id == _termo!.versaoVigenteId;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.s12),
-                      child: SectionCard(
-                        headerAction: eAVigente
-                            ? const StatusChip(status: 'ATIVA', label: 'Vigente')
-                            : const StatusChip(status: 'INATIVA', label: 'Histórico'),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(AppSpacing.s8),
-                              decoration: BoxDecoration(
-                                color: AppColors.blue50,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                versao.rotuloVersao,
-                                style: const TextStyle(
+
+                  AppDataTable<VersaoTermo>(
+                    items: _termo!.versoes,
+                    breakpoint: 768,
+                    columns: [
+                      AppDataColumn<VersaoTermo>(
+                        label: 'Versão',
+                        cellBuilder: (item) {
+                          final eAVigente = item.id == _termo!.versaoVigenteId;
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                item.rotuloVersao,
+                                style: AppTypography.body.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.blue600,
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: AppSpacing.s16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    versao.titulo,
-                                    style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                  const SizedBox(height: AppSpacing.s4),
-                                  Text(
-                                    'SHA-256: ${versao.hashResumido}',
-                                    style: AppTypography.caption.copyWith(fontFamily: 'monospace'),
-                                  ),
-                                ],
+                              const SizedBox(width: AppSpacing.s8),
+                              StatusChip(
+                                status: eAVigente ? 'ATIVA' : 'INATIVA',
+                                label: eAVigente ? 'Vigente' : 'Histórico',
                               ),
+                            ],
+                          );
+                        },
+                      ),
+                      AppDataColumn<VersaoTermo>(
+                        label: 'Publicação',
+                        cellBuilder: (item) => Text(
+                          item.publicadoEm != null
+                              ? item.publicadoEm!.toLocal().toString().split('.')[0]
+                              : '—',
+                          style: AppTypography.caption,
+                        ),
+                      ),
+                      AppDataColumn<VersaoTermo>(
+                        label: 'Ativos c/ Aceite Pendente',
+                        cellBuilder: (item) {
+                          final eAVigente = item.id == _termo!.versaoVigenteId;
+                          if (!eAVigente) {
+                            return const Text('—', style: TextStyle(color: AppColors.textSecondary));
+                          }
+                          return Text(
+                            '${_termo!.ativosComAceiteVigentePendente} de ${_termo!.totalAtivosAtuais}',
+                            style: AppTypography.body.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: _termo!.ativosComAceiteVigentePendente > 0
+                                  ? AppColors.warning
+                                  : AppColors.success,
+                            ),
+                          );
+                        },
+                      ),
+                      AppDataColumn<VersaoTermo>(
+                        label: 'Afetados na Publicação',
+                        cellBuilder: (item) {
+                          if (!item.universoRegistrado) {
+                            return const Text(
+                              'Indisponível — universo histórico não registrado',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontStyle: FontStyle.italic,
+                                fontSize: 12,
+                              ),
+                            );
+                          }
+                          return Text(
+                            '${item.aceitosHistorico} de ${item.totalAfetados} aceitos (${item.pendentesHistorico} pendentes)',
+                            style: AppTypography.caption.copyWith(fontWeight: FontWeight.w500),
+                          );
+                        },
+                      ),
+                      AppDataColumn<VersaoTermo>(
+                        label: 'Ações',
+                        cellBuilder: (item) => Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.description_outlined, size: 20, color: AppColors.blue600),
+                              tooltip: 'Ver documento',
+                              onPressed: () => _verDocumentoDialog(item),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                              tooltip: 'Visualizar conteúdo integral',
-                              onPressed: () => _verDetalhesVersao(versao),
+                              icon: const Icon(Icons.history_outlined, size: 20, color: AppColors.navy900),
+                              tooltip: 'Histórico e detalhes da versão',
+                              onPressed: () => _verDetalhesVersao(item),
                             ),
                           ],
                         ),
                       ),
-                    );
-                  }),
+                    ],
+                    cardBuilder: (context, item) => _buildCardVersaoMobile(item),
+                  ),
                 ],
               ],
             ],

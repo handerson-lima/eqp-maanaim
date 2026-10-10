@@ -13,9 +13,27 @@ class VersaoTermo {
     required this.publicadoPorUid,
     this.versaoAnteriorId,
     this.imutavel = true,
+    this.universoRegistrado = false,
+    this.totalAfetados = 0,
+    this.aceitosHistorico = 0,
+    this.pendentesHistorico = 0,
+    this.criterio,
+    this.instanteSnapshot,
+    this.completo = true,
   });
 
   factory VersaoTermo.fromMap(Map<String, dynamic> map) {
+    final uSnap = map['universoSnapshot'] as Map<dynamic, dynamic>?;
+    final universoRegistrado = uSnap != null && uSnap['registrado'] == true;
+    final totalAfetados = (uSnap?['totalAfetados'] as num?)?.toInt() ?? 0;
+    final aceitosHistorico = (uSnap?['aceitosCount'] as num?)?.toInt() ?? 0;
+    final pendentesHistorico = (uSnap?['pendentesCount'] as num?)?.toInt() ?? 0;
+    final criterio = uSnap?['criterio'] as String?;
+    final instanteSnapshot = uSnap?['instante'] != null
+        ? DateTime.tryParse(uSnap!['instante'] as String)
+        : null;
+    final completo = uSnap?['completo'] as bool? ?? true;
+
     return VersaoTermo(
       id: map['id'] as String? ?? '',
       termoId: map['termoId'] as String? ?? '',
@@ -29,6 +47,13 @@ class VersaoTermo {
       publicadoPorUid: map['publicadoPorUid'] as String? ?? '',
       versaoAnteriorId: map['versaoAnteriorId'] as String?,
       imutavel: map['imutavel'] as bool? ?? true,
+      universoRegistrado: universoRegistrado,
+      totalAfetados: totalAfetados,
+      aceitosHistorico: aceitosHistorico,
+      pendentesHistorico: pendentesHistorico,
+      criterio: criterio,
+      instanteSnapshot: instanteSnapshot,
+      completo: completo,
     );
   }
 
@@ -42,11 +67,25 @@ class VersaoTermo {
   final String publicadoPorUid;
   final String? versaoAnteriorId;
   final bool imutavel;
+  final bool universoRegistrado;
+  final int totalAfetados;
+  final int aceitosHistorico;
+  final int pendentesHistorico;
+  final String? criterio;
+  final DateTime? instanteSnapshot;
+  final bool completo;
 
   String get rotuloVersao => 'v$numeroVersao';
 
   String get hashResumido =>
       hashSha256.length >= 12 ? '${hashSha256.substring(0, 12)}...' : hashSha256;
+
+  String get descricaoHistoricoAceites {
+    if (!universoRegistrado) {
+      return 'Indisponível — universo histórico não registrado';
+    }
+    return '$aceitosHistorico de $totalAfetados aceitaram ($pendentesHistorico pendentes)';
+  }
 }
 
 /// Representação agregada do termo pai com sua versão vigente e histórico.
@@ -63,10 +102,20 @@ class TermoVigente {
     this.atualizadoEm,
     this.ativo = true,
     this.versoes = const [],
+    this.totalAtivosAtuais = 0,
+    this.ativosComAceiteVigentePendente = 0,
+    this.calculadoEm,
   });
 
   factory TermoVigente.fromMap(Map<String, dynamic> map) {
     final versoesRaw = (map['versoes'] as List<dynamic>?) ?? [];
+    final pendencia = map['pendenciaOperacional'] as Map<dynamic, dynamic>?;
+    final totalAtivos = (pendencia?['totalAtivos'] as num?)?.toInt() ?? 0;
+    final pendentes = (pendencia?['pendentesVigente'] as num?)?.toInt() ?? 0;
+    final calculado = pendencia?['calculadoEm'] != null
+        ? DateTime.tryParse(pendencia!['calculadoEm'] as String)
+        : null;
+
     return TermoVigente(
       id: map['id'] as String? ?? '',
       tipoTermo: map['tipoTermo'] as String? ?? 'ADESAO_VOLUNTARIADO',
@@ -86,6 +135,9 @@ class TermoVigente {
           .whereType<Map>()
           .map((v) => VersaoTermo.fromMap(v.cast<String, dynamic>()))
           .toList(),
+      totalAtivosAtuais: totalAtivos,
+      ativosComAceiteVigentePendente: pendentes,
+      calculadoEm: calculado,
     );
   }
 
@@ -100,6 +152,12 @@ class TermoVigente {
   final DateTime? atualizadoEm;
   final bool ativo;
   final List<VersaoTermo> versoes;
+  final int totalAtivosAtuais;
+  final int ativosComAceiteVigentePendente;
+  final DateTime? calculadoEm;
+
+  int get ativosComAceiteVigenteConcluido =>
+      totalAtivosAtuais - ativosComAceiteVigentePendente;
 
   VersaoTermo? get versaoAtual =>
       versoes.cast<VersaoTermo?>().firstWhere(

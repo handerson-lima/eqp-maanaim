@@ -372,6 +372,68 @@ describe('Story 2.3: Repositório de Aceite de Termo (termos.ts)', () => {
     expect(auditOp.data.action).toBe('ACEITE_TERMO_REGISTRADO');
   });
 
+  it('Story 8.14: permite que voluntário com ficha em estado ATIVA registre novo aceite sem exigir participações em rascunho', async () => {
+    const operacoes: any[] = [];
+    const mockDb: any = {
+      collection: (col: string) => ({
+        doc: (id: string) => ({
+          col,
+          id,
+          collection: (sub: string) => ({
+            doc: (subId: string) => ({ col: sub, id: subId, parentId: id }),
+          }),
+        }),
+      }),
+      runTransaction: async (fn: any) => {
+        const tx = {
+          get: async (ref: any) => {
+            if (ref.col === 'commands') return { exists: false };
+            if (ref.col === 'fichas') return { exists: true, data: () => ({ id: uid, estado: 'ATIVA' }) };
+            if (ref.col === 'termos') {
+              return {
+                exists: true,
+                data: () => ({
+                  ativo: true,
+                  versaoVigenteId: 'versao-v2',
+                  versaoVigenteNumero: 2,
+                }),
+              };
+            }
+            if (ref.col === 'versoes') {
+              return {
+                exists: true,
+                data: () => ({
+                  numeroVersao: 2,
+                  hashSha256: entradaValida.hashSha256,
+                  titulo: 'Termo v2',
+                }),
+              };
+            }
+            return { exists: false };
+          },
+          set: (ref: any, data: any) => operacoes.push({ tipo: 'set', ref, data }),
+          update: (ref: any, data: any) => operacoes.push({ tipo: 'update', ref, data }),
+        };
+        return fn(tx);
+      },
+    };
+
+    const entradaV2 = { ...entradaValida, versaoId: 'versao-v2' };
+    const resultado = await aceitarTermoVigenteRepo(
+      mockDb,
+      { commandId: entradaValida.commandId, uid },
+      entradaV2,
+    );
+
+    expect(resultado.repetido).toBe(false);
+    expect(resultado.versaoId).toBe('versao-v2');
+    expect(resultado.numeroVersao).toBe(2);
+
+    const fichaOp = operacoes.find((o) => o.ref.col === 'fichas');
+    expect(fichaOp).toBeDefined();
+    expect(fichaOp.data.termoAceito.versaoId).toBe('versao-v2');
+  });
+
   it('retorna resultado idempotente para o mesmo commandId com payload idêntico', async () => {
     const mockDb: any = {
       collection: (col: string) => ({
