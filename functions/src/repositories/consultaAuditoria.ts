@@ -3,6 +3,7 @@ import { logger } from 'firebase-functions/v2';
 import {
   AcessoConsultaNegadoError,
   codificarCursorAuditoria,
+  codificarCursorRelatorio,
   mascararCpfSeguro,
   type FiltrosConsultaAuditoria,
   type FiltrosRelatorioOperacional,
@@ -51,12 +52,15 @@ function timestampParaMs(valor: unknown): number {
 }
 
 /**
- * Avalia em tempo de execução os vínculos vigentes e privilégios do ator (AD-9).
+ * Avalia em tempo de execução os vínculos vigentes e privilégios do ator com validação temporal (AD-9, UI-CONTRACTS §1).
  */
 export async function resolverEscopoAtorAuditoria(
   db: Firestore,
   atorUid: string,
+  agoraDate: Date = new Date(),
 ): Promise<EscopoAtorAuditoria> {
+  const agoraMs = agoraDate.getTime();
+
   // 1. Verificar autoridade administrativa global (Coordenador Geral ou Administrador)
   const autoridadeDoc = await db.collection('autoridadesAdministrativas').doc(atorUid).get();
   if (autoridadeDoc.exists) {
@@ -85,7 +89,7 @@ export async function resolverEscopoAtorAuditoria(
     }
   }
 
-  // 2. Verificar se é Pastor Local com vínculo pastoral vigente
+  // 2. Verificar se é Pastor Local com vínculo pastoral vigente e válido temporalmente
   const igrejasSet = new Set<string>();
   const igrejasDirectSnap = await db
     .collection('igrejas')
@@ -106,13 +110,19 @@ export async function resolverEscopoAtorAuditoria(
 
   for (const doc of vinculosPastorSnap.docs) {
     const v = doc.data() ?? {};
-    const igId = String(v.entidadeId ?? '').trim();
-    if (igId) {
-      igrejasSet.add(igId);
+    const inicioMs = v.inicioVigencia ? timestampParaMs(v.inicioVigencia) : 0;
+    const fimMs = v.fimVigencia ? timestampParaMs(v.fimVigencia) : Infinity;
+
+    // Resolução temporal: descarta vínculos futuros e expirados
+    if (inicioMs <= agoraMs && fimMs >= agoraMs) {
+      const igId = String(v.entidadeId ?? '').trim();
+      if (igId) {
+        igrejasSet.add(igId);
+      }
     }
   }
 
-  // 3. Verificar se é Responsável de Equipe com responsabilidade vigente
+  // 3. Verificar se é Responsável de Equipe com responsabilidade vigente e válida temporalmente
   const equipesSet = new Set<string>();
   const equipesDirectSnap = await db
     .collection('equipes')
@@ -132,9 +142,16 @@ export async function resolverEscopoAtorAuditoria(
     .get();
 
   for (const doc of vinculosEquipeSnap.docs) {
-    const eqId = String(doc.data()?.entidadeId ?? '').trim();
-    if (eqId) {
-      equipesSet.add(eqId);
+    const v = doc.data() ?? {};
+    const inicioMs = v.inicioVigencia ? timestampParaMs(v.inicioVigencia) : 0;
+    const fimMs = v.fimVigencia ? timestampParaMs(v.fimVigencia) : Infinity;
+
+    // Resolução temporal: descarta responsabilidades futuras e expiradas
+    if (inicioMs <= agoraMs && fimMs >= agoraMs) {
+      const eqId = String(v.entidadeId ?? '').trim();
+      if (eqId) {
+        equipesSet.add(eqId);
+      }
     }
   }
 
@@ -323,13 +340,28 @@ export async function consultarAuditoriaAutorizadaRepo(
     filtrados = filtrados.filter((e) => e.item.acao.toUpperCase() === filtros.acao);
   }
 
+  if (filtros.atorUid) {
+    filtrados = filtrados.filter((e) => e.item.atorUid === filtros.atorUid);
+  }
+
+  if (filtros.entidadeTipo) {
+    filtrados = filtrados.filter((e) =>
+      e.item.entidades.some((ent) => ent.tipo.toUpperCase() === filtros.entidadeTipo!.toUpperCase()),
+    );
+  }
+
+  if (filtros.entidadeId) {
+    filtrados = filtrados.filter((e) =>
+      e.item.entidades.some((ent) => ent.id === filtros.entidadeId),
+    );
+  }
+
   if (filtros.voluntarioId) {
+    // Voluntário-alvo não é confundido com o ator que disparou o comando (UI-CONTRACTS §3)
     filtrados = filtrados.filter((e) => {
-      const temEntidade = e.item.entidades.some(
+      return e.item.entidades.some(
         (ent) => ent.tipo === 'VOLUNTARIO' && ent.id === filtros.voluntarioId,
       );
-      const bateAtor = e.item.atorUid === filtros.voluntarioId;
-      return temEntidade || bateAtor;
     });
   }
 
@@ -390,6 +422,8 @@ export async function consultarRelatorioOperacionalRepo(
   atorUid: string,
   filtros: FiltrosRelatorioOperacional = {},
   correlationId?: string,
+  limite: number = 20,
+  cursorDecodificado: { fichaId: string } | null = null,
 ): Promise<ResultadoRelatorioOperacional> {
   const escopo = await resolverEscopoAtorAuditoria(db, atorUid);
 
@@ -408,6 +442,9 @@ export async function consultarRelatorioOperacionalRepo(
           distribuicaoPorEstado: {},
         },
         voluntarios: [],
+        proximoCursor: null,
+        temMais: false,
+        totalRetornado: 0,
         geradoEm: new Date().toISOString(),
         escopoAtor: 'PASTOR_LOCAL',
       };
@@ -428,6 +465,9 @@ export async function consultarRelatorioOperacionalRepo(
           distribuicaoPorEstado: {},
         },
         voluntarios: [],
+        proximoCursor: null,
+        temMais: false,
+        totalRetornado: 0,
         geradoEm: new Date().toISOString(),
         escopoAtor: 'RESPONSAVEL_EQUIPE',
       };
@@ -473,6 +513,26 @@ export async function consultarRelatorioOperacionalRepo(
     mapasNomesEquipes.set(doc.id, String(doc.data()?.nome ?? doc.id));
   }
 
+  // Resolver filtro por Pastor se especificado
+  let igrejasDoPastor: Set<string> | null = null;
+  if (filtros.pastorId) {
+    igrejasDoPastor = new Set<string>();
+    for (const doc of snapIgrejas.docs) {
+      if (doc.data()?.pastorLocalVigentePessoaId === filtros.pastorId) {
+        igrejasDoPastor.add(doc.id);
+      }
+    }
+    const vinculosP = await db
+      .collection('vinculosPastorIgreja')
+      .where('pessoaId', '==', filtros.pastorId)
+      .where('estado', '==', 'VIGENTE')
+      .get();
+    for (const doc of vinculosP.docs) {
+      const igId = String(doc.data()?.entidadeId ?? '').trim();
+      if (igId) igrejasDoPastor.add(igId);
+    }
+  }
+
   // Carregar fichas
   const snapFichas = await db.collection('fichas').get();
   const fichasPermitidas: Array<{
@@ -489,7 +549,16 @@ export async function consultarRelatorioOperacionalRepo(
     }
 
     if (filtros.igrejaId && igId !== filtros.igrejaId) continue;
+    if (igrejasDoPastor && !igrejasDoPastor.has(igId)) continue;
     if (filtros.estado && String(d.estado ?? '').toUpperCase() !== filtros.estado.toUpperCase()) continue;
+    if (filtros.voluntarioId && doc.id !== filtros.voluntarioId && String(d.voluntarioUid ?? '') !== filtros.voluntarioId) continue;
+
+    if (filtros.periodoInicio || filtros.periodoFim) {
+      const tsCriacao = d.criadoEm ?? d.enviadoEm ?? d.timestampOriginal ?? d.atualizadoEm;
+      const tsMs = timestampParaMs(tsCriacao);
+      if (filtros.periodoInicio && tsMs < Date.parse(filtros.periodoInicio)) continue;
+      if (filtros.periodoFim && tsMs > Date.parse(filtros.periodoFim)) continue;
+    }
 
     fichasPermitidas.push({ id: doc.id, data: d });
   }
@@ -502,12 +571,14 @@ export async function consultarRelatorioOperacionalRepo(
     const part = doc.data() ?? {};
     const fichaId = String(part.fichaId ?? doc.id.split('_')[0] ?? '');
     const eqId = String(part.equipeId ?? '');
+    const ano = typeof part.anoVigencia === 'number' ? part.anoVigencia : undefined;
 
     if (escopo.papel === 'RESPONSAVEL_EQUIPE') {
       if (!escopo.equipesIds.includes(eqId)) continue;
     }
 
     if (filtros.equipeId && eqId !== filtros.equipeId) continue;
+    if (filtros.ano !== undefined && ano !== filtros.ano) continue;
 
     if (!participacoesPorFicha.has(fichaId)) {
       participacoesPorFicha.set(fichaId, []);
@@ -515,9 +586,9 @@ export async function consultarRelatorioOperacionalRepo(
     participacoesPorFicha.get(fichaId)!.push({ ...part, id: doc.id });
   }
 
-  // Para Responsável de Equipe, manter apenas fichas que possuem participações em suas equipes
+  // Para Responsável de Equipe ou filtros por equipe/ano, manter apenas fichas que possuem participações correspondentes
   let fichasFiltradas = fichasPermitidas;
-  if (escopo.papel === 'RESPONSAVEL_EQUIPE' || filtros.equipeId) {
+  if (escopo.papel === 'RESPONSAVEL_EQUIPE' || filtros.equipeId || filtros.ano !== undefined) {
     fichasFiltradas = fichasPermitidas.filter((f) => participacoesPorFicha.has(f.id));
   }
 
@@ -578,6 +649,14 @@ export async function consultarRelatorioOperacionalRepo(
     });
   }
 
+  // Ordenação estável dos voluntários por nomeCompleto e fichaId
+  listaVoluntarios.sort((a, b) => {
+    const c = a.nomeCompleto.localeCompare(b.nomeCompleto);
+    if (c !== 0) return c;
+    return a.fichaId.localeCompare(b.fichaId);
+  });
+
+  // Métricas refletem o conjunto filtrado completo
   const metricas: MetricasRelatorioOperacional = {
     totalVoluntarios: listaVoluntarios.length,
     totalFichasAtivas: listaVoluntarios.filter((v) => v.estadoFicha === 'ATIVA').length,
@@ -589,9 +668,28 @@ export async function consultarRelatorioOperacionalRepo(
     distribuicaoPorEstado: distEstado,
   };
 
+  // Paginação da lista de voluntários
+  let itensAposCursor = listaVoluntarios;
+  if (cursorDecodificado) {
+    const idx = listaVoluntarios.findIndex((v) => v.fichaId === cursorDecodificado.fichaId);
+    if (idx !== -1) {
+      itensAposCursor = listaVoluntarios.slice(idx + 1);
+    }
+  }
+
+  const paginaVoluntarios = itensAposCursor.slice(0, limite);
+  const temMais = itensAposCursor.length > limite;
+  let proximoCursor: string | null = null;
+  if (temMais && paginaVoluntarios.length > 0) {
+    proximoCursor = codificarCursorRelatorio(paginaVoluntarios[paginaVoluntarios.length - 1].fichaId);
+  }
+
   return {
     metricas,
-    voluntarios: listaVoluntarios,
+    voluntarios: paginaVoluntarios,
+    proximoCursor,
+    temMais,
+    totalRetornado: paginaVoluntarios.length,
     geradoEm: new Date().toISOString(),
     escopoAtor: escopo.papel,
   };

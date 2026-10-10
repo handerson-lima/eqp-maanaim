@@ -156,3 +156,10 @@ action_items:
     owner: "dev"
     status: done
     ref: "/Users/usuario/eqp_maanaim/_bmad-output/implementation-artifacts/epic-6-retro-2026-10-07.md"
+  - id: "story-8-13-filtros-paginacao-auditoria-relatorios"
+    epic: 8
+    action: "Completar filtros e paginacao de auditoria e relatorios com resolucao temporal de vigencia, separacao de metricas e detalhe probatorio sanitizado"
+    owner: "dev"
+    status: done
+    ref: "/Users/usuario/eqp_maanaim/_bmad-output/planning-artifacts/correcao-ui/epic-8-correcao-ui.md"
+

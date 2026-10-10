@@ -498,4 +498,187 @@ describe('Story 6.2: Relatórios Operacionais Consolidados', () => {
     expect(relatorio.voluntarios.length).toBe(1);
     expect(relatorio.voluntarios[0].nomeCompleto).toBe('Membro Central');
   });
+
+  describe('Story 8.13: Filtros Avançados, Resolução Temporal e Paginação Estável', () => {
+    it('valida resolução temporal: ignora vínculo futuro ou expirado e aceita vínculo vigente no relógio do servidor', async () => {
+      const agora = new Date('2026-10-10T12:00:00.000Z');
+      const db = criarDbMock({
+        autoridadesAdministrativas: [],
+        igrejas: [
+          { id: 'ig_futura', data: { nome: 'Futura' } },
+          { id: 'ig_expirada', data: { nome: 'Expirada' } },
+          { id: 'ig_vigente', data: { nome: 'Vigente' } },
+        ],
+        vinculosPastorIgreja: [
+          {
+            id: 'v_futuro',
+            data: {
+              pessoaId: 'pastor_teste',
+              entidadeId: 'ig_futura',
+              estado: 'VIGENTE',
+              inicioVigencia: '2026-11-01T00:00:00.000Z', // Futuro
+            },
+          },
+          {
+            id: 'v_expirado',
+            data: {
+              pessoaId: 'pastor_teste',
+              entidadeId: 'ig_expirada',
+              estado: 'VIGENTE',
+              inicioVigencia: '2025-01-01T00:00:00.000Z',
+              fimVigencia: '2026-09-01T00:00:00.000Z', // Passado/Expirado
+            },
+          },
+          {
+            id: 'v_vigente',
+            data: {
+              pessoaId: 'pastor_teste',
+              entidadeId: 'ig_vigente',
+              estado: 'VIGENTE',
+              inicioVigencia: '2026-01-01T00:00:00.000Z',
+              fimVigencia: '2026-12-31T23:59:59.000Z',
+            },
+          },
+        ],
+        equipes: [],
+        vinculosPastorEquipe: [],
+      });
+
+      const escopo = await resolverEscopoAtorAuditoria(db, 'pastor_teste', agora);
+      expect(escopo.papel).toBe('PASTOR_LOCAL');
+      expect(escopo.igrejasIds).toEqual(['ig_vigente']);
+      expect(escopo.igrejasIds).not.toContain('ig_futura');
+      expect(escopo.igrejasIds).not.toContain('ig_expirada');
+    });
+
+    it('auditoria: filtra estritamente por atorUid, entidade e não confunde voluntário-alvo com ator', async () => {
+      const db = criarDbMock({
+        autoridadesAdministrativas: [
+          { id: 'admin_1', data: { papel: 'ADMINISTRADOR', ativa: true } },
+        ],
+        auditoria: [
+          {
+            id: 'cmd_1',
+            data: {
+              commandId: 'cmd_1',
+              atorUid: 'pastor_a',
+              acao: 'APROVAR_FICHA',
+              entidades: [{ tipo: 'VOLUNTARIO', id: 'vol_joao' }, { tipo: 'IGREJA', id: 'ig_1' }],
+              timestampOriginal: '2026-10-01T10:00:00.000Z',
+            },
+          },
+          {
+            id: 'cmd_2',
+            data: {
+              commandId: 'cmd_2',
+              atorUid: 'pastor_b',
+              acao: 'RENOVAR_FICHA',
+              entidades: [{ tipo: 'VOLUNTARIO', id: 'vol_maria' }, { tipo: 'IGREJA', id: 'ig_2' }],
+              timestampOriginal: '2026-10-02T10:00:00.000Z',
+            },
+          },
+          {
+            id: 'cmd_3',
+            data: {
+              commandId: 'cmd_3',
+              atorUid: 'vol_joao', // João agindo como ator em sua própria ficha
+              acao: 'SUBMETER_FICHA',
+              entidades: [{ tipo: 'VOLUNTARIO', id: 'vol_joao' }, { tipo: 'IGREJA', id: 'ig_1' }],
+              timestampOriginal: '2026-10-03T10:00:00.000Z',
+            },
+          },
+        ],
+      });
+
+      // 1. Filtro por atorUid pastor_a
+      const resAtor = await consultarAuditoriaAutorizadaRepo(
+        db,
+        'admin_1',
+        { atorUid: 'pastor_a' },
+        20,
+        null,
+      );
+      expect(resAtor.itens.length).toBe(1);
+      expect(resAtor.itens[0].commandId).toBe('cmd_1');
+
+      // 2. Filtro por voluntarioId vol_joao (deve trazer cmd_1 e cmd_3 porque João é entidade VOLUNTARIO, mas cmd_2 não)
+      const resVol = await consultarAuditoriaAutorizadaRepo(
+        db,
+        'admin_1',
+        { voluntarioId: 'vol_joao' },
+        20,
+        null,
+      );
+      expect(resVol.itens.length).toBe(2);
+      expect(resVol.itens.map((i) => i.commandId)).toEqual(['cmd_3', 'cmd_1']);
+
+      // 3. Filtro por entidadeTipo IGREJA e entidadeId ig_2
+      const resEnt = await consultarAuditoriaAutorizadaRepo(
+        db,
+        'admin_1',
+        { entidadeTipo: 'IGREJA', entidadeId: 'ig_2' },
+        20,
+        null,
+      );
+      expect(resEnt.itens.length).toBe(1);
+      expect(resEnt.itens[0].commandId).toBe('cmd_2');
+    });
+
+    it('relatório: aplica filtro de ano, paginação estável com cursor e mantém métricas do universo completo', async () => {
+      const db = criarDbMock({
+        autoridadesAdministrativas: [
+          { id: 'admin_1', data: { papel: 'ADMINISTRADOR', ativa: true } },
+        ],
+        igrejas: [
+          { id: 'ig_1', data: { nome: 'Igreja Central' } },
+        ],
+        equipes: [
+          { id: 'eq_louvor', data: { nome: 'Louvor' } },
+        ],
+        fichas: [
+          { id: 'f_1', data: { nomeCompleto: 'Ana Silva', igrejaId: 'ig_1', estado: 'ATIVA' } },
+          { id: 'f_2', data: { nomeCompleto: 'Bernardo Costa', igrejaId: 'ig_1', estado: 'ATIVA' } },
+          { id: 'f_3', data: { nomeCompleto: 'Carlos Drumond', igrejaId: 'ig_1', estado: 'ATIVA' } },
+        ],
+        participacoes: [
+          { id: 'p_1', data: { fichaId: 'f_1', equipeId: 'eq_louvor', estado: 'ATIVA', anoVigencia: 2026 } },
+          { id: 'p_2', data: { fichaId: 'f_2', equipeId: 'eq_louvor', estado: 'ATIVA', anoVigencia: 2026 } },
+          { id: 'p_3', data: { fichaId: 'f_3', equipeId: 'eq_louvor', estado: 'ATIVA', anoVigencia: 2025 } }, // Ano 2025
+        ],
+        auditoria: [],
+      });
+
+      // Consulta filtrando por ano 2026 com limite 1 para testar paginação e completude das métricas
+      const pag1 = await consultarRelatorioOperacionalRepo(
+        db,
+        'admin_1',
+        { ano: 2026 },
+        undefined,
+        1, // limite 1
+        null,
+      );
+
+      // Métricas calculadas sobre TODOS os voluntários de 2026 (f_1 e f_2 = 2)
+      expect(pag1.metricas.totalVoluntarios).toBe(2);
+      expect(pag1.metricas.totalFichasAtivas).toBe(2);
+      expect(pag1.voluntarios.length).toBe(1);
+      expect(pag1.voluntarios[0].nomeCompleto).toBe('Ana Silva');
+      expect(pag1.temMais).toBe(true);
+      expect(pag1.proximoCursor).toBeTruthy();
+
+      // Página 2 com o cursor da página 1
+      const pag2 = await consultarRelatorioOperacionalRepo(
+        db,
+        'admin_1',
+        { ano: 2026 },
+        undefined,
+        1,
+        { fichaId: 'f_1' },
+      );
+
+      expect(pag2.voluntarios.length).toBe(1);
+      expect(pag2.voluntarios[0].nomeCompleto).toBe('Bernardo Costa');
+      expect(pag2.temMais).toBe(false);
+    });
+  });
 });

@@ -2,7 +2,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import {
   AcessoConsultaNegadoError,
-  type FiltrosRelatorioOperacional,
+  ConsultaAuditoriaInvalidaError,
+  validarFiltrosRelatorioOperacional,
 } from '../domain/consultaAuditoria.js';
 import { consultarRelatorioOperacionalRepo } from '../repositories/consultaAuditoria.js';
 
@@ -22,41 +23,20 @@ export const consultarRelatorioOperacional = onCall(
       throw new HttpsError('unauthenticated', 'É necessário entrar na conta.');
     }
 
-    const payload = (request.data ?? {}) as Record<string, unknown>;
-    const filtros: FiltrosRelatorioOperacional = {};
-
-    if (payload.igrejaId !== undefined) {
-      if (typeof payload.igrejaId !== 'string') {
-        throw new HttpsError('invalid-argument', 'igrejaId deve ser string.');
+    let validacao;
+    try {
+      validacao = validarFiltrosRelatorioOperacional(request.data);
+    } catch (err) {
+      if (err instanceof ConsultaAuditoriaInvalidaError) {
+        throw new HttpsError('invalid-argument', err.message);
       }
-      filtros.igrejaId = payload.igrejaId.trim();
+      throw new HttpsError('invalid-argument', 'Parâmetros de relatório inválidos.');
     }
 
-    if (payload.equipeId !== undefined) {
-      if (typeof payload.equipeId !== 'string') {
-        throw new HttpsError('invalid-argument', 'equipeId deve ser string.');
-      }
-      filtros.equipeId = payload.equipeId.trim();
-    }
-
-    if (payload.estado !== undefined) {
-      if (typeof payload.estado !== 'string') {
-        throw new HttpsError('invalid-argument', 'estado deve ser string.');
-      }
-      filtros.estado = payload.estado.trim().toUpperCase();
-    }
-
-    if (payload.ano !== undefined) {
-      const parsedAno = Number(payload.ano);
-      if (isNaN(parsedAno) || !Number.isInteger(parsedAno) || parsedAno < 2000 || parsedAno > 2100) {
-        throw new HttpsError('invalid-argument', 'ano deve ser número inteiro válido.');
-      }
-      filtros.ano = parsedAno;
-    }
-
+    const { filtros, limite, cursorDecodificado } = validacao;
     const db = getFirestore();
-    const correlationId = typeof payload.correlationId === 'string'
-      ? payload.correlationId
+    const correlationId = typeof request.data?.correlationId === 'string'
+      ? request.data.correlationId
       : undefined;
 
     try {
@@ -65,6 +45,8 @@ export const consultarRelatorioOperacional = onCall(
         request.auth.uid,
         filtros,
         correlationId,
+        limite,
+        cursorDecodificado,
       );
 
       return resultado;

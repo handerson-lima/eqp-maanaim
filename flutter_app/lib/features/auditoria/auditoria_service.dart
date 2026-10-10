@@ -95,6 +95,9 @@ class FiltrosAuditoria {
     this.igrejaId,
     this.equipeId,
     this.acao,
+    this.atorUid,
+    this.entidadeTipo,
+    this.entidadeId,
     this.voluntarioId,
     this.periodoInicio,
     this.periodoFim,
@@ -105,6 +108,9 @@ class FiltrosAuditoria {
   final String? igrejaId;
   final String? equipeId;
   final String? acao;
+  final String? atorUid;
+  final String? entidadeTipo;
+  final String? entidadeId;
   final String? voluntarioId;
   final String? periodoInicio;
   final String? periodoFim;
@@ -116,6 +122,9 @@ class FiltrosAuditoria {
     if (igrejaId != null && igrejaId!.isNotEmpty) map['igrejaId'] = igrejaId;
     if (equipeId != null && equipeId!.isNotEmpty) map['equipeId'] = equipeId;
     if (acao != null && acao!.isNotEmpty) map['acao'] = acao;
+    if (atorUid != null && atorUid!.isNotEmpty) map['atorUid'] = atorUid;
+    if (entidadeTipo != null && entidadeTipo!.isNotEmpty) map['entidadeTipo'] = entidadeTipo;
+    if (entidadeId != null && entidadeId!.isNotEmpty) map['entidadeId'] = entidadeId;
     if (voluntarioId != null && voluntarioId!.isNotEmpty) map['voluntarioId'] = voluntarioId;
     if (periodoInicio != null && periodoInicio!.isNotEmpty) map['periodoInicio'] = periodoInicio;
     if (periodoFim != null && periodoFim!.isNotEmpty) map['periodoFim'] = periodoFim;
@@ -211,12 +220,18 @@ class ResultadoRelatorioOperacional {
     required this.voluntarios,
     required this.geradoEm,
     required this.escopoAtor,
+    this.proximoCursor,
+    this.temMais = false,
+    this.totalRetornado,
   });
 
   final MetricasRelatorio metricas;
   final List<VoluntarioRelatorioItem> voluntarios;
   final String geradoEm;
   final String escopoAtor;
+  final String? proximoCursor;
+  final bool temMais;
+  final int? totalRetornado;
 
   factory ResultadoRelatorioOperacional.fromJson(Map<String, dynamic> json) {
     final rawVol = json['voluntarios'];
@@ -236,6 +251,9 @@ class ResultadoRelatorioOperacional {
       voluntarios: volList,
       geradoEm: json['geradoEm']?.toString() ?? '',
       escopoAtor: json['escopoAtor']?.toString() ?? 'GLOBAL',
+      proximoCursor: json['proximoCursor']?.toString(),
+      temMais: json['temMais'] == true,
+      totalRetornado: (json['totalRetornado'] as num?)?.toInt() ?? volList.length,
     );
   }
 }
@@ -246,12 +264,24 @@ class FiltrosRelatorio {
     this.equipeId,
     this.estado,
     this.ano,
+    this.periodoInicio,
+    this.periodoFim,
+    this.pastorId,
+    this.voluntarioId,
+    this.limite,
+    this.cursor,
   });
 
   final String? igrejaId;
   final String? equipeId;
   final String? estado;
   final int? ano;
+  final String? periodoInicio;
+  final String? periodoFim;
+  final String? pastorId;
+  final String? voluntarioId;
+  final int? limite;
+  final String? cursor;
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{};
@@ -259,6 +289,12 @@ class FiltrosRelatorio {
     if (equipeId != null && equipeId!.isNotEmpty) map['equipeId'] = equipeId;
     if (estado != null && estado!.isNotEmpty) map['estado'] = estado;
     if (ano != null) map['ano'] = ano;
+    if (periodoInicio != null && periodoInicio!.isNotEmpty) map['periodoInicio'] = periodoInicio;
+    if (periodoFim != null && periodoFim!.isNotEmpty) map['periodoFim'] = periodoFim;
+    if (pastorId != null && pastorId!.isNotEmpty) map['pastorId'] = pastorId;
+    if (voluntarioId != null && voluntarioId!.isNotEmpty) map['voluntarioId'] = voluntarioId;
+    if (limite != null) map['limite'] = limite;
+    if (cursor != null && cursor!.isNotEmpty) map['cursor'] = cursor;
     return map;
   }
 }
@@ -347,6 +383,18 @@ class MemoriaAuditoriaGateway implements AuditoriaRelatoriosGateway {
     if (filtros.acao != null && filtros.acao!.isNotEmpty) {
       itens = itens.where((e) => e.acao.toUpperCase() == filtros.acao!.toUpperCase()).toList();
     }
+    if (filtros.atorUid != null && filtros.atorUid!.isNotEmpty) {
+      itens = itens.where((e) => e.atorUid == filtros.atorUid).toList();
+    }
+    if (filtros.entidadeTipo != null && filtros.entidadeTipo!.isNotEmpty) {
+      itens = itens.where((e) => e.entidades.any((ent) => ent['tipo']?.toUpperCase() == filtros.entidadeTipo!.toUpperCase())).toList();
+    }
+    if (filtros.entidadeId != null && filtros.entidadeId!.isNotEmpty) {
+      itens = itens.where((e) => e.entidades.any((ent) => ent['id'] == filtros.entidadeId)).toList();
+    }
+    if (filtros.voluntarioId != null && filtros.voluntarioId!.isNotEmpty) {
+      itens = itens.where((e) => e.entidades.any((ent) => ent['tipo'] == 'VOLUNTARIO' && ent['id'] == filtros.voluntarioId)).toList();
+    }
     if (filtros.igrejaId != null && filtros.igrejaId!.isNotEmpty) {
       itens = itens.where((e) => e.entidades.any((ent) => ent['id'] == filtros.igrejaId)).toList();
     }
@@ -369,6 +417,42 @@ class MemoriaAuditoriaGateway implements AuditoriaRelatoriosGateway {
   @override
   Future<ResultadoRelatorioOperacional> consultarRelatorio(FiltrosRelatorio filtros) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
-    return _relatorio;
+    var vols = List<VoluntarioRelatorioItem>.from(_relatorio.voluntarios);
+
+    if (filtros.igrejaId != null && filtros.igrejaId!.isNotEmpty) {
+      vols = vols.where((v) => v.igrejaId == filtros.igrejaId).toList();
+    }
+    if (filtros.equipeId != null && filtros.equipeId!.isNotEmpty) {
+      vols = vols.where((v) => v.equipes.any((eq) => eq['equipeId'] == filtros.equipeId || eq['equipeNome'] == filtros.equipeId)).toList();
+    }
+    if (filtros.estado != null && filtros.estado!.isNotEmpty) {
+      vols = vols.where((v) => v.estadoFicha.toUpperCase() == filtros.estado!.toUpperCase()).toList();
+    }
+    if (filtros.voluntarioId != null && filtros.voluntarioId!.isNotEmpty) {
+      vols = vols.where((v) => v.fichaId == filtros.voluntarioId).toList();
+    }
+
+    final limite = filtros.limite ?? 20;
+    final slice = vols.take(limite).toList();
+    final temMais = _relatorio.temMais || vols.length > limite;
+
+    return ResultadoRelatorioOperacional(
+      metricas: MetricasRelatorio(
+        totalVoluntarios: vols.length,
+        totalFichasAtivas: vols.where((v) => v.estadoFicha == 'ATIVA').length,
+        totalParticipacoesAtivas: _relatorio.metricas.totalParticipacoesAtivas,
+        totalAguardandoAprovacao: vols.where((v) => v.estadoFicha.startsWith('AGUARDANDO')).length,
+        totalCanceladasOuInativas: vols.where((v) => ['CANCELADA', 'INATIVA', 'EXPIRADA'].contains(v.estadoFicha)).length,
+        distribuicaoPorEquipe: _relatorio.metricas.distribuicaoPorEquipe,
+        distribuicaoPorIgreja: _relatorio.metricas.distribuicaoPorIgreja,
+        distribuicaoPorEstado: _relatorio.metricas.distribuicaoPorEstado,
+      ),
+      voluntarios: slice,
+      geradoEm: _relatorio.geradoEm,
+      escopoAtor: _relatorio.escopoAtor,
+      proximoCursor: temMais ? (_relatorio.proximoCursor ?? 'cursor_rel_simulado') : null,
+      temMais: temMais,
+      totalRetornado: slice.length,
+    );
   }
 }

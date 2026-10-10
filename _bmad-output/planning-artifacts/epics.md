@@ -1024,7 +1024,7 @@ Adotado conforme [épico corretivo completo](correcao-ui/epic-8-correcao-ui.md),
 | 8.10 | Organizar Minha Ficha e documentos privados | backlog |
 | 8.11 | Completar administração de igrejas e equipes | backlog |
 | 8.12 | Vincular múltiplas igrejas a partir do pastor | backlog |
-| 8.13 | Completar filtros e paginação de auditoria/relatórios | backlog |
+| 8.13 | Completar filtros e paginação de auditoria/relatórios | done |
 | 8.14 | Exibir versões e aceites pendentes dos termos | backlog |
 | 8.15 | Alinhar superfícies adicionais e linguagem | backlog |
 | 8.16 | Homologar todas as telas e impedir regressões | backlog |

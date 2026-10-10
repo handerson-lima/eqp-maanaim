@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../ui/identidade.dart';
 import 'auditoria_service.dart';
 
-/// Superfície de Auditoria e Relatórios autorizados com mobile-first e acessibilidade WCAG 2.2 AA (AD-8, AD-9, AD-12).
+/// Superfície de Auditoria e Relatórios autorizados com mobile-first e acessibilidade WCAG 2.2 AA (AD-8, AD-9, AD-12, UI-CONTRACTS §3).
 class AuditoriaRelatoriosScreen extends StatefulWidget {
   const AuditoriaRelatoriosScreen({
     super.key,
@@ -25,15 +25,35 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
   bool _carregandoAuditoria = false;
   String? _erroAuditoria;
   List<ItemAuditoria> _itensAuditoria = [];
-  String? _proximoCursor;
+  String? _proximoCursorAuditoria;
   bool _temMaisAuditoria = false;
-  String _filtroAcao = '';
+
+  // Filtros de Auditoria
   final TextEditingController _acaoController = TextEditingController();
+  final TextEditingController _atorController = TextEditingController();
+  final TextEditingController _entidadeTipoController = TextEditingController();
+  final TextEditingController _entidadeIdController = TextEditingController();
+  final TextEditingController _voluntarioController = TextEditingController();
+  final TextEditingController _periodoInicioController = TextEditingController();
+  final TextEditingController _periodoFimController = TextEditingController();
+  bool _mostrarFiltrosAvancadosAuditoria = false;
 
   // Estado de Relatório
   bool _carregandoRelatorio = false;
   String? _erroRelatorio;
   ResultadoRelatorioOperacional? _relatorio;
+  List<VoluntarioRelatorioItem> _voluntariosRelatorio = [];
+  String? _proximoCursorRelatorio;
+  bool _temMaisRelatorio = false;
+
+  // Filtros de Relatório
+  final TextEditingController _relIgrejaController = TextEditingController();
+  final TextEditingController _relEquipeController = TextEditingController();
+  final TextEditingController _relEstadoController = TextEditingController();
+  final TextEditingController _relAnoController = TextEditingController();
+  final TextEditingController _relPastorController = TextEditingController();
+  final TextEditingController _relVoluntarioController = TextEditingController();
+  bool _mostrarFiltrosRelatorio = false;
 
   @override
   void initState() {
@@ -45,23 +65,70 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
   @override
   void dispose() {
     _acaoController.dispose();
+    _atorController.dispose();
+    _entidadeTipoController.dispose();
+    _entidadeIdController.dispose();
+    _voluntarioController.dispose();
+    _periodoInicioController.dispose();
+    _periodoFimController.dispose();
+
+    _relIgrejaController.dispose();
+    _relEquipeController.dispose();
+    _relEstadoController.dispose();
+    _relAnoController.dispose();
+    _relPastorController.dispose();
+    _relVoluntarioController.dispose();
     super.dispose();
   }
+
+  bool get _temFiltrosAuditoriaAtivos =>
+      _acaoController.text.trim().isNotEmpty ||
+      _atorController.text.trim().isNotEmpty ||
+      _entidadeTipoController.text.trim().isNotEmpty ||
+      _entidadeIdController.text.trim().isNotEmpty ||
+      _voluntarioController.text.trim().isNotEmpty ||
+      _periodoInicioController.text.trim().isNotEmpty ||
+      _periodoFimController.text.trim().isNotEmpty;
+
+  bool get _temFiltrosRelatorioAtivos =>
+      _relIgrejaController.text.trim().isNotEmpty ||
+      _relEquipeController.text.trim().isNotEmpty ||
+      _relEstadoController.text.trim().isNotEmpty ||
+      _relAnoController.text.trim().isNotEmpty ||
+      _relPastorController.text.trim().isNotEmpty ||
+      _relVoluntarioController.text.trim().isNotEmpty;
 
   Future<void> _carregarAuditoria({bool carregarMais = false}) async {
     setState(() {
       _carregandoAuditoria = true;
       if (!carregarMais) {
         _erroAuditoria = null;
+        _proximoCursorAuditoria = null;
       }
     });
 
     try {
       final res = await widget.gateway.consultarAuditoria(
         FiltrosAuditoria(
-          acao: _filtroAcao.isNotEmpty ? _filtroAcao : null,
+          acao: _acaoController.text.trim().isNotEmpty ? _acaoController.text.trim() : null,
+          atorUid: _atorController.text.trim().isNotEmpty ? _atorController.text.trim() : null,
+          entidadeTipo: _entidadeTipoController.text.trim().isNotEmpty
+              ? _entidadeTipoController.text.trim()
+              : null,
+          entidadeId: _entidadeIdController.text.trim().isNotEmpty
+              ? _entidadeIdController.text.trim()
+              : null,
+          voluntarioId: _voluntarioController.text.trim().isNotEmpty
+              ? _voluntarioController.text.trim()
+              : null,
+          periodoInicio: _periodoInicioController.text.trim().isNotEmpty
+              ? _periodoInicioController.text.trim()
+              : null,
+          periodoFim: _periodoFimController.text.trim().isNotEmpty
+              ? _periodoFimController.text.trim()
+              : null,
           limite: 20,
-          cursor: carregarMais ? _proximoCursor : null,
+          cursor: carregarMais ? _proximoCursorAuditoria : null,
         ),
       );
 
@@ -72,7 +139,7 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
         } else {
           _itensAuditoria = res.itens;
         }
-        _proximoCursor = res.proximoCursor;
+        _proximoCursorAuditoria = res.proximoCursor;
         _temMaisAuditoria = res.temMais;
         _carregandoAuditoria = false;
       });
@@ -85,17 +152,61 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
     }
   }
 
-  Future<void> _carregarRelatorio() async {
+  void _limparFiltrosAuditoria() {
+    _acaoController.clear();
+    _atorController.clear();
+    _entidadeTipoController.clear();
+    _entidadeIdController.clear();
+    _voluntarioController.clear();
+    _periodoInicioController.clear();
+    _periodoFimController.clear();
+    _carregarAuditoria();
+  }
+
+  Future<void> _carregarRelatorio({bool carregarMais = false}) async {
     setState(() {
       _carregandoRelatorio = true;
-      _erroRelatorio = null;
+      if (!carregarMais) {
+        _erroRelatorio = null;
+        _proximoCursorRelatorio = null;
+      }
     });
 
     try {
-      final res = await widget.gateway.consultarRelatorio(const FiltrosRelatorio());
+      final parsedAno = int.tryParse(_relAnoController.text.trim());
+      final res = await widget.gateway.consultarRelatorio(
+        FiltrosRelatorio(
+          igrejaId: _relIgrejaController.text.trim().isNotEmpty
+              ? _relIgrejaController.text.trim()
+              : null,
+          equipeId: _relEquipeController.text.trim().isNotEmpty
+              ? _relEquipeController.text.trim()
+              : null,
+          estado: _relEstadoController.text.trim().isNotEmpty
+              ? _relEstadoController.text.trim()
+              : null,
+          ano: parsedAno,
+          pastorId: _relPastorController.text.trim().isNotEmpty
+              ? _relPastorController.text.trim()
+              : null,
+          voluntarioId: _relVoluntarioController.text.trim().isNotEmpty
+              ? _relVoluntarioController.text.trim()
+              : null,
+          limite: 20,
+          cursor: carregarMais ? _proximoCursorRelatorio : null,
+        ),
+      );
+
       if (!mounted) return;
       setState(() {
         _relatorio = res;
+        if (carregarMais) {
+          _voluntariosRelatorio.addAll(res.voluntarios);
+        } else {
+          _voluntariosRelatorio = res.voluntarios;
+        }
+        _proximoCursorRelatorio = res.proximoCursor;
+        _temMaisRelatorio = res.temMais;
         _carregandoRelatorio = false;
       });
     } catch (err) {
@@ -105,6 +216,118 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
         _carregandoRelatorio = false;
       });
     }
+  }
+
+  void _limparFiltrosRelatorio() {
+    _relIgrejaController.clear();
+    _relEquipeController.clear();
+    _relEstadoController.clear();
+    _relAnoController.clear();
+    _relPastorController.clear();
+    _relVoluntarioController.clear();
+    _carregarRelatorio();
+  }
+
+  void _mostrarDetalhesAuditoria(ItemAuditoria item) {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        final dataFormatada = item.timestamp.length > 19
+            ? item.timestamp.substring(0, 19).replaceAll('T', ' ')
+            : item.timestamp;
+
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.shield_outlined, color: AppColors.navy900),
+              SizedBox(width: AppSpacing.s8),
+              Expanded(
+                child: Text('Detalhe Probatório de Auditoria', style: AppTypography.h3),
+              ),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600, maxHeight: 500),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Wrap(
+                    spacing: AppSpacing.s8,
+                    runSpacing: AppSpacing.s4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      StatusChip(status: item.acao),
+                      Text('Data/Hora: $dataFormatada (UTC)', style: AppTypography.caption),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.s12),
+                  Text('Comando ID: ${item.commandId}', style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+                  Text('Correlation ID: ${item.correlationId}', style: AppTypography.caption),
+                  Text('Ator UID: ${item.atorUid}', style: AppTypography.body),
+                  const SizedBox(height: AppSpacing.s12),
+                  const Text('Entidades Referenciadas:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(height: AppSpacing.s4),
+                  if (item.entidades.isEmpty)
+                    const Text('Nenhuma entidade declarada.', style: AppTypography.caption)
+                  else
+                    Wrap(
+                      spacing: AppSpacing.s4,
+                      runSpacing: AppSpacing.s4,
+                      children: item.entidades.map((e) {
+                        return Chip(
+                          label: Text('${e['tipo']}: ${e['id']}', style: const TextStyle(fontSize: 11)),
+                          backgroundColor: const Color(0xFFF0F4F8),
+                        );
+                      }).toList(),
+                    ),
+                  if (item.antes != null) ...[
+                    const SizedBox(height: AppSpacing.s12),
+                    const Text('Estado Anterior (Sanitizado):', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    const SizedBox(height: AppSpacing.s4),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.s8),
+                      decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(4)),
+                      child: Text(item.antes.toString(), style: AppTypography.caption),
+                    ),
+                  ],
+                  if (item.depois != null) ...[
+                    const SizedBox(height: AppSpacing.s12),
+                    const Text('Estado Posterior (Sanitizado):', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    const SizedBox(height: AppSpacing.s4),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.s8),
+                      decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(4)),
+                      child: Text(item.depois.toString(), style: AppTypography.caption),
+                    ),
+                  ],
+                  if (item.metadados != null) ...[
+                    const SizedBox(height: AppSpacing.s12),
+                    const Text('Metadados:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    const SizedBox(height: AppSpacing.s4),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.s8),
+                      decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(4)),
+                      child: Text(item.metadados.toString(), style: AppTypography.caption),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            PrimaryButton(
+              label: 'Fechar',
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildSeletorAbas() {
@@ -182,45 +405,253 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
   Widget _buildFiltrosAuditoria() {
     return SectionCard(
       padding: const EdgeInsets.all(AppSpacing.cardPadding),
-      child: Wrap(
-        spacing: AppSpacing.s12,
-        runSpacing: AppSpacing.s12,
-        crossAxisAlignment: WrapCrossAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 260,
-            child: TextField(
-              controller: _acaoController,
-              decoration: const InputDecoration(
-                labelText: 'Filtrar por Ação',
-                hintText: 'Ex.: DECISAO_PASTOR_LOCAL',
-                prefixIcon: Icon(Icons.search, size: 20),
-                isDense: true,
+          Wrap(
+            spacing: AppSpacing.s12,
+            runSpacing: AppSpacing.s12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SizedBox(
+                width: 260,
+                child: TextField(
+                  controller: _acaoController,
+                  decoration: const InputDecoration(
+                    labelText: 'Filtrar por Ação',
+                    hintText: 'Ex.: DECISAO_PASTOR_LOCAL',
+                    prefixIcon: Icon(Icons.search, size: 20),
+                    isDense: true,
+                  ),
+                  onSubmitted: (_) => _carregarAuditoria(),
+                ),
               ),
-              onSubmitted: (val) {
-                _filtroAcao = val.trim();
-                _carregarAuditoria();
-              },
-            ),
+              PrimaryButton(
+                label: 'Filtrar',
+                icon: Icons.filter_list,
+                onPressed: () => _carregarAuditoria(),
+              ),
+              SecondaryButton(
+                label: _mostrarFiltrosAvancadosAuditoria ? 'Ocultar Filtros' : 'Filtros Avançados',
+                icon: _mostrarFiltrosAvancadosAuditoria ? Icons.expand_less : Icons.tune,
+                onPressed: () {
+                  setState(() {
+                    _mostrarFiltrosAvancadosAuditoria = !_mostrarFiltrosAvancadosAuditoria;
+                  });
+                },
+              ),
+              if (_temFiltrosAuditoriaAtivos)
+                SecondaryButton(
+                  label: 'Limpar Filtros',
+                  icon: Icons.clear,
+                  onPressed: _limparFiltrosAuditoria,
+                ),
+            ],
           ),
-          PrimaryButton(
-            label: 'Filtrar',
-            icon: Icons.filter_list,
-            onPressed: () {
-              _filtroAcao = _acaoController.text.trim();
-              _carregarAuditoria();
-            },
-          ),
-          if (_filtroAcao.isNotEmpty)
-            SecondaryButton(
-              label: 'Limpar Filtros',
-              icon: Icons.clear,
-              onPressed: () {
-                _acaoController.clear();
-                _filtroAcao = '';
-                _carregarAuditoria();
-              },
+          if (_mostrarFiltrosAvancadosAuditoria) ...[
+            const SizedBox(height: AppSpacing.s16),
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: AppSpacing.s16),
+            Wrap(
+              spacing: AppSpacing.s12,
+              runSpacing: AppSpacing.s12,
+              children: [
+                SizedBox(
+                  width: 220,
+                  child: TextField(
+                    controller: _atorController,
+                    decoration: const InputDecoration(
+                      labelText: 'Ator (UID)',
+                      hintText: 'UID do responsável',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarAuditoria(),
+                  ),
+                ),
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _entidadeTipoController,
+                    decoration: const InputDecoration(
+                      labelText: 'Tipo de Entidade',
+                      hintText: 'Ex.: IGREJA, EQUIPE',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarAuditoria(),
+                  ),
+                ),
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _entidadeIdController,
+                    decoration: const InputDecoration(
+                      labelText: 'ID da Entidade',
+                      hintText: 'ID do alvo',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarAuditoria(),
+                  ),
+                ),
+                SizedBox(
+                  width: 220,
+                  child: TextField(
+                    controller: _voluntarioController,
+                    decoration: const InputDecoration(
+                      labelText: 'Voluntário-Alvo (ID)',
+                      hintText: 'ID da entidade VOLUNTARIO',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarAuditoria(),
+                  ),
+                ),
+                SizedBox(
+                  width: 180,
+                  child: TextField(
+                    controller: _periodoInicioController,
+                    decoration: const InputDecoration(
+                      labelText: 'Início (ISO)',
+                      hintText: 'AAAA-MM-DD',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarAuditoria(),
+                  ),
+                ),
+                SizedBox(
+                  width: 180,
+                  child: TextField(
+                    controller: _periodoFimController,
+                    decoration: const InputDecoration(
+                      labelText: 'Fim (ISO)',
+                      hintText: 'AAAA-MM-DD',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarAuditoria(),
+                  ),
+                ),
+              ],
             ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFiltrosRelatorio() {
+    return SectionCard(
+      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Filtros do Relatório', style: AppTypography.h3),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _mostrarFiltrosRelatorio = !_mostrarFiltrosRelatorio;
+                  });
+                },
+                icon: Icon(_mostrarFiltrosRelatorio ? Icons.expand_less : Icons.tune),
+                label: Text(_mostrarFiltrosRelatorio ? 'Recolher' : 'Expandir Filtros'),
+              ),
+            ],
+          ),
+          if (_mostrarFiltrosRelatorio) ...[
+            const SizedBox(height: AppSpacing.s12),
+            Wrap(
+              spacing: AppSpacing.s12,
+              runSpacing: AppSpacing.s12,
+              children: [
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _relIgrejaController,
+                    decoration: const InputDecoration(
+                      labelText: 'Igreja ID',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarRelatorio(),
+                  ),
+                ),
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _relEquipeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Equipe ID',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarRelatorio(),
+                  ),
+                ),
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _relEstadoController,
+                    decoration: const InputDecoration(
+                      labelText: 'Situação Ficha',
+                      hintText: 'Ex.: ATIVA',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarRelatorio(),
+                  ),
+                ),
+                SizedBox(
+                  width: 140,
+                  child: TextField(
+                    controller: _relAnoController,
+                    decoration: const InputDecoration(
+                      labelText: 'Ano Vigência',
+                      hintText: 'Ex.: 2026',
+                      isDense: true,
+                    ),
+                    keyboardType: TextInputType.number,
+                    onSubmitted: (_) => _carregarRelatorio(),
+                  ),
+                ),
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _relPastorController,
+                    decoration: const InputDecoration(
+                      labelText: 'Pastor ID',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarRelatorio(),
+                  ),
+                ),
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _relVoluntarioController,
+                    decoration: const InputDecoration(
+                      labelText: 'Voluntário ID',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _carregarRelatorio(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s12),
+            Wrap(
+              spacing: AppSpacing.s12,
+              children: [
+                PrimaryButton(
+                  label: 'Aplicar Filtros',
+                  icon: Icons.filter_list,
+                  onPressed: () => _carregarRelatorio(),
+                ),
+                if (_temFiltrosRelatorioAtivos)
+                  SecondaryButton(
+                    label: 'Limpar Filtros',
+                    icon: Icons.clear,
+                    onPressed: _limparFiltrosRelatorio,
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -234,6 +665,10 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s12),
       itemBuilder: (context, i) {
         final item = itens[i];
+        final dataFormatada = item.timestamp.length > 19
+            ? item.timestamp.substring(0, 19).replaceAll('T', ' ')
+            : item.timestamp;
+
         return SectionCard(
           padding: const EdgeInsets.all(AppSpacing.cardPadding),
           child: Column(
@@ -246,12 +681,7 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
                 runSpacing: AppSpacing.s4,
                 children: [
                   StatusChip(status: item.acao),
-                  Text(
-                    item.timestamp.length > 19
-                        ? item.timestamp.substring(0, 19).replaceAll('T', ' ')
-                        : item.timestamp,
-                    style: AppTypography.caption,
-                  ),
+                  Text(dataFormatada, style: AppTypography.caption),
                 ],
               ),
               const SizedBox(height: AppSpacing.s8),
@@ -281,6 +711,12 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
                   }).toList(),
                 ),
               ],
+              const SizedBox(height: AppSpacing.s12),
+              SecondaryButton(
+                label: 'Ver Detalhes',
+                icon: Icons.visibility_outlined,
+                onPressed: () => _mostrarDetalhesAuditoria(item),
+              ),
             ],
           ),
         );
@@ -301,6 +737,7 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
             DataColumn(label: Text('Ator', style: TextStyle(fontWeight: FontWeight.w600))),
             DataColumn(label: Text('Command ID', style: TextStyle(fontWeight: FontWeight.w600))),
             DataColumn(label: Text('Entidades Referenciadas', style: TextStyle(fontWeight: FontWeight.w600))),
+            DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.w600))),
           ],
           rows: itens.map((item) {
             final dataFormatada = item.timestamp.length > 19
@@ -324,6 +761,13 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
                       style: AppTypography.caption,
                       overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                ),
+                DataCell(
+                  IconButton(
+                    icon: const Icon(Icons.info_outline, size: 20, color: AppColors.blue600),
+                    tooltip: 'Ver detalhes probatórios',
+                    onPressed: () => _mostrarDetalhesAuditoria(item),
                   ),
                 ),
               ],
@@ -416,7 +860,7 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
         variant: MetricVariant.warning,
       ),
       MetricCard(
-        title: 'Canceladas / Inativas',
+        title: 'Fichas canceladas, inativas ou expiradas',
         value: metricas.totalCanceladasOuInativas.toString(),
         icon: Icons.cancel_outlined,
         variant: MetricVariant.neutral,
@@ -566,22 +1010,38 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
     }
 
     final rel = _relatorio!;
+    final voluntarios = _voluntariosRelatorio.isNotEmpty ? _voluntariosRelatorio : rel.voluntarios;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _buildFiltrosRelatorio(),
+        const SizedBox(height: AppSpacing.s16),
         _buildMetricasRelatorio(rel.metricas, isMobile),
         const SizedBox(height: AppSpacing.s24),
         Text('Voluntários sob Escopo Autorizado', style: AppTypography.h2),
         const SizedBox(height: AppSpacing.s12),
-        if (rel.voluntarios.isEmpty)
+        if (voluntarios.isEmpty)
           const EmptyState(
             title: 'Nenhum voluntário encontrado para o escopo',
-            message: 'Não há registros de voluntários associados ao seu escopo vigente.',
+            message: 'Não há registros de voluntários associados ao seu escopo vigente com os filtros aplicados.',
           )
-        else
+        else ...[
           isMobile
-              ? _buildListaVoluntariosMobile(rel.voluntarios)
-              : _buildTabelaVoluntariosDesktop(rel.voluntarios),
+              ? _buildListaVoluntariosMobile(voluntarios)
+              : _buildTabelaVoluntariosDesktop(voluntarios),
+          const SizedBox(height: AppSpacing.s16),
+          if (_temMaisRelatorio)
+            Center(
+              child: _carregandoRelatorio
+                  ? const CircularProgressIndicator()
+                  : PrimaryButton(
+                      label: 'Carregar mais voluntários',
+                      icon: Icons.expand_more,
+                      onPressed: () => _carregarRelatorio(carregarMais: true),
+                    ),
+            ),
+        ],
       ],
     );
   }

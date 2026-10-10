@@ -158,4 +158,117 @@ void main() {
 
     expect(find.text('Nenhum registro de auditoria encontrado'), findsOneWidget);
   });
+
+  testWidgets('Story 8.13: abre modal de detalhes probatórios de auditoria e fecha', (tester) async {
+    final gateway = MemoriaAuditoriaGateway(
+      eventosIniciais: [eventoExemplo1],
+    );
+
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(criarApp(gateway, tamanho: const Size(390, 844)));
+    await tester.pumpAndSettle();
+
+    // Clica em 'Ver Detalhes'
+    await tester.tap(find.text('Ver Detalhes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detalhe Probatório de Auditoria'), findsOneWidget);
+    expect(find.text('Comando ID: CMD_101'), findsOneWidget);
+    expect(find.text('Correlation ID: CORR_101'), findsOneWidget);
+    expect(find.text('Ator UID: PASTOR_MARIO'), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AlertDialog), matching: find.text('IGREJA: ig_central')),
+      findsOneWidget,
+    );
+
+    // Fecha o modal
+    await tester.tap(find.text('Fechar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detalhe Probatório de Auditoria'), findsNothing);
+  });
+
+  testWidgets('Story 8.13: expande filtros avançados de auditoria e filtra por ator UID', (tester) async {
+    final gateway = MemoriaAuditoriaGateway(
+      eventosIniciais: [eventoExemplo1, eventoExemplo2],
+    );
+
+    tester.view.physicalSize = const Size(1024, 768);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(criarApp(gateway, tamanho: const Size(1024, 768)));
+    await tester.pumpAndSettle();
+
+    // Expande filtros avançados
+    await tester.tap(find.text('Filtros Avançados'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ator (UID)'), findsOneWidget);
+
+    // Preenche ator UID
+    await tester.enterText(find.widgetWithText(TextField, 'Ator (UID)'), 'PASTOR_MARIO');
+    await tester.tap(find.text('Filtrar'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(of: find.byType(DataTable), matching: find.text('PASTOR_MARIO')),
+      findsOneWidget,
+    );
+    expect(find.text('RESP_LOUVOR'), findsNothing);
+  });
+
+  testWidgets('Story 8.13: exibe métricas com rótulo institucional e pagina voluntários no relatório', (tester) async {
+    final voluntario1 = const VoluntarioRelatorioItem(
+      fichaId: 'f1',
+      nomeCompleto: 'Amanda Ferreira',
+      cpfMascarado: '111.***.***-01',
+      igrejaId: 'ig1',
+      estadoFicha: 'ATIVA',
+      equipes: [],
+    );
+
+    final relatorioPaginado = ResultadoRelatorioOperacional(
+      metricas: const MetricasRelatorio(
+        totalVoluntarios: 2,
+        totalFichasAtivas: 2,
+        totalParticipacoesAtivas: 0,
+        totalAguardandoAprovacao: 0,
+        totalCanceladasOuInativas: 0,
+        distribuicaoPorEquipe: {},
+        distribuicaoPorIgreja: {},
+        distribuicaoPorEstado: {},
+      ),
+      voluntarios: [voluntario1],
+      geradoEm: '2026-10-10T12:00:00.000Z',
+      escopoAtor: 'GLOBAL',
+      temMais: true,
+      proximoCursor: 'cursor_2',
+    );
+
+    final gateway = MemoriaAuditoriaGateway(
+      relatorioInicial: relatorioPaginado,
+    );
+
+    tester.view.physicalSize = const Size(1024, 768);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(criarApp(gateway, tamanho: const Size(1024, 768)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Relatório Operacional'));
+    await tester.pumpAndSettle();
+
+    // Rótulo normativo de métricas
+    expect(find.text('Fichas canceladas, inativas ou expiradas'), findsOneWidget);
+
+    // Lista paginada
+    expect(find.text('Amanda Ferreira'), findsOneWidget);
+    expect(find.text('Carregar mais voluntários'), findsOneWidget);
+  });
 }
+
