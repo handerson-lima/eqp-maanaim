@@ -496,4 +496,498 @@ void main() {
     expect(find.byType(VinculosResponsaveis), findsOneWidget);
     expect(find.text('Goianinha - 240008'), findsOneWidget);
   });
+
+  group('Story 8.12 — Modo Centrado no Pastor / Responsável', () {
+    const pastorMaria = PessoaAdministrativa(
+      uid: 'p2',
+      nomeCompleto: 'Maria Souza',
+      email: 'maria@exemplo.com',
+      papeis: [],
+      versao: 0,
+      coordenador: false,
+    );
+
+    final igrejasMultiplas = <ItemVinculo>[
+      ItemVinculo(
+        id: 'ig1',
+        tipoEntidade: 'IGREJA',
+        rotulo: 'Goianinha - 240008',
+        codigo: '240008',
+        ativo: true,
+        versaoVinculo: 2,
+        responsavel: const ResponsavelVigente(
+          pessoaId: 'p1',
+          nome: 'João Batista',
+        ),
+      ),
+      const ItemVinculo(
+        id: 'ig2',
+        tipoEntidade: 'IGREJA',
+        rotulo: 'Mossoró - 240006',
+        codigo: '240006',
+        ativo: true,
+        versaoVinculo: 1,
+      ),
+      const ItemVinculo(
+        id: 'ig3',
+        tipoEntidade: 'IGREJA',
+        rotulo: 'Caicó - 240005',
+        codigo: '240005',
+        ativo: true,
+        versaoVinculo: 3,
+      ),
+    ];
+
+    Future<void> abrirModoPastor(
+      WidgetTester tester,
+      VinculosFake gateway, {
+      PessoaAdministrativa? pastorInicial,
+      Size size = const Size(1200, 900),
+    }) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: VinculosResponsaveis(
+              gateway,
+              pastorInicial: pastorInicial,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('ativa modo centrado no pastor pelo botão da tela inicial', (
+      tester,
+    ) async {
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(
+          igrejas: igrejasMultiplas,
+          equipes: const [],
+        ),
+        pessoas: _pessoas,
+      );
+      await abrirModoPastor(tester, gateway);
+
+      expect(find.text('Gestão Centrada no Pastor / Responsável'), findsOneWidget);
+      await tester.tap(find.text('Vincular por pastor'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Selecionar pessoa'), findsOneWidget);
+      await tester.tap(find.text('Maria Souza'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Maria Souza'), findsWidgets);
+      expect(find.text('Pastor Local'), findsWidgets);
+      expect(find.textContaining('0 igreja(s)'), findsOneWidget);
+      expect(find.text('Painel de Revisão e Ações'), findsOneWidget);
+    });
+
+    testWidgets('layout desktop exibe 2 colunas e mobile exibe empilhado', (
+      tester,
+    ) async {
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(
+          igrejas: igrejasMultiplas,
+          equipes: const [],
+        ),
+        pessoas: _pessoas,
+      );
+
+      // Desktop
+      await abrirModoPastor(
+        tester,
+        gateway,
+        pastorInicial: pastorMaria,
+        size: const Size(1200, 900),
+      );
+      expect(find.text('Painel de Revisão e Ações'), findsOneWidget);
+      expect(find.byType(CheckboxListTile), findsNWidgets(3));
+
+      // Mobile
+      await abrirModoPastor(
+        tester,
+        gateway,
+        pastorInicial: pastorMaria,
+        size: const Size(500, 900),
+      );
+      expect(find.text('Painel de Revisão e Ações'), findsOneWidget);
+      expect(find.byType(CheckboxListTile), findsNWidgets(3));
+    });
+
+    testWidgets('duas inclusões no lote executam comandos individuais com commandId e expectedVersion', (
+      tester,
+    ) async {
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(
+          igrejas: igrejasMultiplas,
+          equipes: const [],
+        ),
+        pessoas: _pessoas,
+      );
+      await abrirModoPastor(tester, gateway, pastorInicial: pastorMaria);
+
+      // Marca Mossoró (ig2) e Caicó (ig3)
+      final cbMossoro = find.widgetWithText(CheckboxListTile, 'Mossoró - 240006');
+      final cbCaico = find.widgetWithText(CheckboxListTile, 'Caicó - 240005');
+      await tester.tap(cbMossoro);
+      await tester.pumpAndSettle();
+      await tester.tap(cbCaico);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Revisar e Salvar Vínculos (2)'), findsOneWidget);
+
+      await tester.tap(find.text('Revisar e Salvar Vínculos (2)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Revisão de Vínculos em Lote'), findsOneWidget);
+      expect(find.text('2 inclusão(ões)'), findsOneWidget);
+
+      await tester.tap(find.text('Confirmar e Salvar Vínculos'));
+      await tester.pumpAndSettle();
+
+      expect(gateway.chamadasGerenciar.length, 2);
+      expect(gateway.chamadasGerenciar[0]['acao'], 'ATRIBUIR');
+      expect(gateway.chamadasGerenciar[0]['pessoaId'], 'p2');
+      expect(gateway.chamadasGerenciar[0]['entidadeId'], 'ig2');
+      expect(gateway.chamadasGerenciar[0]['versao'], 1);
+
+      expect(gateway.chamadasGerenciar[1]['acao'], 'ATRIBUIR');
+      expect(gateway.chamadasGerenciar[1]['pessoaId'], 'p2');
+      expect(gateway.chamadasGerenciar[1]['entidadeId'], 'ig3');
+      expect(gateway.chamadasGerenciar[1]['versao'], 3);
+
+      // Comandos possuem commandIds distintos
+      expect(
+        gateway.chamadasGerenciar[0]['commandId'],
+        isNot(equals(gateway.chamadasGerenciar[1]['commandId'])),
+      );
+
+      expect(find.textContaining('2 concluído(s) com sucesso'), findsOneWidget);
+    });
+
+    testWidgets('substituição contextual destaca responsável atual e redirecionamento de pendências', (
+      tester,
+    ) async {
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(
+          igrejas: igrejasMultiplas,
+          equipes: const [],
+        ),
+        pessoas: _pessoas,
+      );
+      await abrirModoPastor(tester, gateway, pastorInicial: pastorMaria);
+
+      // Goianinha já tem João Batista como responsável
+      final cbGoianinha = find.widgetWithText(CheckboxListTile, 'Goianinha - 240008');
+      await tester.tap(cbGoianinha);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Substitui João Batista'), findsWidgets);
+      await tester.tap(find.text('Revisar e Salvar Vínculos (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 substituição(ões)'), findsOneWidget);
+      expect(find.textContaining('apenas pendências não decididas serão redirecionadas'), findsOneWidget);
+
+      await tester.tap(find.text('Confirmar e Salvar Vínculos'));
+      await tester.pumpAndSettle();
+
+      expect(gateway.chamadasGerenciar.length, 1);
+      expect(gateway.chamadasGerenciar[0]['acao'], 'SUBSTITUIR');
+      expect(gateway.chamadasGerenciar[0]['pessoaId'], 'p2');
+      expect(gateway.chamadasGerenciar[0]['entidadeId'], 'ig1');
+      expect(gateway.chamadasGerenciar[0]['versao'], 2);
+    });
+
+    testWidgets('desmarcar igreja já vinculada exige confirmação explícita; cancelar mantém marcada', (
+      tester,
+    ) async {
+      final comMariaVinculada = <ItemVinculo>[
+        ItemVinculo(
+          id: 'ig1',
+          tipoEntidade: 'IGREJA',
+          rotulo: 'Goianinha - 240008',
+          codigo: '240008',
+          ativo: true,
+          versaoVinculo: 4,
+          responsavel: const ResponsavelVigente(
+            pessoaId: 'p2',
+            nome: 'Maria Souza',
+          ),
+        ),
+      ];
+
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(
+          igrejas: comMariaVinculada,
+          equipes: const [],
+        ),
+        pessoas: _pessoas,
+      );
+      await abrirModoPastor(tester, gateway, pastorInicial: pastorMaria);
+
+      final cb = tester.widget<CheckboxListTile>(
+        find.widgetWithText(CheckboxListTile, 'Goianinha - 240008'),
+      );
+      expect(cb.value, isTrue);
+
+      // Clica para desmarcar
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Goianinha - 240008'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Confirmar encerramento de vínculo'), findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+
+      // Mantém marcado e não há intenção
+      final cbApos = tester.widget<CheckboxListTile>(
+        find.widgetWithText(CheckboxListTile, 'Goianinha - 240008'),
+      );
+      expect(cbApos.value, isTrue);
+      expect(
+        find.textContaining('Nenhuma alteração selecionada para este pastor'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('desmarcar igreja vigente com confirmação registra encerramento e executa ENCERRAR', (
+      tester,
+    ) async {
+      final comMariaVinculada = <ItemVinculo>[
+        ItemVinculo(
+          id: 'ig1',
+          tipoEntidade: 'IGREJA',
+          rotulo: 'Goianinha - 240008',
+          codigo: '240008',
+          ativo: true,
+          versaoVinculo: 4,
+          responsavel: const ResponsavelVigente(
+            pessoaId: 'p2',
+            nome: 'Maria Souza',
+          ),
+        ),
+      ];
+
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(
+          igrejas: comMariaVinculada,
+          equipes: const [],
+        ),
+        pessoas: _pessoas,
+      );
+      await abrirModoPastor(tester, gateway, pastorInicial: pastorMaria);
+
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Goianinha - 240008'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).last, 'Encerramento programado');
+      await tester.tap(find.text('Confirmar encerramento'));
+      await tester.pumpAndSettle();
+
+      // Checkbox agora é false e aparece como Encerramento
+      final cbApos = tester.widget<CheckboxListTile>(
+        find.widgetWithText(CheckboxListTile, 'Goianinha - 240008'),
+      );
+      expect(cbApos.value, isFalse);
+      expect(find.text('Revisar e Salvar Vínculos (1)'), findsOneWidget);
+
+      await tester.tap(find.text('Revisar e Salvar Vínculos (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 encerramento(s)'), findsOneWidget);
+      await tester.tap(find.text('Confirmar e Salvar Vínculos'));
+      await tester.pumpAndSettle();
+
+      expect(gateway.chamadasGerenciar.length, 1);
+      expect(gateway.chamadasGerenciar[0]['acao'], 'ENCERRAR');
+      expect(gateway.chamadasGerenciar[0]['pessoaId'], isNull);
+      expect(gateway.chamadasGerenciar[0]['entidadeId'], 'ig1');
+      expect(gateway.chamadasGerenciar[0]['versao'], 4);
+      expect(gateway.chamadasGerenciar[0]['justificativa'], 'Encerramento programado');
+    });
+
+    testWidgets('item inalterado mantido marcado não gera comando de mutação', (
+      tester,
+    ) async {
+      final dados = <ItemVinculo>[
+        ItemVinculo(
+          id: 'ig1',
+          tipoEntidade: 'IGREJA',
+          rotulo: 'Goianinha - 240008',
+          codigo: '240008',
+          ativo: true,
+          versaoVinculo: 4,
+          responsavel: const ResponsavelVigente(
+            pessoaId: 'p2',
+            nome: 'Maria Souza',
+          ),
+        ),
+        const ItemVinculo(
+          id: 'ig2',
+          tipoEntidade: 'IGREJA',
+          rotulo: 'Mossoró - 240006',
+          codigo: '240006',
+          ativo: true,
+          versaoVinculo: 1,
+        ),
+      ];
+
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(igrejas: dados, equipes: const []),
+        pessoas: _pessoas,
+      );
+      await abrirModoPastor(tester, gateway, pastorInicial: pastorMaria);
+
+      // ig1 está marcado (pertence a Maria). Não mexemos nele.
+      // Marcamos apenas ig2.
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Mossoró - 240006'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Revisar e Salvar Vínculos (1)'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Confirmar e Salvar Vínculos'));
+      await tester.pumpAndSettle();
+
+      // Somente ig2 foi enviado! ig1 não gerou comando de mutação.
+      expect(gateway.chamadasGerenciar.length, 1);
+      expect(gateway.chamadasGerenciar[0]['entidadeId'], 'ig2');
+    });
+
+    testWidgets('falha parcial exibe resumo quantitativo e retentativa atua estritamente sobre a falha', (
+      tester,
+    ) async {
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(
+          igrejas: igrejasMultiplas,
+          equipes: const [],
+        ),
+        pessoas: _pessoas,
+      );
+      // Configura falha apenas para ig3
+      gateway.falhasPorEntidade['ig3'] = true;
+
+      await abrirModoPastor(tester, gateway, pastorInicial: pastorMaria);
+
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Mossoró - 240006'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Caicó - 240005'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Revisar e Salvar Vínculos (2)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirmar e Salvar Vínculos'));
+      await tester.pumpAndSettle();
+
+      // Resumo quantitativo
+      expect(find.textContaining('1 concluído(s) com sucesso · 1 falha(s)'), findsOneWidget);
+      expect(find.text('Tentar novamente falhas (1)'), findsOneWidget);
+
+      final cmdIdOriginalIg3 = gateway.chamadasGerenciar.firstWhere((c) => c['entidadeId'] == 'ig3')['commandId'];
+
+      // Corrige a falha
+      gateway.falhasPorEntidade['ig3'] = false;
+      await tester.tap(find.text('Tentar novamente falhas (1)'));
+      await tester.pumpAndSettle();
+
+      // Agora foram 3 chamadas no total (ig2, ig3 que falhou, e ig3 reenviado)
+      expect(gateway.chamadasGerenciar.length, 3);
+      // Reenvio usou o MESMO commandId para ig3
+      expect(gateway.chamadasGerenciar[2]['commandId'], cmdIdOriginalIg3);
+      expect(gateway.chamadasGerenciar[2]['entidadeId'], 'ig3');
+      // ig2 NÃO foi reenviado!
+      expect(find.textContaining('2 concluído(s) com sucesso · 0 falha(s)'), findsOneWidget);
+    });
+
+    testWidgets('conflito de versão aborted permite atualizar e reavaliar com novo commandId', (
+      tester,
+    ) async {
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(
+          igrejas: igrejasMultiplas,
+          equipes: const [],
+        ),
+        pessoas: _pessoas,
+      );
+      gateway.conflitosPorEntidade['ig2'] = true;
+
+      await abrirModoPastor(tester, gateway, pastorInicial: pastorMaria);
+
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Mossoró - 240006'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Revisar e Salvar Vínculos (1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirmar e Salvar Vínculos'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('1 conflito(s)'), findsOneWidget);
+      expect(find.text('Atualizar e reavaliar'), findsOneWidget);
+
+      final cmdIdPrimeiro = gateway.chamadasGerenciar[0]['commandId'];
+
+      // Atualiza os dados do servidor (simulando que versao mudou para 5)
+      gateway.resposta = VinculosResposta(
+        igrejas: [
+          const ItemVinculo(
+            id: 'ig2',
+            tipoEntidade: 'IGREJA',
+            rotulo: 'Mossoró - 240006',
+            codigo: '240006',
+            ativo: true,
+            versaoVinculo: 5,
+          ),
+        ],
+        equipes: const [],
+      );
+      gateway.conflitosPorEntidade['ig2'] = false;
+
+      await tester.ensureVisible(find.text('Atualizar e reavaliar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Atualizar e reavaliar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Conflito concorrente detectado'), findsOneWidget);
+      expect(find.textContaining('Versão atual: 5'), findsOneWidget);
+
+      await tester.tap(find.text('Reconfirmar e Enviar'));
+      await tester.pumpAndSettle();
+
+      expect(gateway.chamadasGerenciar.length, 2);
+      expect(gateway.chamadasGerenciar[1]['versao'], 5);
+      // Gerou um NOVO commandId
+      expect(gateway.chamadasGerenciar[1]['commandId'], isNot(equals(cmdIdPrimeiro)));
+      expect(find.textContaining('1 concluído(s) com sucesso'), findsOneWidget);
+    });
+
+    testWidgets('voltar ao modo individual com alterações pendentes pede confirmação', (
+      tester,
+    ) async {
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(
+          igrejas: igrejasMultiplas,
+          equipes: const [],
+        ),
+        pessoas: _pessoas,
+      );
+      await abrirModoPastor(tester, gateway, pastorInicial: pastorMaria);
+
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Mossoró - 240006'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Voltar ao modo individual'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Descartar alterações?'), findsOneWidget);
+      await tester.tap(find.text('Descartar e voltar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Gestão Centrada no Pastor / Responsável'), findsOneWidget);
+      expect(find.text('Atribuir responsável'), findsWidgets);
+    });
+  });
 }

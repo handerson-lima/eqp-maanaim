@@ -402,6 +402,10 @@ class VinculosFake implements VinculosGateway {
     return pessoas;
   }
 
+  Map<String, bool> falhasPorEntidade = {};
+  Map<String, bool> conflitosPorEntidade = {};
+  List<Map<String, dynamic>> chamadasGerenciar = [];
+
   @override
   Future<VinculoResultado> gerenciar({
     required String commandId,
@@ -422,6 +426,22 @@ class VinculosFake implements VinculosGateway {
     ultimaData = dataEfetiva;
     ultimaVersao = versao;
     ultimaJustificativa = justificativa;
+    chamadasGerenciar.add({
+      'commandId': commandId,
+      'tipoEntidade': tipoEntidade,
+      'entidadeId': entidadeId,
+      'acao': acao,
+      'pessoaId': pessoaId,
+      'dataEfetiva': dataEfetiva,
+      'versao': versao,
+      'justificativa': justificativa,
+    });
+    if (conflitosPorEntidade[entidadeId] == true) {
+      throw Exception('aborted: conflito de versao');
+    }
+    if (falhasPorEntidade[entidadeId] == true) {
+      throw Exception('falha simulada na entidade $entidadeId');
+    }
     if (gerenciarFalhar) throw Exception('falha simulada');
     return const VinculoResultado(
       vinculoId: 'vinculo-fake',
