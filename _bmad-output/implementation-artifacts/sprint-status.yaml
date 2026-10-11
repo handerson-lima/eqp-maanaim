@@ -87,8 +87,8 @@ development_status:
   epic-7-retrospective: optional
 
   # Autorização 08/10; incorporação 09/10 com backlog como estado inicial das 16 histórias.
-  # Execução em curso: 8.1–8.7 concluídas (8.3 revisada e corrigida em 09/10).
-  epic-8: in-progress
+  # Execução concluída: 8.1–8.16 homologadas com sucesso.
+  epic-8: done
   8-1-consolidar-contrato-visual-e-inventario-de-dados: done
   8-2-corrigir-tokens-acessiveis-e-componentes-compartilhados: done
   8-3-resolver-contexto-de-acesso-e-rotas-por-capacidades: done
@@ -101,10 +101,10 @@ development_status:
   8-10-organizar-minha-ficha-e-documentos-privados: done
   8-11-completar-administracao-de-igrejas-e-equipes: done
   8-12-vincular-multiplas-igrejas-a-partir-do-pastor: done
-  8-13-completar-filtros-e-paginacao-de-auditoria-relatorios: backlog
+  8-13-completar-filtros-e-paginacao-de-auditoria-relatorios: done
   8-14-exibir-versoes-e-aceites-pendentes-dos-termos: done
   8-15-alinhar-superficies-adicionais-e-linguagem: done
-  8-16-homologar-todas-as-telas-e-impedir-regressoes: backlog
+  8-16-homologar-todas-as-telas-e-impedir-regressoes: done
   epic-8-retrospective: optional
 action_items:
   - id: "epic-1-retro-item-1-configurar-runner-de-integracao-automati"
