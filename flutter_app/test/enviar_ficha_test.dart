@@ -153,7 +153,7 @@ class ParticipacaoMockGateway implements ParticipacaoGateway {
 
 class CatalogoMockGateway implements CatalogoGateway {
   @override
-  Future<CatalogoResposta> consultar({String? termo}) async {
+  Future<CatalogoResposta> consultar({String? termo, bool somenteAdmin = false}) async {
     return const CatalogoResposta(
       igrejas: [
         IgrejaCatalogo(id: 'igreja-1', nome: 'Igreja Central', codigo: 'IC01', ativo: true),

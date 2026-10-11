@@ -948,7 +948,7 @@ class _CatalogoMemoriaFallback implements CatalogoGateway {
   const _CatalogoMemoriaFallback();
 
   @override
-  Future<CatalogoResposta> consultar({String? termo}) async =>
+  Future<CatalogoResposta> consultar({String? termo, bool somenteAdmin = false}) async =>
       const CatalogoResposta(igrejas: [], equipes: []);
 
   @override

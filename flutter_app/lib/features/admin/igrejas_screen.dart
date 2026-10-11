@@ -46,7 +46,7 @@ class _IgrejasScreenState extends State<IgrejasScreen> {
 
   void _carregar() {
     setState(() {
-      _futuro = widget.gateway.consultar();
+      _futuro = widget.gateway.consultar(somenteAdmin: true);
     });
   }
 

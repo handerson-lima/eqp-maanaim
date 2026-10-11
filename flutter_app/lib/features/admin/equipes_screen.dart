@@ -45,7 +45,7 @@ class _EquipesScreenState extends State<EquipesScreen> {
 
   void _carregar() {
     setState(() {
-      _futuro = widget.gateway.consultar();
+      _futuro = widget.gateway.consultar(somenteAdmin: true);
     });
   }
 

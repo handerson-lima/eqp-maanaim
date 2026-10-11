@@ -80,7 +80,7 @@ class CatalogoResposta {
 
 /// Operações autorizadas do catálogo no backend.
 abstract interface class CatalogoGateway {
-  Future<CatalogoResposta> consultar({String? termo});
+  Future<CatalogoResposta> consultar({String? termo, bool somenteAdmin = false});
 
   Future<void> alternarStatusIgreja({
     required String commandId,
@@ -164,7 +164,7 @@ class FirebaseCatalogoGateway implements CatalogoGateway {
   final FirebaseFirestore _firestore;
 
   @override
-  Future<CatalogoResposta> consultar({String? termo}) async {
+  Future<CatalogoResposta> consultar({String? termo, bool somenteAdmin = false}) async {
     try {
       final payload = <String, dynamic>{};
       if (termo != null && termo.trim().isNotEmpty) {
@@ -183,11 +183,14 @@ class FirebaseCatalogoGateway implements CatalogoGateway {
       );
     } on FirebaseFunctionsException catch (e) {
       // Proibição canônica de fallback silencioso que mascare falha administrativa
-      if (e.code == 'permission-denied') {
+      if (somenteAdmin && e.code == 'permission-denied') {
         rethrow;
       }
       return _fallbackPublico(termo);
     } catch (_) {
+      if (somenteAdmin) {
+        rethrow;
+      }
       return _fallbackPublico(termo);
     }
   }

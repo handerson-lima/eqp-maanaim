@@ -40,7 +40,7 @@ class FakeCatalogoGateway implements CatalogoGateway {
   List<EquipeCatalogo> equipes;
 
   @override
-  Future<CatalogoResposta> consultar({String? termo}) async =>
+  Future<CatalogoResposta> consultar({String? termo, bool somenteAdmin = false}) async =>
       CatalogoResposta(igrejas: const [], equipes: equipes);
 
   @override

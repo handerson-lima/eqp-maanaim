@@ -121,7 +121,7 @@ class CatalogoFake implements CatalogoGateway {
   Completer<void>? pendente;
 
   @override
-  Future<CatalogoResposta> consultar({String? termo}) async {
+  Future<CatalogoResposta> consultar({String? termo, bool somenteAdmin = false}) async {
     chamadas++;
     if (pendente != null) await pendente!.future;
     if (falhar) throw Exception('falha simulada');
