@@ -304,6 +304,13 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         if (mounted) {
           setState(() {
             _participacoes = novas;
+            if (_participacaoSelecionada == null ||
+                !novas.any((p) => p.id == _participacaoSelecionada!.id)) {
+              _participacaoSelecionada = novas.isNotEmpty ? novas.first : null;
+            } else {
+              _participacaoSelecionada =
+                  novas.firstWhere((p) => p.id == _participacaoSelecionada!.id);
+            }
             _equipesSelecionadasIds = novas
                 .where((p) => p.isRascunho)
                 .map((p) => p.equipeId)
@@ -938,8 +945,12 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   Widget _buildCardSeletorParticipacao() {
     if (_participacoes.isEmpty) return const SizedBox.shrink();
 
+    final idSelecionado = _participacoes.any((p) => p.id == _participacaoSelecionada?.id)
+        ? _participacaoSelecionada?.id
+        : (_participacoes.isNotEmpty ? _participacoes.first.id : null);
+
     return SectionCard(
-      title: 'Documento por Participação (AD-13)',
+      title: 'Documento por Participação',
       subtitle:
           'Selecione a equipe desejada para consultar o termo probatório específico gerado no servidor.',
       child: Column(
@@ -979,8 +990,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           ),
           const SizedBox(height: AppSpacing.s12),
           DropdownButtonFormField<String>(
-            key: const Key('seletor_participacao_equipe'),
-            initialValue: _participacaoSelecionada?.id,
+            key: ValueKey('seletor_participacao_${_participacoes.map((p) => p.id).join('_')}'),
+            initialValue: idSelecionado,
             isExpanded: true,
             decoration: const InputDecoration(
               prefixIcon: Icon(Icons.groups_outlined, size: 20),
@@ -993,7 +1004,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               final nome = p.nomeEquipe.isNotEmpty
                   ? p.nomeEquipe
                   : (eq?.nome ?? p.equipeId);
-              final statusTexto = p.isAtiva ? 'Aprovada' : p.estado;
+              final statusTexto = p.isAtiva
+                  ? 'Aprovada'
+                  : (p.isRejeitada ? 'Informação' : p.estado);
               return DropdownMenuItem<String>(
                 value: p.id,
                 child: Text(

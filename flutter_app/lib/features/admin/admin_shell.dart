@@ -129,7 +129,7 @@ class _AdminShellState extends State<AdminShell> {
           : const Center(
               child: Padding(
                 padding: EdgeInsets.all(AppSpacing.cardPadding),
-                child: Text('Serviço de seed indisponível.'),
+                child: Text('Serviço de carga inicial indisponível.'),
               ),
             ),
     ),

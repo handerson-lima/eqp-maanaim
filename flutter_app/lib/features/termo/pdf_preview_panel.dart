@@ -247,7 +247,7 @@ class _PdfPreviewPanelState extends State<PdfPreviewPanel> {
               const SizedBox(height: 2),
               Text(
                 p?.isAtiva == true
-                    ? 'Termo individual homologado no servidor (AD-13)'
+                    ? 'Termo individual homologado no servidor'
                     : 'Acompanhamento do documento privado',
                 style: const TextStyle(
                   fontSize: 12,
@@ -259,7 +259,10 @@ class _PdfPreviewPanelState extends State<PdfPreviewPanel> {
         ),
         if (p != null) ...[
           const SizedBox(width: AppSpacing.s8),
-          StatusChip(status: p.estado),
+          StatusChip(
+            status: p.isRejeitada ? 'INATIVA' : p.estado,
+            label: p.isRejeitada ? 'Informação' : null,
+          ),
         ],
       ],
     );
@@ -368,7 +371,7 @@ class _PdfPreviewPanelState extends State<PdfPreviewPanel> {
               border: Border.all(color: AppColors.border),
             ),
             child: Text(
-              'Situação atual: ${p.proximaAcao.isNotEmpty ? p.proximaAcao : p.estado}',
+              'Situação atual: ${p.proximaAcao.isNotEmpty ? p.proximaAcao : (p.isRejeitada ? 'Procure o Pastor da igreja local para mais informações' : p.estado)}',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -451,8 +454,10 @@ class _PdfPreviewPanelState extends State<PdfPreviewPanel> {
             style: const TextStyle(fontSize: 13, color: AppColors.navy900),
           ),
           const SizedBox(height: AppSpacing.s16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppSpacing.s12,
+            runSpacing: AppSpacing.s8,
             children: [
               OutlinedButton.icon(
                 key: const Key('btn_tentar_novamente_pdf'),
@@ -463,7 +468,6 @@ class _PdfPreviewPanelState extends State<PdfPreviewPanel> {
                   minimumSize: const Size(44, 44),
                 ),
               ),
-              const SizedBox(width: AppSpacing.s12),
               ElevatedButton.icon(
                 key: const Key('btn_baixar_pdf_fallback'),
                 onPressed: _baixando ? null : _baixarPdf,
@@ -587,7 +591,7 @@ class _PdfPreviewPanelState extends State<PdfPreviewPanel> {
               ),
               const SizedBox(height: AppSpacing.s12),
               const Text(
-                'Este documento probatório é gerado exclusivamente a partir de evidências imutáveis no servidor conforme a diretriz AD-13.',
+                'Este documento probatório é gerado exclusivamente a partir de evidências imutáveis no servidor.',
                 style: TextStyle(
                   fontSize: 11,
                   color: AppColors.textSecondary,

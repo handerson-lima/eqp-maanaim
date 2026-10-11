@@ -1151,9 +1151,12 @@ class _CadastroState extends State<Cadastro> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Crie seu acesso',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              Semantics(
+                header: true,
+                child: Text(
+                  'Crie seu acesso',
+                  style: AppTypography.h2,
+                ),
               ),
               const SizedBox(height: 16),
               _campo(
@@ -1252,9 +1255,11 @@ class _CadastroState extends State<Cadastro> {
                   child: Semantics(liveRegion: true, child: Text(aviso!)),
                 ),
               const SizedBox(height: 20),
-              ElevatedButton(
+              PrimaryButton(
+                label: 'Criar cadastro',
+                isLoading: enviando,
+                isFullWidth: true,
                 onPressed: enviando ? null : enviar,
-                child: Text(enviando ? 'Enviando…' : 'Criar cadastro'),
               ),
             ],
           ),

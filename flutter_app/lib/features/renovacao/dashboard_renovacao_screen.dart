@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../ui/components/buttons.dart';
 import '../../ui/components/layout_elements.dart';
 import '../../ui/components/metrics.dart';
 import '../../ui/components/status_chips.dart';
@@ -237,10 +238,10 @@ class _DashboardRenovacaoScreenState extends State<DashboardRenovacaoScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.s16),
-          ElevatedButton.icon(
+          PrimaryButton(
             onPressed: () => _carregarDados(pagina: 1),
-            icon: const Icon(Icons.refresh),
-            label: const Text('Tentar novamente'),
+            icon: Icons.refresh,
+            label: 'Tentar novamente',
           ),
         ],
       ),

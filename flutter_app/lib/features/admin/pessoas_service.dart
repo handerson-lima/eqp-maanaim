@@ -44,12 +44,16 @@ class PessoasResposta {
   const PessoasResposta({
     required this.pessoas,
     this.contextoPapeis = const [],
+    this.contextoUid = '',
   });
 
   final List<PessoaAdministrativa> pessoas;
 
   /// Conjunto efetivo do solicitante, exibido apenas como leitura.
   final List<String> contextoPapeis;
+
+  /// UID do solicitante autenticado, usado para blindar contra autoatribuição.
+  final String contextoUid;
 
   bool get vazio => pessoas.isEmpty;
 
@@ -137,6 +141,7 @@ class FirebasePessoasGateway implements PessoasGateway {
       contextoPapeis: (contexto?['papeis'] as List? ?? const [])
           .map((item) => item.toString())
           .toList(growable: false),
+      contextoUid: contexto?['uid']?.toString() ?? '',
     );
   }
 

@@ -23,6 +23,8 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
   String? _aviso;
   String? _erroAcao;
 
+  String _contextoUid = '';
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +74,12 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
     String papel,
     bool conceder,
   ) async {
+    if (_contextoUid.isNotEmpty && pessoa.uid == _contextoUid) {
+      setState(() {
+        _erroAcao = 'Não é permitido alterar os próprios papéis administrativos.';
+      });
+      return;
+    }
     final rotulo = rotuloPapel(papel);
     final confirmado = await _confirmar(
       conceder ? 'Conceder $rotulo' : 'Revogar $rotulo',
@@ -113,7 +121,10 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
   Future<void> _abrirFormulario([PessoaAdministrativa? pessoa]) async {
     final dados = await showDialog<_DadosPessoa>(
       context: context,
-      builder: (_) => _FormularioPessoa(pessoa: pessoa),
+      builder: (_) => _FormularioPessoa(
+        pessoa: pessoa,
+        contextoUid: _contextoUid,
+      ),
     );
     if (dados == null || !mounted) return;
     setState(() {
@@ -240,6 +251,7 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
         );
       }
       final dados = estado.data!;
+      _contextoUid = dados.contextoUid;
       final pessoas = filtrarPessoas(dados.pessoas, _termo);
       final contexto = _cartaoContexto(dados);
       if (pessoas.isEmpty) {
@@ -259,7 +271,10 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
       }
       return ListView(
         padding: const EdgeInsets.only(bottom: 24),
-        children: [contexto, for (final pessoa in pessoas) _cartao(pessoa)],
+        children: [
+          contexto,
+          for (final pessoa in pessoas) _cartao(pessoa, dados.contextoUid),
+        ],
       );
     },
   );
@@ -319,86 +334,121 @@ class _PessoasPapeisState extends State<PessoasPapeis> {
     ),
   );
 
-  Widget _cartao(PessoaAdministrativa pessoa) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-    child: SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.person_outline, color: AppColors.blue600),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  pessoa.rotulo,
-                  style: AppTypography.h3,
+  Widget _cartao(PessoaAdministrativa pessoa, String contextoUid) {
+    final ehProprioUsuario =
+        contextoUid.isNotEmpty && pessoa.uid == contextoUid;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: SectionCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.person_outline, color: AppColors.blue600),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    pessoa.rotulo,
+                    style: AppTypography.h3,
+                  ),
+                ),
+                if (pessoa.coordenador)
+                  const StatusChip(
+                    status: 'ATIVA',
+                    label: 'Coordenador do Maanaim',
+                  ),
+              ],
+            ),
+            if (pessoa.email.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                pessoa.email,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
-              if (pessoa.coordenador)
-                const StatusChip(
-                  status: 'ATIVA',
-                  label: 'Coordenador do Maanaim',
-                ),
             ],
-          ),
-          if (pessoa.email.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(
-              pessoa.email,
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textSecondary,
+            Semantics(
+              label: 'Papéis de ${pessoa.rotulo}: ${pessoa.papeisRotulo}',
+              child: Text(
+                'Papéis: ${pessoa.papeisRotulo}',
+                style: AppTypography.body,
               ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (ehProprioUsuario)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: AppGeometry.buttonBorderRadius,
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.shield_outlined,
+                          size: 16,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Seu usuário (autoatribuição bloqueada)',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else ...[
+                  SecondaryButton(
+                    onPressed: _executando
+                        ? null
+                        : () => _alterarPapel(
+                            pessoa,
+                            'ADMINISTRADOR',
+                            !pessoa.temAdministrador,
+                          ),
+                    label: pessoa.temAdministrador
+                        ? 'Revogar Administrador'
+                        : 'Conceder Administrador',
+                  ),
+                  SecondaryButton(
+                    onPressed: _executando
+                        ? null
+                        : () => _alterarPapel(
+                            pessoa,
+                            'COORDENADOR',
+                            !pessoa.temCoordenador,
+                          ),
+                    label: pessoa.temCoordenador
+                        ? 'Revogar Coordenador'
+                        : 'Conceder Coordenador',
+                  ),
+                ],
+                SecondaryButton(
+                  onPressed: _executando ? null : () => _abrirFormulario(pessoa),
+                  icon: Icons.edit_outlined,
+                  label: 'Editar',
+                ),
+              ],
             ),
           ],
-          const SizedBox(height: 4),
-          Semantics(
-            label: 'Papéis de ${pessoa.rotulo}: ${pessoa.papeisRotulo}',
-            child: Text(
-              'Papéis: ${pessoa.papeisRotulo}',
-              style: AppTypography.body,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              SecondaryButton(
-                onPressed: _executando
-                    ? null
-                    : () => _alterarPapel(
-                        pessoa,
-                        'ADMINISTRADOR',
-                        !pessoa.temAdministrador,
-                      ),
-                label: pessoa.temAdministrador
-                    ? 'Revogar Administrador'
-                    : 'Conceder Administrador',
-              ),
-              SecondaryButton(
-                onPressed: _executando
-                    ? null
-                    : () => _alterarPapel(
-                        pessoa,
-                        'COORDENADOR',
-                        !pessoa.temCoordenador,
-                      ),
-                label: pessoa.temCoordenador
-                    ? 'Revogar Coordenador'
-                    : 'Conceder Coordenador',
-              ),
-              SecondaryButton(
-                onPressed: _executando ? null : () => _abrirFormulario(pessoa),
-                icon: Icons.edit_outlined,
-                label: 'Editar',
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _DadosPessoa {
@@ -416,9 +466,10 @@ class _DadosPessoa {
 }
 
 class _FormularioPessoa extends StatefulWidget {
-  const _FormularioPessoa({this.pessoa});
+  const _FormularioPessoa({this.pessoa, this.contextoUid = ''});
 
   final PessoaAdministrativa? pessoa;
+  final String contextoUid;
 
   @override
   State<_FormularioPessoa> createState() => _FormularioPessoaState();
@@ -505,8 +556,17 @@ class _FormularioPessoaState extends State<_FormularioPessoa> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Coordenador do Maanaim'),
+              subtitle: (widget.pessoa != null &&
+                      widget.contextoUid.isNotEmpty &&
+                      widget.pessoa!.uid == widget.contextoUid)
+                  ? const Text('Autoatribuição de coordenação não permitida')
+                  : null,
               value: _coordenador,
-              onChanged: (valor) => setState(() => _coordenador = valor),
+              onChanged: (widget.pessoa != null &&
+                      widget.contextoUid.isNotEmpty &&
+                      widget.pessoa!.uid == widget.contextoUid)
+                  ? null
+                  : (valor) => setState(() => _coordenador = valor),
             ),
             if (_coordenador)
               TextFormField(

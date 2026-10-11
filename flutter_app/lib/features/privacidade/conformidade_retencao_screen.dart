@@ -171,7 +171,7 @@ class _ConformidadeRetencaoScreenState
                 PageHeader(
                   title: 'Retenção e Privacidade',
                   subtitle:
-                      'Minimização de dados, retenção de 5 anos e controles operacionais (AD-12 / LGPD).',
+                      'Minimização de dados, retenção de 5 anos e controles operacionais conforme LGPD.',
                   actions: [
                     SecondaryButton(
                       label: 'Atualizar',
@@ -302,7 +302,7 @@ class _ConformidadeRetencaoScreenState
         : 'Desabilitado';
     return SectionCard(
       title: 'Política vigente',
-      subtitle: 'Fonte única de minimização e retenção (AD-12).',
+      subtitle: 'Fonte única de minimização e retenção.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -137,6 +137,7 @@ export async function consultarSolicitacoesPendentesGlobalRepo(
     const decPastor = p.decisaoPastor as Record<string, unknown> | undefined;
     const decResp = p.decisaoResponsavel as Record<string, unknown> | undefined;
 
+    const cpfMasc = mascararCpf(cpfOriginal);
     solicitacoes.push({
       participacaoId: doc.id,
       fichaId,
@@ -147,8 +148,8 @@ export async function consultarSolicitacoesPendentesGlobalRepo(
       enviadoEm: iso(p.enviadoEm || ficha.enviadoEm || p.criadoEm),
       nomeVoluntario: String(ficha.nomeCompleto ?? 'Voluntário').trim(),
       profissao: String(ficha.profissao ?? '').trim(),
-      cpfMascarado: mascararCpf(cpfOriginal),
-      cpfDigitos: cpfOriginal,
+      cpfMascarado: cpfMasc,
+      cpfDigitos: cpfMasc.replace(/\D/g, ''),
       igrejaId,
       igrejaNome: igrejaInfo.nome,
       igrejaCodigo: igrejaInfo.codigo,

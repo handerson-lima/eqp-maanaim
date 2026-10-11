@@ -650,6 +650,8 @@ class _PainelSolicitacoesPendentesScreenState
                   children: [
                     Text(
                       item.nomeVoluntario,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -744,11 +746,15 @@ class _PainelSolicitacoesPendentesScreenState
       children: [
         Icon(icone, size: 14, color: AppColors.textSecondary),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
           ),
         ),
       ],

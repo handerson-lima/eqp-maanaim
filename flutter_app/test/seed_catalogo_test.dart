@@ -9,7 +9,7 @@ void main() {
     await tester
         .pumpWidget(MaterialApp(home: Scaffold(body: SeedCatalogo(SeedFake()))));
     await tester.pumpAndSettle();
-    expect(find.text('Seed do catálogo'), findsOneWidget);
+    expect(find.text('Carga inicial do catálogo'), findsOneWidget);
     expect(find.textContaining('idempotente'), findsOneWidget);
     expect(find.text('Semear catálogo inicial'), findsOneWidget);
   });
@@ -26,7 +26,7 @@ void main() {
     expect(seed.chamadas, 1);
     expect(seed.ultimoCommandId, isNotNull);
     expect(seed.ultimoCommandId!.length, 32); // 16 bytes hex
-    expect(find.text('Seed concluído'), findsOneWidget);
+    expect(find.text('Carga inicial concluída'), findsOneWidget);
     expect(find.textContaining('Igrejas criadas: 25'), findsOneWidget);
   });
 
@@ -43,7 +43,7 @@ void main() {
     await tester.tap(find.text('Semear catálogo inicial'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Seed já executado (idempotente)'), findsOneWidget);
+    expect(find.text('Carga inicial já executada (idempotente)'), findsOneWidget);
     expect(find.textContaining('Recibo idempotente'), findsOneWidget);
   });
 
@@ -64,7 +64,7 @@ void main() {
     seed.falhar = false;
     await tester.tap(find.text('Tentar novamente'));
     await tester.pumpAndSettle();
-    expect(find.text('Seed concluído'), findsOneWidget);
+    expect(find.text('Carga inicial concluída'), findsOneWidget);
     expect(seed.chamadas, 2);
     expect(seed.ultimoCommandId, commandIdDaFalha);
   });

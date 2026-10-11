@@ -40,9 +40,9 @@ describe('auditoria e regras de segurança Firestore e Storage (AD-1, AD-9, AD-1
     expect(firestoreRules).toMatch(/match \/versoes\/\{versaoId\}\s*\{\s*allow read, write: if false;\s*\}/);
   });
 
-  it('garante que storage.rules bloqueia leitura e escrita direta em todos os caminhos do bucket', () => {
-    expect(storageRules).toContain('match /b/{bucket}/o { match /{allPaths=**} { allow read, write: if false; } }');
-    expect(storageRules).not.toMatch(/allow\s+(read|write)\s*:\s*if\s+request\.auth/);
+  it('garante que storage.rules bloqueia caminhos gerais e restringe avatares ao próprio usuário', () => {
+    expect(storageRules).toMatch(/match\s+\/\{allPaths=\*\*\}\s*\{\s*allow\s+read,\s*write:\s*if\s+false;\s*\}/);
+    expect(storageRules).toContain('match /avatars/{userId}/{fileName}');
   });
 });
 

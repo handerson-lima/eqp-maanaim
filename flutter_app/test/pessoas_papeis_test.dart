@@ -247,4 +247,23 @@ void main() {
     expect(find.byType(PessoasPapeis), findsOneWidget);
     expect(find.text('Ana Lima'), findsOneWidget);
   });
+
+  testWidgets('bloqueia autoatribuição e auto-revogação de papéis do próprio usuário', (
+    tester,
+  ) async {
+    const respostaComUsuarioLogado = PessoasResposta(
+      pessoas: _pessoas,
+      contextoPapeis: ['ADMINISTRADOR'],
+      contextoUid: '1', // '1' é Ana Lima
+    );
+    await _abrir(tester, PessoasFake(resposta: respostaComUsuarioLogado));
+    await tester.pumpAndSettle();
+
+    // Ana Lima (UID: '1') é o usuário atual logado
+    expect(find.text('Seu usuário (autoatribuição bloqueada)'), findsOneWidget);
+
+    // Revogar Administrador pertencia a Ana Lima, mas agora está bloqueado
+    expect(find.text('Revogar Administrador'), findsNothing);
+    expect(find.text('Conceder Administrador'), findsNWidgets(2));
+  });
 }

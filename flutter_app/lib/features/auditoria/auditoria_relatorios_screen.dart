@@ -1064,7 +1064,7 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
                 PageHeader(
                   title: 'Auditoria & Relatórios',
                   subtitle:
-                      'Rastreabilidade probatória imutável e consolidação operacional (AD-8, AD-9, AD-12).',
+                      'Rastreabilidade probatória imutável e consolidação operacional.',
                   actions: [
                     SecondaryButton(
                       label: 'Atualizar',

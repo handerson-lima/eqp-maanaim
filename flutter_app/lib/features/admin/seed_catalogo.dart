@@ -44,7 +44,7 @@ class _SeedCatalogoState extends State<SeedCatalogo> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _erro = 'Não foi possível executar o seed. Tente novamente.';
+          _erro = 'Não foi possível executar a carga inicial. Tente novamente.';
           _executando = false;
         });
       }
@@ -61,7 +61,7 @@ class _SeedCatalogoState extends State<SeedCatalogo> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const PageHeader(
-                  title: 'Seed do catálogo',
+                  title: 'Carga inicial do catálogo',
                   subtitle:
                       'Cria as igrejas e equipes iniciais do Maanaim a partir do '
                       'dataset canônico. A operação é idempotente: registros já '
@@ -158,8 +158,8 @@ class _SeedCatalogoState extends State<SeedCatalogo> {
                               Expanded(
                                 child: Text(
                                   _resultado!.repetido
-                                      ? 'Seed já executado (idempotente)'
-                                      : 'Seed concluído',
+                                      ? 'Carga inicial já executada (idempotente)'
+                                      : 'Carga inicial concluída',
                                   style: AppTypography.h3
                                       .copyWith(color: AppColors.success),
                                 ),

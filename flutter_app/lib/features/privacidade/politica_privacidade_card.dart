@@ -17,7 +17,7 @@ class PoliticaPrivacidadeCard extends StatelessWidget {
 
   static const String _textoRetencao =
       'Seus dados pessoais e os documentos do voluntariado são retidos por 5 anos '
-      '(política AD-12_V1), prazo necessário para comprovar a relação de serviço '
+      '(conforme política institucional de retenção), prazo necessário para comprovar a relação de serviço '
       'voluntário, salvo obrigação legal superior.';
   static const String _textoFinalidade =
       'Finalidade: identificar o voluntário, registrar o aceite do Termo de Adesão '
