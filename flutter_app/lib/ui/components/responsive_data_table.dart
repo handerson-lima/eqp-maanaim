@@ -94,49 +94,51 @@ class AppDataTable<T> extends StatelessWidget {
         final isDesktop = constraints.maxWidth >= breakpoint;
 
         if (isDesktop) {
-          return SectionCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (header != null) ...[
-                  Padding(
-                    padding: const EdgeInsets.all(AppSpacing.cardPadding),
-                    child: header!,
-                  ),
-                  const Divider(height: 1, color: AppColors.border),
-                ],
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    headingRowColor: WidgetStateProperty.all(
-                      const Color(0xFFF9FAFB),
+          return SingleChildScrollView(
+            child: SectionCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (header != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+                      child: header!,
                     ),
-                    dataRowMinHeight: AppGeometry.minTouchTarget,
-                    dataRowMaxHeight: AppGeometry.minTouchTarget + 16,
-                    columns: columns.map((col) {
-                      return DataColumn(
-                        label: Text(
-                          col.label,
-                          style: AppTypography.label.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.navy900,
+                    const Divider(height: 1, color: AppColors.border),
+                  ],
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor: WidgetStateProperty.all(
+                        const Color(0xFFF9FAFB),
+                      ),
+                      dataRowMinHeight: AppGeometry.minTouchTarget,
+                      dataRowMaxHeight: AppGeometry.minTouchTarget + 16,
+                      columns: columns.map((col) {
+                        return DataColumn(
+                          label: Text(
+                            col.label,
+                            style: AppTypography.label.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.navy900,
+                            ),
                           ),
-                        ),
-                        numeric: col.numeric,
-                        tooltip: col.tooltip,
-                      );
-                    }).toList(),
-                    rows: items.map((item) {
-                      return DataRow(
-                        cells: columns.map((col) {
-                          return DataCell(col.cellBuilder(item));
-                        }).toList(),
-                      );
-                    }).toList(),
+                          numeric: col.numeric,
+                          tooltip: col.tooltip,
+                        );
+                      }).toList(),
+                      rows: items.map((item) {
+                        return DataRow(
+                          cells: columns.map((col) {
+                            return DataCell(col.cellBuilder(item));
+                          }).toList(),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         }
