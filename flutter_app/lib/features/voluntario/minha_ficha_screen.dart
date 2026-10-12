@@ -26,6 +26,7 @@ import 'solicitar_reativacao_dialog.dart';
 import 'manifestar_renovacao_dialog.dart';
 import '../privacidade/politica_privacidade_card.dart';
 import '../perfil/editar_perfil_screen.dart';
+import 'ficha_documento_viewer_widget.dart';
 
 /// Tela responsiva mobile-first para o voluntário preencher e manter sua ficha cadastral permanente.
 class MinhaFichaScreen extends StatefulWidget {
@@ -91,6 +92,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   List<EventoLinhaDoTempoModel> _eventosHistorico = [];
   bool _carregandoEventos = false;
   String? _baixandoPdfParticipacaoId;
+  bool _baixandoPdfPrincipal = false;
   bool _modoEdicao = false;
   ParticipacaoModel? _participacaoSelecionada;
 
@@ -104,25 +106,50 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   bool get _bloqueiaEdicaoCadastral => _isEmAnalise;
 
   String _obterSubtituloHeader() {
-    if (_ficha?.estado == 'ATIVA') {
-      return 'Voluntariado homologado e ativo no Maanaim.';
-    }
     if (_ficha?.estado == 'REJEITADA') {
       return _mensagemNegativaVoluntario;
     }
-    if (_ficha?.estado == 'AGUARDANDO_COORDENADOR') {
-      return 'Aguardando homologação final do Coordenador Geral.';
-    }
-    if (_ficha?.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE') {
-      return 'Em análise pelos Responsáveis de Equipe.';
-    }
-    if (_isAguardandoPastor) {
-      return 'Ficha enviada para avaliação do Pastor Local.';
-    }
-    return 'Acesso realizado. Sua ficha pode continuar em rascunho.';
+    return 'Visualize e baixe sua ficha de voluntário';
   }
 
   Widget _obterActionHeader() {
+    final temParticipacaoAtiva = _participacoes.any((p) => p.isAtiva);
+
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.s12,
+      runSpacing: AppSpacing.s8,
+      children: [
+        if (temParticipacaoAtiva)
+          ElevatedButton.icon(
+            key: const Key('btn_baixar_pdf_principal'),
+            onPressed: _baixandoPdfPrincipal ? null : _executarDownloadPdfPrincipal,
+            icon: _baixandoPdfPrincipal
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.download, size: 18),
+            label: const Text('Baixar PDF'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.blue600,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(44, 44),
+              elevation: 0,
+              textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+          ),
+        _obterActionStatusChip(),
+        _buildMenuAcoesSecundarias(),
+      ],
+    );
+  }
+
+  Widget _obterActionStatusChip() {
     if (_ficha?.estado == 'ATIVA') {
       return const StatusChip(status: 'ATIVA', label: 'Ativa');
     }
@@ -139,6 +166,122 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       return const StatusChip(status: 'AGUARDANDO_PASTOR_LOCAL', label: 'Aguardando Pastor Local');
     }
     return StatusChip(status: _ficha?.estado ?? 'RASCUNHO');
+  }
+
+  Widget _buildMenuAcoesSecundarias() {
+    return PopupMenuButton<String>(
+      key: const Key('btn_menu_acoes_secundarias'),
+      tooltip: 'Ações da ficha',
+      icon: const Icon(Icons.more_vert, color: AppColors.navy900),
+      onSelected: (opcao) {
+        switch (opcao) {
+          case 'editar':
+            setState(() => _modoEdicao = true);
+            break;
+          case 'consulta':
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ConsultaFichaAutorizadaScreen(
+                  historicoService: _historicoService,
+                  userName: widget.userName,
+                  onVoltar: () => Navigator.of(context).maybePop(),
+                ),
+              ),
+            );
+            break;
+          case 'cancelar_voluntariado':
+            _abrirModalCancelarVoluntariado();
+            break;
+          case 'solicitar_equipe':
+            _abrirModalSolicitarEquipe();
+            break;
+        }
+      },
+      itemBuilder: (ctx) => [
+        if (!_bloqueiaEdicaoCadastral)
+          const PopupMenuItem(
+            value: 'editar',
+            child: Row(
+              children: [
+                Icon(Icons.edit_outlined, size: 18, color: AppColors.navy900),
+                SizedBox(width: 8),
+                Text('Editar dados cadastrais'),
+              ],
+            ),
+          ),
+        const PopupMenuItem(
+          value: 'consulta',
+          child: Row(
+            children: [
+              Icon(Icons.history_outlined, size: 18, color: AppColors.navy900),
+              SizedBox(width: 8),
+              Text('Histórico e auditoria'),
+            ],
+          ),
+        ),
+        if (_ficha?.isAtiva == true)
+          const PopupMenuItem(
+            value: 'solicitar_equipe',
+            child: Row(
+              children: [
+                Icon(Icons.group_add_outlined, size: 18, color: AppColors.navy900),
+                SizedBox(width: 8),
+                Text('Solicitar nova equipe'),
+              ],
+            ),
+          ),
+        if (_ficha != null && !_ficha!.isRascunho)
+          const PopupMenuItem(
+            value: 'cancelar_voluntariado',
+            child: Row(
+              children: [
+                Icon(Icons.cancel_outlined, size: 18, color: AppColors.danger),
+                SizedBox(width: 8),
+                Text('Cancelar voluntariado', style: TextStyle(color: AppColors.danger)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _executarDownloadPdfPrincipal() async {
+    final ativa = _participacaoSelecionada?.isAtiva == true
+        ? _participacaoSelecionada!
+        : _participacoes.cast<ParticipacaoModel?>().firstWhere(
+            (p) => p?.isAtiva == true,
+            orElse: () => null,
+          );
+    if (ativa == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nenhum documento ativo disponível para download.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+    setState(() => _baixandoPdfPrincipal = true);
+    await _baixarTermoPdf(ativa);
+    if (mounted) {
+      setState(() => _baixandoPdfPrincipal = false);
+    }
+  }
+
+  String? _obterCodigoIgreja(String? id) {
+    if (id == null || id.isEmpty) return null;
+    final match = _igrejas.cast<IgrejaCatalogo?>().firstWhere(
+          (i) => i?.id == id,
+          orElse: () => null,
+        );
+    return match?.codigo;
+  }
+
+  String _obterEmailVoluntario() {
+    if (widget.userName != null && widget.userName!.contains('@')) {
+      return widget.userName!;
+    }
+    return 'voluntario@maanaim.org.br';
   }
 
   /// Mensagem neutra canônica do voluntário. Prefere o valor projetado pelo
@@ -670,6 +813,27 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              if (_ficha != null && !_modoEdicao) ...[
+                                FichaDocumentoViewerWidget(
+                                  key: const Key('ficha_documento_viewer'),
+                                  ficha: _ficha,
+                                  participacoes: _participacoes,
+                                  participacaoSelecionada: _participacaoSelecionada,
+                                  nomeIgreja: _obterNomeIgreja(_ficha?.igrejaId),
+                                  codigoIgreja: _obterCodigoIgreja(_ficha?.igrejaId),
+                                  emailVoluntario: _obterEmailVoluntario(),
+                                  termoVersao: _termoVigente?.numeroVersao.toString(),
+                                  aceiteEm: _ficha?.termoAceito?.aceitoEm ?? _ficha?.atualizadoEm,
+                                  onBaixarPdf: _participacoes.any((p) => p.isAtiva)
+                                      ? _executarDownloadPdfPrincipal
+                                      : null,
+                                  isBaixandoPdf: _baixandoPdfPrincipal,
+                                  onBaixarTermoPdf: _baixarTermoPdf,
+                                  baixandoParticipacaoId: _baixandoPdfParticipacaoId,
+                                  onSelecionarParticipacao: (p) => setState(() => _participacaoSelecionada = p),
+                                ),
+                                const SizedBox(height: AppSpacing.s24),
+                              ],
                               if (_participacoes.isNotEmpty)
                                 PdfPreviewPanel(
                                   key: Key('preview_pdf_desktop_${_participacaoSelecionada?.id}'),
@@ -703,6 +867,27 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           participacao: _participacaoSelecionada,
                           pdfTermoGateway: widget.pdfTermoGateway,
                           nomeVoluntario: _ficha?.nomeCompleto,
+                        ),
+                      ],
+                      if (_ficha != null && !_modoEdicao) ...[
+                        const SizedBox(height: AppSpacing.s20),
+                        FichaDocumentoViewerWidget(
+                          key: const Key('ficha_documento_viewer_mobile'),
+                          ficha: _ficha,
+                          participacoes: _participacoes,
+                          participacaoSelecionada: _participacaoSelecionada,
+                          nomeIgreja: _obterNomeIgreja(_ficha?.igrejaId),
+                          codigoIgreja: _obterCodigoIgreja(_ficha?.igrejaId),
+                          emailVoluntario: _obterEmailVoluntario(),
+                          termoVersao: _termoVigente?.numeroVersao.toString(),
+                          aceiteEm: _ficha?.termoAceito?.aceitoEm ?? _ficha?.atualizadoEm,
+                          onBaixarPdf: _participacoes.any((p) => p.isAtiva)
+                              ? _executarDownloadPdfPrincipal
+                              : null,
+                          isBaixandoPdf: _baixandoPdfPrincipal,
+                          onBaixarTermoPdf: _baixarTermoPdf,
+                          baixandoParticipacaoId: _baixandoPdfParticipacaoId,
+                          onSelecionarParticipacao: (p) => setState(() => _participacaoSelecionada = p),
                         ),
                       ],
                       const SizedBox(height: AppSpacing.s24),
@@ -1631,17 +1816,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: AppSpacing.s8,
+                        runSpacing: AppSpacing.s4,
                         children: [
-                          Expanded(
-                            child: Text(
-                              nomeEquipe,
-                              style: AppTypography.label.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
+                          Text(
+                            nomeEquipe,
+                            style: AppTypography.label.copyWith(
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.s8),
                           StatusChip(
                             status: p.estado,
                             label: statusChipLabel,

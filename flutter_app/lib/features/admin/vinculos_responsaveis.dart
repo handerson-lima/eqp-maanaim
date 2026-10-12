@@ -657,20 +657,44 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const PageHeader(
-              title: 'Vínculos e Responsáveis',
-              subtitle:
-                  'Mantenha exatamente um responsável vigente por igreja e equipe. '
-                  'A troca encerra o vínculo anterior sem apagar o histórico.',
-            ),
-            const SizedBox(height: 12),
             if (_pastorSelecionado == null) ...[
+              const PageHeader(
+                title: 'Vínculos e Responsáveis',
+                subtitle:
+                    'Mantenha exatamente um responsável vigente por igreja e equipe. '
+                    'A troca encerra o vínculo anterior sem apagar o histórico.',
+              ),
+              const SizedBox(height: 12),
               _bannerModoPastor(),
               const SizedBox(height: 12),
               _seletorAbas(),
               const SizedBox(height: 12),
               _campoBusca(),
             ] else ...[
+              Row(
+                children: [
+                  TextButton.icon(
+                    key: const Key('btnVoltarVinculosPastor'),
+                    onPressed: _executandoLote ? null : _voltarModoIndividual,
+                    icon: const Icon(Icons.arrow_back, size: 18),
+                    label: const Text('Voltar'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.blue600,
+                      minimumSize: const Size(44, 44),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _aba == 0
+                          ? 'Vincular Igrejas ao Pastor'
+                          : 'Vincular Equipes ao Responsável',
+                      style: AppTypography.h2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               _cabecalhoPastor(),
               const SizedBox(height: 12),
               _seletorAbas(),
@@ -976,7 +1000,7 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
                   const SizedBox(width: 16),
                   Expanded(
                     flex: 2,
-                    child: _colunaRevisaoLote(),
+                    child: _colunaRevisaoLote(todos),
                   ),
                 ],
               ),
@@ -991,7 +1015,7 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
                   isDesktop: false,
                 ),
                 const SizedBox(height: 16),
-                _colunaRevisaoLote(),
+                _colunaRevisaoLote(todos),
               ],
             );
           }
@@ -1067,10 +1091,19 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
     final cabecalho = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _campoBusca(),
-        const SizedBox(height: 8),
+        TextField(
+          controller: _busca,
+          onChanged: (valor) => setState(() => _termo = valor),
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            labelText: _aba == 0 ? 'Buscar igreja...' : 'Buscar equipe...',
+            hintText: _aba == 0 ? 'Buscar igreja...' : 'Buscar equipe...',
+            prefixIcon: const Icon(Icons.search),
+          ),
+        ),
+        const SizedBox(height: 12),
         Text(
-          'Selecione as ${_aba == 0 ? 'igrejas' : 'equipes'} a serem vinculadas a este pastor:',
+          'Selecione as ${_aba == 0 ? 'igrejas' : 'equipes'} sob responsabilidade',
           style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
@@ -1127,88 +1160,232 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
     }
   }
 
-  Widget _colunaRevisaoLote() {
+  String _descricaoStatusSelecionado(ItemVinculo item) {
+    final intencao = _intencoes[item.id];
+    if (intencao != null) {
+      if (intencao.acao == TipoAcaoLote.substituicao) {
+        return 'Substitui ${intencao.responsavelAtual?.rotulo ?? '—'}';
+      }
+      if (intencao.acao == TipoAcaoLote.inclusao) {
+        return 'Nova atribuição';
+      }
+    }
+    return 'Vínculo vigente';
+  }
+
+  Color _corStatusSelecionado(ItemVinculo item) {
+    final intencao = _intencoes[item.id];
+    if (intencao?.acao == TipoAcaoLote.substituicao) {
+      return AppColors.warning;
+    }
+    return AppColors.textSecondary;
+  }
+
+  Widget _colunaRevisaoLote(List<ItemVinculo> todos) {
     final ativas = _intencoesAtivas;
+    final selecionados = todos.where(_isItemMarcado).toList();
+    final encerramentos = _intencoes.values
+        .where((i) => i.acao == TipoAcaoLote.encerramento)
+        .toList();
 
     return SingleChildScrollView(
       child: SectionCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          Row(
-            children: [
-              const Icon(Icons.rate_review_outlined, color: AppColors.blue600),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text('Painel de Revisão e Ações', style: AppTypography.h3),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _executandoLote ? null : _escolherDataEfetivaLote,
-            icon: const Icon(Icons.event),
-            label: Text('Data efetiva: ${_formatarData(_dataEfetiva)}'),
-          ),
-          const SizedBox(height: 12),
-          if (_executandoLote || _loteFinalizado) ...[
-            _painelMonitorExecucao(),
-          ] else ...[
-            if (ativas.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: Text(
-                    'Nenhuma alteração selecionada para este pastor.\n'
-                    'Marque ou desmarque entidades na lista à esquerda para configurar as intenções de vínculo.',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+            Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: AppColors.blue600,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_aba == 0 ? 'Igrejas selecionadas' : 'Equipes selecionadas'} (${selecionados.length})',
+                        style: AppTypography.h3,
+                      ),
+                      Text(
+                        'Painel de Revisão e Ações',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              )
-            else ...[
-              Text(
-                'Alterações preparadas (${ativas.length}):',
-                style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: ativas.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, idx) {
-                  final intencao = ativas[idx];
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: _iconeTipoAcao(intencao.acao),
-                    title: Text(intencao.item.rotulo, style: AppTypography.body),
-                    subtitle: Text(
-                      _descricaoAcao(intencao),
+              ],
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _executandoLote ? null : _escolherDataEfetivaLote,
+              icon: const Icon(Icons.event),
+              label: Text('Data efetiva: ${_formatarData(_dataEfetiva)}'),
+            ),
+            const SizedBox(height: 12),
+            if (_executandoLote || _loteFinalizado) ...[
+              _painelMonitorExecucao(),
+            ] else ...[
+              if (selecionados.isEmpty && encerramentos.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Text(
+                      'Nenhuma alteração selecionada para este pastor.\n'
+                      'Marque ou desmarque entidades na lista à esquerda para configurar as intenções de vínculo.',
+                      textAlign: TextAlign.center,
                       style: AppTypography.caption.copyWith(
-                        color: intencao.acao == TipoAcaoLote.substituicao
-                            ? AppColors.warning
-                            : AppColors.textSecondary,
+                        color: AppColors.textSecondary,
                       ),
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              PrimaryButton(
-                label: 'Revisar e Salvar Vínculos (${ativas.length})',
-                icon: Icons.checklist,
-                onPressed: _revisarLote,
-              ),
+                  ),
+                )
+              else ...[
+                if (ativas.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Nenhuma alteração selecionada para este pastor.\n'
+                      'Marque ou desmarque entidades na lista à esquerda para configurar as intenções de vínculo.',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                if (selecionados.isNotEmpty) ...[
+                  Text(
+                    '${_aba == 0 ? 'Igrejas vinculadas' : 'Equipes vinculadas'} (${selecionados.length}):',
+                    style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final item in selecionados)
+                    Container(
+                      key: Key('cardItemLote_${item.id}'),
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: AppGeometry.cardBorderRadius,
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _aba == 0
+                                ? Icons.church_outlined
+                                : Icons.groups_outlined,
+                            color: AppColors.blue600,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.rotulo,
+                                  style: AppTypography.body.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  _descricaoStatusSelecionado(item),
+                                  style: AppTypography.caption.copyWith(
+                                    color: _corStatusSelecionado(item),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            key: Key('btnRemoverLote_${item.id}'),
+                            icon: const Icon(
+                              Icons.close,
+                              color: AppColors.danger,
+                              size: 20,
+                            ),
+                            tooltip: 'Remover da seleção',
+                            constraints: const BoxConstraints(
+                              minWidth: 44,
+                              minHeight: 44,
+                            ),
+                            onPressed: _executandoLote
+                                ? null
+                                : () => _aoAlternarItemLote(item, false),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+                if (encerramentos.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Encerramentos solicitados (${encerramentos.length}):',
+                    style: AppTypography.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.danger,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final enc in encerramentos)
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.dangerBg,
+                        borderRadius: AppGeometry.cardBorderRadius,
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.link_off, color: AppColors.danger, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              enc.item.rotulo,
+                              style: AppTypography.body.copyWith(
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.undo, color: AppColors.textSecondary, size: 20),
+                            tooltip: 'Desfazer encerramento',
+                            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                            onPressed: _executandoLote ? null : () => _aoAlternarItemLote(enc.item, true),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: PrimaryButton(
+                    key: const Key('btnSalvarLote'),
+                    label: 'Salvar vínculos',
+                    icon: Icons.checklist,
+                    onPressed: ativas.isEmpty || _executandoLote ? null : _revisarLote,
+                  ),
+                ),
+              ],
             ],
           ],
-        ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _painelMonitorExecucao() {
     final ativas = _intencoesAtivas;
@@ -1300,35 +1477,6 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
       ],
     );
   }
-
-  Widget _iconeTipoAcao(TipoAcaoLote acao) => switch (acao) {
-    TipoAcaoLote.inclusao => const Icon(
-        Icons.add_circle_outline,
-        color: AppColors.success,
-      ),
-    TipoAcaoLote.substituicao => const Icon(
-        Icons.swap_horiz,
-        color: AppColors.warning,
-      ),
-    TipoAcaoLote.encerramento => const Icon(
-        Icons.link_off,
-        color: AppColors.danger,
-      ),
-    TipoAcaoLote.inalterado => const Icon(
-        Icons.check,
-        color: AppColors.textSecondary,
-      ),
-  };
-
-  String _descricaoAcao(IntencaoItemLote intencao) => switch (intencao.acao) {
-    TipoAcaoLote.inclusao => 'Novo vínculo a ser atribuído.',
-    TipoAcaoLote.substituicao =>
-      'Substitui ${intencao.responsavelAtual?.rotulo ?? '—'}. '
-          'Apenas pendências não decididas serão redirecionadas. Decisões históricas são preservadas.',
-    TipoAcaoLote.encerramento =>
-      'Encerramento do vínculo vigente a partir da data efetiva.',
-    TipoAcaoLote.inalterado => 'Sem alteração.',
-  };
 
   Widget _iconeEstadoLote(EstadoItemLote estado) => switch (estado) {
     EstadoItemLote.naoEnviado => const Icon(

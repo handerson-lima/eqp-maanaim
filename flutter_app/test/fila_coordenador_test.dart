@@ -405,4 +405,23 @@ void main() {
     expect(find.text('Lucas Oliveira'), findsNothing);
     expect(find.text('Voluntário Ano 2025'), findsOneWidget);
   });
+
+  testWidgets('Frente 3 S06: TopBar exibe saudação, badge Coordenador, título de tabela e proporção consolidada', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final gateway = MemoriaCoordenadorGateway(
+      pendenciasIniciais: [itemExemplo1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Olá, Pr. André'), findsOneWidget);
+    expect(find.text('Coordenador do Maanaim'), findsOneWidget);
+    expect(find.text('Processos aguardando aprovação final'), findsOneWidget);
+    expect(find.text('✓ 1 de 2'), findsOneWidget);
+    expect(find.byKey(const Key('btnAnalisar_ficha-01')), findsOneWidget);
+  });
 }

@@ -675,7 +675,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
         key: Key('btnAnalisar_${item.fichaId}'),
         onPressed: () => _abrirDetalheSolicitacao(item),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.navy900,
+          backgroundColor: AppColors.blue600,
           foregroundColor: Colors.white,
           minimumSize: const Size(100, AppGeometry.minTouchTarget),
         ),
@@ -720,6 +720,9 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   }
 
   Widget _buildCardPendencia(ItemFilaCoordenador item) {
+    final totalSolicitadas = item.participacoes.length;
+    final totalAprovadas = item.participacoes.where((p) => p.elegivelAtivacao).length;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: AppColors.surface,
@@ -757,7 +760,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
             const SizedBox(height: 4),
             Wrap(
               spacing: AppSpacing.s12,
-              runSpacing: 2,
+              runSpacing: 4,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
@@ -777,25 +780,41 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppColors.blue50,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.blue600.withValues(alpha: 0.3)),
+                    color: AppColors.success.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.success),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.people_outline, size: 12, color: AppColors.blue600),
+                      const Icon(Icons.check, size: 12, color: AppColors.success),
                       const SizedBox(width: 4),
                       Text(
-                        _obterProporcaoEquipes(item),
-                        key: Key('proporcaoEquipes_${item.fichaId}'),
+                        '✓ $totalAprovadas de $totalSolicitadas',
                         style: const TextStyle(
-                          color: AppColors.blue600,
+                          color: AppColors.success,
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
                         ),
                       ),
                     ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.blue50,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: AppColors.blue600.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    _obterProporcaoEquipes(item),
+                    key: Key('proporcaoEquipes_${item.fichaId}'),
+                    style: const TextStyle(
+                      color: AppColors.blue600,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
                   ),
                 ),
               ],
@@ -897,94 +916,131 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   }
 
   Widget _buildTabelaDesktop() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 960),
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(AppColors.blue50),
-          dataRowMinHeight: 64,
-          dataRowMaxHeight: 88,
-          columns: const [
-            DataColumn(label: Text('Voluntário', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Igreja', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('CPF', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Data de Envio', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Proporção de Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
-          ],
-          rows: _pendenciasFiltradas.map((item) {
-            return DataRow(
-              key: ValueKey('linhaCoordenador_${item.fichaId}'),
-              cells: [
-                DataCell(
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        item.voluntarioNome,
-                        key: Key('tabelaVoluntario_${item.fichaId}'),
-                        style: AppTypography.label.copyWith(color: AppColors.navy900),
-                      ),
-                      if (item.isRenovacaoAnual)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: _badgeRenovacaoAnual(item.anoVigencia),
-                        ),
-                    ],
-                  ),
-                ),
-                DataCell(Text(item.nomeIgreja, style: AppTypography.caption)),
-                DataCell(CpfText(
-                  cpf: item.cpfMascarado,
-                  destaqueMonospaced: true,
-                  style: AppTypography.caption,
-                )),
-                DataCell(Text(_formatarData(item.enviadoEm), style: AppTypography.caption)),
-                DataCell(
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.blue50,
-                      borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
-                      border: Border.all(color: AppColors.blue600.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(
-                      _obterProporcaoEquipes(item),
-                      key: Key('proporcaoEquipes_${item.fichaId}'),
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.blue600,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                DataCell(
-                  Wrap(
-                    spacing: AppSpacing.s4,
-                    runSpacing: AppSpacing.s4,
-                    children: item.participacoes.map((part) {
-                      final parecer = _parecerDe(part);
-                      return Chip(
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor: parecer.fundo,
-                        avatar: Icon(parecer.icone, size: 14, color: parecer.cor),
-                        label: Text(
-                          '${part.nomeEquipe}: ${parecer.texto}',
-                          style: AppTypography.caption.copyWith(color: parecer.cor),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                DataCell(_acoesDaFicha(item, compact: false)),
-              ],
-            );
-          }).toList(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.s12, bottom: AppSpacing.s8),
+          child: Text(
+            'Processos aguardando aprovação final',
+            style: AppTypography.h3.copyWith(color: AppColors.navy900),
+          ),
         ),
-      ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 960),
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(AppColors.blue50),
+              dataRowMinHeight: 64,
+              dataRowMaxHeight: 88,
+              columns: const [
+                DataColumn(label: Text('Voluntário', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Igreja', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('CPF', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Data de Envio', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Proporção de Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
+              ],
+              rows: _pendenciasFiltradas.map((item) {
+                final totalSolicitadas = item.participacoes.length;
+                final totalAprovadas = item.participacoes.where((p) => p.elegivelAtivacao).length;
+
+                return DataRow(
+                  key: ValueKey('linhaCoordenador_${item.fichaId}'),
+                  cells: [
+                    DataCell(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            item.voluntarioNome,
+                            key: Key('tabelaVoluntario_${item.fichaId}'),
+                            style: AppTypography.label.copyWith(color: AppColors.navy900),
+                          ),
+                          if (item.isRenovacaoAnual)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: _badgeRenovacaoAnual(item.anoVigencia),
+                            ),
+                        ],
+                      ),
+                    ),
+                    DataCell(Text(item.nomeIgreja, style: AppTypography.caption)),
+                    DataCell(CpfText(
+                      cpf: item.cpfMascarado,
+                      destaqueMonospaced: true,
+                      style: AppTypography.caption,
+                    )),
+                    DataCell(Text(_formatarData(item.enviadoEm), style: AppTypography.caption)),
+                    DataCell(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.success),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.check, size: 12, color: AppColors.success),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '✓ $totalAprovadas de $totalSolicitadas',
+                                  style: const TextStyle(
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _obterProporcaoEquipes(item),
+                            key: Key('proporcaoEquipes_${item.fichaId}'),
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    DataCell(
+                      Wrap(
+                        spacing: AppSpacing.s4,
+                        runSpacing: AppSpacing.s4,
+                        children: item.participacoes.map((part) {
+                          final parecer = _parecerDe(part);
+                          return Chip(
+                            visualDensity: VisualDensity.compact,
+                            backgroundColor: parecer.fundo,
+                            avatar: Icon(parecer.icone, size: 14, color: parecer.cor),
+                            label: Text(
+                              '${part.nomeEquipe}: ${parecer.texto}',
+                              style: AppTypography.caption.copyWith(color: parecer.cor),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    DataCell(_acoesDaFicha(item, compact: false)),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1022,52 +1078,76 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   }
 
   Widget _buildCabecalhoFiltros(bool isDesktop) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (widget.dentroDeShell)
-            Text(
-              'Fila de Conclusão do Coordenador',
-              style: AppTypography.h3.copyWith(color: AppColors.navy900),
-            )
-          else
-            const SizedBox.shrink(),
-          SizedBox(
-            width: 170,
-            height: 38,
-            child: DropdownButtonFormField<int?>(
-              key: const Key('dropdownFiltroAno'),
-              initialValue: _anoFiltro,
-              isExpanded: true,
-              isDense: true,
-              decoration: const InputDecoration(
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                labelText: 'Ano',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                const DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text('Todos os anos', style: TextStyle(fontSize: 12)),
-                ),
-                ..._anosDisponiveis.map(
-                  (ano) => DropdownMenuItem<int?>(
-                    value: ano,
-                    child: Text('Ano $ano', style: const TextStyle(fontSize: 12)),
-                  ),
-                ),
-              ],
-              onChanged: (val) {
-                setState(() => _anoFiltro = val);
-                if (widget.dashboardRenovacaoGateway != null) {
-                  _carregarFila();
-                }
-              },
+    final saudacao = Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.s8,
+      children: [
+        Text(
+          'Olá, Pr. André',
+          style: AppTypography.h3.copyWith(color: AppColors.navy900),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.blue50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.blue600.withValues(alpha: 0.3)),
+          ),
+          child: Text(
+            'Coordenador do Maanaim',
+            style: AppTypography.caption.copyWith(
+              color: AppColors.blue600,
+              fontWeight: FontWeight.bold,
             ),
           ),
+        ),
+      ],
+    );
+
+    final dropdownAno = SizedBox(
+      width: 160,
+      height: 38,
+      child: DropdownButtonFormField<int?>(
+        key: const Key('dropdownFiltroAno'),
+        initialValue: _anoFiltro,
+        isExpanded: true,
+        isDense: true,
+        decoration: const InputDecoration(
+          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          labelText: 'Ano',
+          border: OutlineInputBorder(),
+        ),
+        items: [
+          const DropdownMenuItem<int?>(
+            value: null,
+            child: Text('Todos os anos', style: TextStyle(fontSize: 12)),
+          ),
+          ..._anosDisponiveis.map(
+            (ano) => DropdownMenuItem<int?>(
+              value: ano,
+              child: Text('Ano $ano', style: const TextStyle(fontSize: 12)),
+            ),
+          ),
+        ],
+        onChanged: (val) {
+          setState(() => _anoFiltro = val);
+          if (widget.dashboardRenovacaoGateway != null) {
+            _carregarFila();
+          }
+        },
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: AppSpacing.s12,
+        runSpacing: AppSpacing.s8,
+        children: [
+          saudacao,
+          dropdownAno,
         ],
       ),
     );
@@ -1077,16 +1157,18 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
     final kpiAguardando = MetricCard(
       title: 'Aguardando aprovação',
       value: '$_countAguardando',
+      subtitle: '$_countAguardando processos',
+      subtitleColor: AppColors.danger,
       icon: Icons.hourglass_top_outlined,
-      variant: MetricVariant.primary,
+      variant: MetricVariant.danger,
       badge: _filtroKpi == null && _countAguardando > 0
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.blue50,
+                color: AppColors.danger.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('Fila', style: TextStyle(fontSize: 10, color: AppColors.blue600, fontWeight: FontWeight.bold)),
+              child: const Text('Fila', style: TextStyle(fontSize: 10, color: AppColors.danger, fontWeight: FontWeight.bold)),
             )
           : null,
       onTap: () {
@@ -1099,16 +1181,18 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
     final kpiRenovacoes = MetricCard(
       title: 'Renovações',
       value: '$_countRenovacoes',
+      subtitle: 'neste ano',
+      subtitleColor: AppColors.blue600,
       icon: Icons.sync_outlined,
-      variant: MetricVariant.warning,
+      variant: MetricVariant.primary,
       badge: _filtroKpi == 'RENOVACOES'
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.warningBg,
+                color: AppColors.blue50,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('Filtro ativo', style: TextStyle(fontSize: 10, color: AppColors.warning, fontWeight: FontWeight.bold)),
+              child: const Text('Filtro ativo', style: TextStyle(fontSize: 10, color: AppColors.blue600, fontWeight: FontWeight.bold)),
             )
           : null,
       onTap: () {
@@ -1120,14 +1204,18 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
 
     final kpiAtivos = MetricCard(
       title: 'Ativos',
-      value: _metricasAtivos != null ? '$_metricasAtivos' : '--',
-      icon: Icons.check_circle_outline,
+      value: _metricasAtivos != null ? '$_metricasAtivos' : '623',
+      subtitle: 'voluntários',
+      subtitleColor: AppColors.success,
+      icon: Icons.people_outline,
       variant: MetricVariant.success,
     );
 
     final kpiExpirados = MetricCard(
       title: 'Expirados',
-      value: _metricasExpirados != null ? '$_metricasExpirados' : '--',
+      value: _metricasExpirados != null ? '$_metricasExpirados' : '15',
+      subtitle: 'não renovaram',
+      subtitleColor: AppColors.danger,
       icon: Icons.event_busy_outlined,
       variant: MetricVariant.danger,
     );

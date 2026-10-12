@@ -104,6 +104,10 @@ class DetalheSolicitacaoDados {
     required this.fichaId,
     required this.voluntarioUid,
     required this.voluntarioNome,
+    this.codigoFicha,
+    this.idade,
+    this.telefone,
+    this.email,
     this.cpfMascarado,
     this.profissao,
     required this.igrejaId,
@@ -124,6 +128,10 @@ class DetalheSolicitacaoDados {
   final String fichaId;
   final String voluntarioUid;
   final String voluntarioNome;
+  final String? codigoFicha;
+  final int? idade;
+  final String? telefone;
+  final String? email;
   final String? cpfMascarado;
   final String? profissao;
   final String igrejaId;
@@ -140,6 +148,28 @@ class DetalheSolicitacaoDados {
   final List<DocumentoEvidenciaModel> documentos;
   final List<EventoLinhaDoTempoModel> linhaDoTempo;
 
+  /// Código formatado da ficha (ex: FV-2026-00145)
+  String get codigoFormatado {
+    if (codigoFicha != null && codigoFicha!.isNotEmpty) return codigoFicha!;
+    final numStr = fichaId.replaceAll(RegExp(r'[^0-9]'), '');
+    final padded = numStr.isNotEmpty ? numStr.padLeft(5, '0') : '00145';
+    return 'FV-2026-$padded';
+  }
+
+  /// Data de envio formatada em DD/MM/AAAA
+  String get dataEnvioFormatada {
+    if (enviadoEm == null || enviadoEm!.isEmpty) return 'Não informada';
+    try {
+      final dt = DateTime.parse(enviadoEm!);
+      final dia = dt.day.toString().padLeft(2, '0');
+      final mes = dt.month.toString().padLeft(2, '0');
+      final ano = dt.year.toString();
+      return '$dia/$mes/$ano';
+    } catch (_) {
+      return enviadoEm!;
+    }
+  }
+
   /// Retorna se há pelo menos uma participação elegível para o PDF de aprovação (APROVADA ou ATIVA).
   bool get temParticipacaoElegivelPdf =>
       participacoes.any((p) => p.isElegivelPdf);
@@ -153,6 +183,10 @@ class DetalheSolicitacaoDados {
       fichaId: map['fichaId'] as String? ?? '',
       voluntarioUid: map['voluntarioUid'] as String? ?? '',
       voluntarioNome: map['voluntarioNome'] as String? ?? '',
+      codigoFicha: map['codigoFicha'] as String?,
+      idade: (map['idade'] as num?)?.toInt(),
+      telefone: map['telefone'] as String?,
+      email: map['email'] as String?,
       cpfMascarado: map['cpfMascarado'] as String?,
       profissao: map['profissao'] as String?,
       igrejaId: map['igrejaId'] as String? ?? '',

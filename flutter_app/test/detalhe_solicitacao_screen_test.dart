@@ -475,6 +475,8 @@ void main() {
       expect(find.byType(DetalheSolicitacaoScreen), findsOneWidget);
 
       // Aprova na tela de detalhe
+      await tester.ensureVisible(find.byKey(const Key('btnAprovarPastorDetalhe')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('btnAprovarPastorDetalhe')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('btnConfirmarModalAprovacaoPastor')));
@@ -622,6 +624,35 @@ void main() {
       // Voltou para a fila do coordenador e item foi removido
       expect(find.byType(DetalheSolicitacaoScreen), findsNothing);
       expect(find.text('Nenhuma solicitação pendente!'), findsOneWidget);
+    });
+
+    testWidgets('Frente 3 S05: Header exibe Análise da Ficha, chip âmbar, resumo com código alfanumérico e botões estilizados', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final gateway = MockDetalheSolicitacaoGateway(dados: _criarDadosExemplo());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DetalheSolicitacaoScreen(
+            fichaId: 'ficha-123',
+            papel: PapelContextualAnalise.pastorLocal,
+            gateway: gateway,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Análise da Ficha'), findsWidgets);
+      expect(find.byKey(const Key('chipStatusAguardandoAprovacao')), findsOneWidget);
+      expect(find.text('Aguardando sua aprovação'), findsOneWidget);
+      expect(find.text('FV-2026-00123'), findsOneWidget);
+      expect(find.byKey(const Key('btnVerFichaPdf')), findsOneWidget);
+      expect(find.byKey(const Key('inputObservacaoDecisao')), findsOneWidget);
+      expect(find.text('✓ Aprovar'), findsOneWidget);
+      expect(find.text('✕ Rejeitar'), findsOneWidget);
     });
   });
 }

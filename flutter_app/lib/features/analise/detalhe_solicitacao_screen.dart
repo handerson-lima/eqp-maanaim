@@ -53,11 +53,18 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
 
   // Estado contextual do Coordenador Geral
   bool _confirmacaoReuniaoPastores = false;
+  final TextEditingController _observacaoController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _carregarDados();
+  }
+
+  @override
+  void dispose() {
+    _observacaoController.dispose();
+    super.dispose();
   }
 
   @override
@@ -654,7 +661,7 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 1024;
+        final isDesktop = constraints.maxWidth >= 720;
 
         return RefreshIndicator(
           onRefresh: _carregarDados,
@@ -666,6 +673,8 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildHeaderS05(dados, isDesktop),
+                const SizedBox(height: AppSpacing.s16),
                 if (_conflitoConcorrencia) ...[
                   _buildAlertaConcorrencia(),
                   const SizedBox(height: AppSpacing.s16),
@@ -696,7 +705,7 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
                     ],
                   )
                 else ...[
-                  // Mobile (<1024px): Empilhamento vertical em ordem estrita
+                  // Mobile (<720px): Empilhamento vertical estrito
                   _buildResumoVoluntario(dados),
                   const SizedBox(height: AppSpacing.s16),
                   _buildSecaoEquipes(dados),
@@ -710,6 +719,127 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildChipStatusAguardando() {
+    return Container(
+      key: const Key('chipStatusAguardandoAprovacao'),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.warningBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.warning),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: AppColors.warning,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Aguardando sua aprovação',
+            style: AppTypography.caption.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.navy900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderS05(DetalheSolicitacaoDados dados, bool isDesktop) {
+    if (!isDesktop) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              InkWell(
+                key: const Key('btnVoltarDetalheInPage'),
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else if (widget.onVoltar != null) {
+                    widget.onVoltar!();
+                  }
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.arrow_back, size: 20, color: AppColors.navy900),
+                      SizedBox(width: 4),
+                      Text(
+                        'Voltar',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy900),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Expanded(
+                child: Text(
+                  'Análise da Ficha',
+                  style: AppTypography.h2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          _buildChipStatusAguardando(),
+        ],
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InkWell(
+              key: const Key('btnVoltarDetalheInPage'),
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else if (widget.onVoltar != null) {
+                  widget.onVoltar!();
+                }
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.arrow_back, size: 20, color: AppColors.navy900),
+                    SizedBox(width: 4),
+                    Text(
+                      'Voltar',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy900),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s12),
+            Text('Análise da Ficha', style: AppTypography.h2),
+          ],
+        ),
+        _buildChipStatusAguardando(),
+      ],
     );
   }
 
@@ -768,6 +898,7 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
                 radius: 28,
@@ -788,6 +919,21 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
                       dados.voluntarioNome,
                       style: AppTypography.h3,
                     ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue50,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        dados.codigoFormatado,
+                        style: AppTypography.caption.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.blue600,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.s4),
                     StatusChip(
                       status: dados.estadoFicha,
@@ -798,13 +944,31 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
               ),
             ],
           ),
-          const Divider(height: AppSpacing.s32),
+          const Divider(height: AppSpacing.s24),
           Text('Dados Cadastrais Autorizados', style: AppTypography.h3),
           const SizedBox(height: AppSpacing.s12),
+          if (dados.idade != null) ...[
+            _buildInfoLinha('Idade', '${dados.idade} anos', Icons.cake_outlined),
+            const SizedBox(height: AppSpacing.s8),
+          ],
+          if (dados.telefone != null && dados.telefone!.isNotEmpty) ...[
+            _buildInfoLinha('Telefone', dados.telefone!, Icons.phone_outlined),
+            const SizedBox(height: AppSpacing.s8),
+          ],
+          if (dados.email != null && dados.email!.isNotEmpty) ...[
+            _buildInfoLinha('E-mail', dados.email!, Icons.email_outlined),
+            const SizedBox(height: AppSpacing.s8),
+          ],
           _buildInfoLinha(
             'Igreja Local',
             dados.nomeIgreja ?? (dados.igrejaId.isNotEmpty ? dados.igrejaId : 'Não informada'),
             Icons.church_outlined,
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          _buildInfoLinha(
+            'Data de envio',
+            dados.dataEnvioFormatada,
+            Icons.calendar_today_outlined,
           ),
           const SizedBox(height: AppSpacing.s8),
           _buildInfoLinha(
@@ -832,6 +996,22 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
               Icons.autorenew_outlined,
             ),
           ],
+          const SizedBox(height: AppSpacing.s20),
+          OutlinedButton.icon(
+            key: const Key('btnVerFichaPdf'),
+            icon: const Icon(Icons.description_outlined, size: 18, color: AppColors.blue600),
+            label: const Text('Ver ficha completa (PDF)'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.blue600,
+              side: const BorderSide(color: AppColors.blue600),
+              minimumSize: const Size(double.infinity, AppGeometry.minTouchTarget),
+            ),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Abrindo ficha completa (PDF)...')),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -870,7 +1050,7 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text('Equipes Solicitadas e Pareceres', style: AppTypography.h3),
+                child: Text('Equipes solicitadas', style: AppTypography.h3),
               ),
               const SizedBox(width: AppSpacing.s8),
               Text(
@@ -895,6 +1075,8 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
   Widget _buildCardParticipacao(ItemParticipacaoDetalhe p, DetalheSolicitacaoDados dados) {
     final ehEscopoDoUsuario = widget.papel == PapelContextualAnalise.responsavelEquipe &&
         (widget.equipeEscopoId == p.equipeId || widget.equipeEscopoId == null);
+
+    final ehAguardando = p.estado.startsWith('AGUARDANDO');
 
     return Container(
       key: Key('cardParticipacao_${p.equipeId}'),
@@ -943,7 +1125,7 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
               ),
               StatusChip(
                 status: p.estado,
-                label: p.estado.replaceAll('_', ' '),
+                label: ehAguardando ? 'AGUARDANDO' : p.estado.replaceAll('_', ' '),
               ),
             ],
           ),
@@ -977,6 +1159,20 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
   }
 
   Widget _buildSecaoDocumentosEvidencias(DetalheSolicitacaoDados dados) {
+    final docs = List<DocumentoEvidenciaModel>.from(dados.documentos);
+    // Assegura exibição da Ficha do voluntário se não presente
+    if (!docs.any((d) => d.tipo == 'FICHA_CADASTRAL' || d.titulo.contains('Ficha do voluntário'))) {
+      docs.insert(
+        0,
+        const DocumentoEvidenciaModel(
+          tipo: 'FICHA_CADASTRAL',
+          titulo: 'Ficha do voluntário',
+          descricao: 'Cadastro e dados declarados pelo voluntário',
+          disponivel: true,
+        ),
+      );
+    }
+
     return SectionCard(
       key: const Key('cardSecaoDocumentos'),
       padding: const EdgeInsets.all(AppSpacing.cardPadding),
@@ -985,7 +1181,7 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
         children: [
           Text('Documentos e Evidências', style: AppTypography.h3),
           const SizedBox(height: AppSpacing.s12),
-          ...dados.documentos.map((doc) => _buildItemDocumento(doc)),
+          ...docs.map((doc) => _buildItemDocumento(doc)),
         ],
       ),
     );
@@ -1028,10 +1224,16 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
             ),
           ),
           if (doc.disponivel)
-            IconButton(
+            TextButton.icon(
               key: Key('btnVisualizarDoc_${doc.tipo}'),
-              icon: const Icon(Icons.remove_red_eye_outlined, color: AppColors.blue600),
-              tooltip: 'Visualizar evidência',
+              icon: const Icon(Icons.remove_red_eye_outlined, size: 16, color: AppColors.blue600),
+              label: const Text(
+                'Ver documento',
+                style: TextStyle(
+                  color: AppColors.blue600,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Visualizando ${doc.titulo}')),
@@ -1067,7 +1269,7 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
               const Icon(Icons.gavel, size: 22, color: AppColors.navy900),
               const SizedBox(width: AppSpacing.s8),
               Expanded(
-                child: Text('Painel de Decisão Contextual', style: AppTypography.h3),
+                child: Text('Sua decisão', style: AppTypography.h3),
               ),
             ],
           ),
@@ -1075,6 +1277,19 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
           Text(
             _obterTextoOrientacaoPapel(),
             style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          TextFormField(
+            key: const Key('inputObservacaoDecisao'),
+            controller: _observacaoController,
+            maxLines: 2,
+            maxLength: 500,
+            decoration: const InputDecoration(
+              labelText: 'Observação (opcional)',
+              hintText: 'Adicione notas sobre a decisão...',
+              border: OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
           ),
           const SizedBox(height: AppSpacing.s16),
           if (widget.papel == PapelContextualAnalise.pastorLocal)
@@ -1103,34 +1318,38 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(
+          child: ElevatedButton.icon(
             key: const Key('btnRecusarPastorDetalhe'),
             onPressed: _processandoDecisao ? null : _executarRecusaPastor,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.danger,
-              side: const BorderSide(color: AppColors.danger),
+            icon: const Icon(Icons.close, color: Colors.white, size: 18),
+            label: const Text('✕ Rejeitar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
               minimumSize: const Size(0, AppGeometry.minTouchTarget),
             ),
-            child: const Text('Recusar Ficha'),
           ),
         ),
         const SizedBox(width: AppSpacing.s16),
         Expanded(
-          child: ElevatedButton(
+          child: ElevatedButton.icon(
             key: const Key('btnAprovarPastorDetalhe'),
             onPressed: _processandoDecisao ? null : _executarAprovacaoPastor,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(0, AppGeometry.minTouchTarget),
-            ),
-            child: _processandoDecisao
+            icon: _processandoDecisao
+                ? const SizedBox.shrink()
+                : const Icon(Icons.check, color: Colors.white, size: 18),
+            label: _processandoDecisao
                 ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('Aprovar Ficha'),
+                : const Text('✓ Aprovar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, AppGeometry.minTouchTarget),
+            ),
           ),
         ),
       ],
@@ -1182,38 +1401,42 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton(
+              child: ElevatedButton.icon(
                 key: const Key('btnRecusarResponsavelDetalhe'),
                 onPressed: _processandoDecisao
                     ? null
                     : () => _executarRecusaResponsavel(participacaoEscopo),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.danger,
-                  side: const BorderSide(color: AppColors.danger),
+                icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                label: const Text('✕ Rejeitar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
                   minimumSize: const Size(0, AppGeometry.minTouchTarget),
                 ),
-                child: const Text('Recusar Participação'),
               ),
             ),
             const SizedBox(width: AppSpacing.s16),
             Expanded(
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 key: const Key('btnAprovarResponsavelDetalhe'),
                 onPressed: _processandoDecisao
                     ? null
                     : () => _executarAprovacaoResponsavel(participacaoEscopo),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, AppGeometry.minTouchTarget),
-                ),
-                child: _processandoDecisao
+                icon: _processandoDecisao
+                    ? const SizedBox.shrink()
+                    : const Icon(Icons.check, color: Colors.white, size: 18),
+                label: _processandoDecisao
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('Aprovar Participação'),
+                    : const Text('✓ Aprovar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, AppGeometry.minTouchTarget),
+                ),
               ),
             ),
           ],
@@ -1271,36 +1494,40 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton(
+              child: ElevatedButton.icon(
                 key: const Key('btnRecusarCoordenadorDetalhe'),
                 onPressed: _processandoDecisao ? null : _executarRecusaCoordenador,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.danger,
-                  side: const BorderSide(color: AppColors.danger),
+                icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                label: const Text('✕ Rejeitar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
                   minimumSize: const Size(0, AppGeometry.minTouchTarget),
                 ),
-                child: const Text('Recusar'),
               ),
             ),
             const SizedBox(width: AppSpacing.s16),
             Expanded(
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 key: const Key('btnHomologarCoordenadorDetalhe'),
                 onPressed: (_processandoDecisao || !_confirmacaoReuniaoPastores)
                     ? null
                     : _executarHomologacaoCoordenador,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.blue600,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, AppGeometry.minTouchTarget),
-                ),
-                child: _processandoDecisao
+                icon: _processandoDecisao
+                    ? const SizedBox.shrink()
+                    : const Icon(Icons.check, color: Colors.white, size: 18),
+                label: _processandoDecisao
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('Homologar e Ativar'),
+                    : const Text('✓ Homologar e Ativar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.blue600,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, AppGeometry.minTouchTarget),
+                ),
               ),
             ),
           ],

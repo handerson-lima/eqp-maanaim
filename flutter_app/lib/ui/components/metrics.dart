@@ -21,6 +21,7 @@ class MetricCard extends StatelessWidget {
     required this.icon,
     this.variant = MetricVariant.primary,
     this.subtitle,
+    this.subtitleColor,
     this.badge,
     this.onTap,
   });
@@ -30,6 +31,7 @@ class MetricCard extends StatelessWidget {
   final IconData icon;
   final MetricVariant variant;
   final String? subtitle;
+  final Color? subtitleColor;
   final Widget? badge;
   final VoidCallback? onTap;
 
@@ -109,7 +111,8 @@ class MetricCard extends StatelessWidget {
             Text(
               subtitle!,
               style: AppTypography.caption.copyWith(
-                color: AppColors.textSecondary,
+                color: subtitleColor ?? AppColors.textSecondary,
+                fontWeight: subtitleColor != null ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ],

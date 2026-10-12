@@ -62,6 +62,8 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
+        await tester.ensureVisible(find.byKey(const Key('btnAprovar_ficha-01')));
+        await tester.pumpAndSettle();
         await tester.tap(find.byKey(const Key('btnAprovar_ficha-01')));
         await tester.pumpAndSettle();
 
@@ -84,6 +86,8 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
+        await tester.ensureVisible(find.byKey(const Key('btnRecusar_ficha-01')));
+        await tester.pumpAndSettle();
         await tester.tap(find.byKey(const Key('btnRecusar_ficha-01')));
         await tester.pumpAndSettle();
 

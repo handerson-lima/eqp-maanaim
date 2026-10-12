@@ -19,14 +19,9 @@ void main() {
         ),
       );
 
-      // Sem sessão: a raiz mostra a tela inicial.
+      // Sem sessão: a raiz mostra diretamente a tela de Login.
       identidade.simularLogout();
       await tester.pump();
-      expect(find.byType(Inicio), findsOneWidget);
-
-      // Abrir o Login a partir da tela inicial.
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Entrar'));
-      await tester.pumpAndSettle();
       expect(find.byType(Login), findsOneWidget);
 
       // Enviar credenciais válidas.

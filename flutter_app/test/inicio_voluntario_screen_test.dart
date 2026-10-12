@@ -5,7 +5,6 @@ import 'package:eqp_maanaim/features/termo/pdf_termo_service.dart';
 import 'package:eqp_maanaim/features/voluntario/ficha_service.dart';
 import 'package:eqp_maanaim/features/voluntario/inicio_voluntario_screen.dart';
 import 'package:eqp_maanaim/features/voluntario/participacao_service.dart';
-import 'package:eqp_maanaim/ui/components/metrics.dart';
 
 class FakeFichaGateway implements FichaGateway {
   FakeFichaGateway({this.resposta = const ObterFichaResposta(existe: false)});
@@ -133,8 +132,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Saudação e status
-      expect(find.text('Olá, Gabriel Silva'), findsOneWidget);
+      // Invariante: Não duplica cabeçalho de saudação no corpo (está na AppTopBar)
+      expect(find.text('Olá, Gabriel Silva'), findsNothing);
       expect(find.text('RASCUNHO'), findsWidgets);
 
       // Invariante de privacidade: Nunca exibir UID bruto
@@ -180,7 +179,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Olá, Mariana Souza'), findsOneWidget);
+      // Invariante: Não duplica cabeçalho de saudação no corpo
+      expect(find.text('Olá, Mariana Souza'), findsNothing);
       expect(find.text('EM APROVAÇÃO'), findsOneWidget);
       expect(find.text('Ficha em Análise e Tramitação'), findsOneWidget);
       expect(find.text('Acompanhar em Minha Ficha'), findsOneWidget);
@@ -260,39 +260,33 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Saudação e chip ativa
-      expect(find.text('Olá, Lucas Rocha'), findsOneWidget);
+      // Invariante: Não duplica saudação no corpo da tela
+      expect(find.text('Olá, Lucas Rocha'), findsNothing);
       expect(find.text('ATIVA'), findsWidgets);
 
-      // KPIs
-      expect(find.text('Equipes Ativas'), findsOneWidget);
+      // Card 1 — Minhas Equipes (3 indicadores)
+      expect(find.text('Minhas Equipes'), findsWidgets);
+      expect(find.text('Ativas'), findsOneWidget);
       expect(find.text('2'), findsOneWidget); // 2 equipes ativas
-      expect(find.text('Próxima Renovação'), findsOneWidget);
-      expect(find.text('23 dias'), findsOneWidget); // Menor vencimento entre as ativas
-      expect(find.text('Equipe: Equipe de Mídia'), findsOneWidget);
-      expect(find.text('Termo de Adesão'), findsOneWidget);
-      expect(find.text('Vigente'), findsOneWidget);
+      expect(find.text('Em aprovação'), findsOneWidget);
+      expect(find.text('Pendentes / Rejeitadas'), findsOneWidget);
 
-      // Card de validade destacada da equipe mais próxima
-      expect(find.byType(ProgressValidityCard), findsOneWidget);
-      expect(find.text('Vigência - Equipe de Mídia'), findsOneWidget);
+      // Card 2 — Validade da Ficha (data, dias restantes, barra de progresso verde)
+      expect(find.text('Validade da Ficha'), findsOneWidget);
+      expect(find.text('01/11/2026'), findsOneWidget);
+      expect(find.text('Faltam 23 dias'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
 
-      // Lista Minhas Equipes
-      expect(find.text('Minhas Equipes'), findsOneWidget);
+      // Seção Minhas Equipes em largura total
       expect(find.text('Grupo de Louvor'), findsOneWidget);
       expect(find.text('Equipe de Mídia'), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_right), findsWidgets);
 
       // Botão Renovar Equipe na participação em janela
       expect(find.text('Renovar Equipe'), findsOneWidget);
 
       // Botão de Comprovante / PDF
       expect(find.text('Comprovante / PDF'), findsWidgets);
-
-      // Ações rápidas
-      expect(find.text('Ações Rápidas'), findsOneWidget);
-      expect(find.text('Minha Ficha'), findsWidgets);
-      expect(find.text('Solicitar Nova Equipe'), findsOneWidget);
-      expect(find.text('Renovação Anual'), findsOneWidget);
     });
 
     testWidgets('Decisão desfavorável/rejeitada exibe resposta neutra canônica e oculta detalhes internos', (tester) async {
@@ -393,10 +387,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Sem overflow de layout
+      // Sem overflow de layout e sem saudação duplicada no corpo
       expect(tester.takeException(), isNull);
-      expect(find.text('Olá, Carla Dias'), findsOneWidget);
-      expect(find.text('Minhas Equipes'), findsOneWidget);
+      expect(find.text('Olá, Carla Dias'), findsNothing);
+      expect(find.text('Minhas Equipes'), findsWidgets);
       expect(find.text('Recepção'), findsOneWidget);
     });
   });

@@ -305,7 +305,7 @@ class _RaizSessaoState extends State<RaizSessao> {
       }
       final usuario = estado.data;
       if (usuario == null) {
-        return Inicio(widget.auth);
+        return Login(widget.auth);
       }
       return AreaAutenticada(
         widget.auth,
@@ -991,50 +991,7 @@ class Inicio extends StatelessWidget {
   const Inicio(this.auth, {super.key});
   final AuthService auth;
   @override
-  Widget build(BuildContext c) => Scaffold(
-    body: SafeArea(
-      child: PainelAcesso(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Semantics(
-              header: true,
-              child: Text(
-                'Bem-vindo',
-                style: AppTypography.h2,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.s4),
-            Text(
-              'Acesse sua conta para continuar.',
-              style: AppTypography.body.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.s24),
-            PrimaryButton(
-              label: 'Entrar',
-              isFullWidth: true,
-              onPressed: () => Navigator.push(
-                c,
-                MaterialPageRoute(builder: (_) => Login(auth)),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.s12),
-            SecondaryButton(
-              label: 'Cadastre-se',
-              isFullWidth: true,
-              onPressed: () => Navigator.push(
-                c,
-                MaterialPageRoute(builder: (_) => Cadastro(auth)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
+  Widget build(BuildContext c) => Login(auth);
 }
 
 class Cadastro extends StatefulWidget {
@@ -1300,7 +1257,9 @@ class _LoginState extends State<Login> {
   final f = GlobalKey<FormState>();
   final email = TextEditingController(), senha = TextEditingController();
   bool carregando = false;
+  bool _senhaVisivel = false;
   String? aviso;
+
   @override
   void dispose() {
     email.dispose();
@@ -1329,7 +1288,6 @@ class _LoginState extends State<Login> {
 
   @override
   Widget build(BuildContext c) => Scaffold(
-    appBar: AppBar(title: const Text('Entrar')),
     body: SafeArea(
       child: PainelAcesso(
         child: Form(
@@ -1342,7 +1300,10 @@ class _LoginState extends State<Login> {
                 header: true,
                 child: Text(
                   'Bem-vindo',
-                  style: AppTypography.h2,
+                  style: AppTypography.h2.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.s4),
@@ -1353,18 +1314,45 @@ class _LoginState extends State<Login> {
                 ),
               ),
               const SizedBox(height: AppSpacing.s24),
-              _campo(
-                email,
-                'E-mail',
-                emailValido,
-                tipo: TextInputType.emailAddress,
+              AppTextField(
+                controller: email,
+                label: 'E-mail',
+                hintText: 'seu@email.com',
+                isRequired: true,
+                keyboardType: TextInputType.emailAddress,
+                validator: emailValido,
+                prefixIcon: const Icon(
+                  Icons.mail_outline,
+                  size: 20,
+                  color: AppColors.textSecondary,
+                ),
               ),
-              _campo(
-                senha,
-                'Senha',
-                senhaValida,
-                segredo: true,
+              const SizedBox(height: AppSpacing.s16),
+              AppTextField(
+                controller: senha,
+                label: 'Senha',
+                hintText: 'Sua senha',
+                isRequired: true,
+                obscureText: !_senhaVisivel,
+                validator: senhaValida,
+                prefixIcon: const Icon(
+                  Icons.lock_outline,
+                  size: 20,
+                  color: AppColors.textSecondary,
+                ),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _senhaVisivel
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                  tooltip: _senhaVisivel ? 'Ocultar senha' : 'Exibir senha',
+                  onPressed: () => setState(() => _senhaVisivel = !_senhaVisivel),
+                ),
               ),
+              const SizedBox(height: AppSpacing.s4),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -1372,22 +1360,27 @@ class _LoginState extends State<Login> {
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.blue600,
                     minimumSize: const Size(44, 36),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s8,
+                      vertical: AppSpacing.s4,
+                    ),
                   ),
                   child: const Text('Esqueci minha senha'),
                 ),
               ),
-              if (aviso != null)
+              if (aviso != null) ...[
+                const SizedBox(height: AppSpacing.s8),
                 Semantics(
                   liveRegion: true,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.s12),
-                    child: Text(
-                      aviso!,
-                      style: AppTypography.body.copyWith(color: AppColors.danger),
+                  child: Text(
+                    aviso!,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.danger,
                     ),
                   ),
                 ),
-              const SizedBox(height: AppSpacing.s8),
+              ],
+              const SizedBox(height: AppSpacing.s16),
               PrimaryButton(
                 label: 'Entrar',
                 isFullWidth: true,
@@ -1436,40 +1429,6 @@ class _LoginState extends State<Login> {
           ),
         ),
       ),
-    ),
-  );
-
-  Widget _campo(
-    TextEditingController controller,
-    String label,
-    String? Function(String?) valida, {
-    bool segredo = false,
-    TextInputType? tipo,
-  }) => Padding(
-    padding: const EdgeInsets.only(bottom: AppSpacing.s12),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: AppTypography.label.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.s4),
-        TextFormField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: label,
-            hintText: 'Informe seu ${label.toLowerCase()}',
-          ),
-          validator: valida,
-          keyboardType: segredo ? null : tipo,
-          obscureText: segredo,
-        ),
-      ],
     ),
   );
 }

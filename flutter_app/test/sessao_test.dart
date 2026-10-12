@@ -35,7 +35,7 @@ void main() {
     identidade.simularLogout();
     await tester.pump();
 
-    expect(find.byType(Inicio), findsOneWidget);
+    expect(find.byType(Login), findsOneWidget);
     expect(find.text('Maanaim'), findsOneWidget);
   });
 
@@ -44,6 +44,7 @@ void main() {
     final auth = AuthService(identidade, RascunhoFake());
 
     await tester.pumpWidget(MaterialApp(home: AreaAutenticada(auth)));
+    await tester.pump();
     await tester.pump();
 
     // Usuário sem admin vê tela de rascunho com botão de sair.

@@ -638,9 +638,9 @@ void main() {
       await tester.tap(cbCaico);
       await tester.pumpAndSettle();
 
-      expect(find.text('Revisar e Salvar Vínculos (2)'), findsOneWidget);
+      expect(find.text('Salvar vínculos'), findsOneWidget);
 
-      await tester.tap(find.text('Revisar e Salvar Vínculos (2)'));
+      await tester.tap(find.text('Salvar vínculos'));
       await tester.pumpAndSettle();
 
       expect(find.text('Revisão de Vínculos em Lote'), findsOneWidget);
@@ -687,7 +687,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Substitui João Batista'), findsWidgets);
-      await tester.tap(find.text('Revisar e Salvar Vínculos (1)'));
+      await tester.tap(find.text('Salvar vínculos'));
       await tester.pumpAndSettle();
 
       expect(find.text('1 substituição(ões)'), findsOneWidget);
@@ -793,9 +793,9 @@ void main() {
         find.widgetWithText(CheckboxListTile, 'Goianinha - 240008'),
       );
       expect(cbApos.value, isFalse);
-      expect(find.text('Revisar e Salvar Vínculos (1)'), findsOneWidget);
+      expect(find.text('Salvar vínculos'), findsOneWidget);
 
-      await tester.tap(find.text('Revisar e Salvar Vínculos (1)'));
+      await tester.tap(find.text('Salvar vínculos'));
       await tester.pumpAndSettle();
 
       expect(find.text('1 encerramento(s)'), findsOneWidget);
@@ -847,7 +847,7 @@ void main() {
       await tester.tap(find.widgetWithText(CheckboxListTile, 'Mossoró - 240006'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Revisar e Salvar Vínculos (1)'));
+      await tester.tap(find.text('Salvar vínculos'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Confirmar e Salvar Vínculos'));
@@ -878,7 +878,7 @@ void main() {
       await tester.tap(find.widgetWithText(CheckboxListTile, 'Caicó - 240005'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Revisar e Salvar Vínculos (2)'));
+      await tester.tap(find.text('Salvar vínculos'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Confirmar e Salvar Vínculos'));
       await tester.pumpAndSettle();
@@ -920,7 +920,7 @@ void main() {
       await tester.tap(find.widgetWithText(CheckboxListTile, 'Mossoró - 240006'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Revisar e Salvar Vínculos (1)'));
+      await tester.tap(find.text('Salvar vínculos'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Confirmar e Salvar Vínculos'));
       await tester.pumpAndSettle();
@@ -988,6 +988,51 @@ void main() {
 
       expect(find.text('Gestão Centrada no Pastor / Responsável'), findsOneWidget);
       expect(find.text('Atribuir responsável'), findsWidgets);
+    });
+
+    testWidgets('Frente 3 S08 — header com Voltar e título, card do pastor, busca e remoção rápida ✕', (
+      tester,
+    ) async {
+      final gateway = VinculosFake(
+        resposta: VinculosResposta(
+          igrejas: igrejasMultiplas,
+          equipes: const [],
+        ),
+        pessoas: _pessoas,
+      );
+      await abrirModoPastor(tester, gateway, pastorInicial: pastorMaria);
+
+      // Header S08
+      expect(find.byKey(const Key('btnVoltarVinculosPastor')), findsOneWidget);
+      expect(find.text('Vincular Igrejas ao Pastor'), findsOneWidget);
+
+      // Card de identificação do pastor
+      expect(find.text('Maria Souza'), findsWidgets);
+      expect(find.text('Pastor Local'), findsWidgets);
+      expect(find.text('maria@exemplo.com'), findsOneWidget);
+
+      // Coluna esquerda: busca e título
+      expect(find.text('Selecione as igrejas sob responsabilidade'), findsOneWidget);
+      expect(find.byType(TextField), findsWidgets);
+
+      // Coluna direita: Igrejas selecionadas (0) inicialmente
+      expect(find.text('Igrejas selecionadas (0)'), findsOneWidget);
+
+      // Marca Mossoró (ig2)
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Mossoró - 240006'));
+      await tester.pumpAndSettle();
+
+      // Agora aparece card selecionado com botão de remoção rápida ✕
+      expect(find.text('Igrejas selecionadas (1)'), findsOneWidget);
+      expect(find.byKey(const Key('cardItemLote_ig2')), findsOneWidget);
+      expect(find.byKey(const Key('btnRemoverLote_ig2')), findsOneWidget);
+
+      // Clica no ✕ para remover da seleção
+      await tester.tap(find.byKey(const Key('btnRemoverLote_ig2')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Igrejas selecionadas (0)'), findsOneWidget);
+      expect(find.byKey(const Key('cardItemLote_ig2')), findsNothing);
     });
   });
 }

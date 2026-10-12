@@ -436,7 +436,8 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
   Widget _buildConteudo() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 1024;
+        final screenWidth = MediaQuery.sizeOf(context).width;
+        final isDesktop = constraints.maxWidth >= 900 || screenWidth >= 1024;
 
         return SingleChildScrollView(
           padding: EdgeInsets.symmetric(
@@ -457,6 +458,8 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
                     _buildBannerFiltroAtivo(),
                     const SizedBox(height: AppSpacing.s8),
                   ],
+                  _buildTituloSecaoPendencias(),
+                  const SizedBox(height: AppSpacing.s8),
                   if (_pendenciasFiltradas.isEmpty)
                     _buildListaVazia()
                   else if (isDesktop)
@@ -477,62 +480,143 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
     );
   }
 
-  Widget _buildCabecalho(bool isDesktop) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Solicitações de Voluntariado',
-                style: AppTypography.h2,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Avalie as fichas pendentes das igrejas sob sua responsabilidade.',
-                style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
-              ),
-            ],
+  Widget _buildTituloSecaoPendencias() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Text(
+              'Pendências recentes',
+              style: AppTypography.h3.copyWith(color: AppColors.navy900),
+            ),
           ),
-        ),
-        if (_igrejas.isNotEmpty) ...[
-          const SizedBox(width: AppSpacing.s12),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 180, maxWidth: 240),
-            child: DropdownButtonFormField<String?>(
-              key: const Key('dropdownFiltroIgreja'),
-              initialValue: _igrejaFiltroId,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                labelText: 'Igreja',
-                border: OutlineInputBorder(),
+          TextButton(
+            key: const Key('linkVerTodas'),
+            onPressed: () {
+              setState(() => _filtroKpi = null);
+            },
+            child: Text(
+              'Ver todas',
+              style: AppTypography.label.copyWith(
+                color: AppColors.blue600,
+                fontWeight: FontWeight.w600,
               ),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Todas as igrejas'),
-                ),
-                ..._igrejas.map(
-                  (igreja) => DropdownMenuItem<String?>(
-                    value: igreja.id,
-                    child: Text(
-                      igreja.nome,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-              onChanged: (novo) {
-                setState(() => _igrejaFiltroId = novo);
-              },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCabecalho(bool isDesktop) {
+    final nomePastor = widget.userName ?? 'Carlos';
+    final formatado = nomePastor.startsWith('Pr.') ? nomePastor : 'Pr. $nomePastor';
+    final saudacao = 'Olá, $formatado';
+
+    final infoPastor = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppSpacing.s8,
+          runSpacing: AppSpacing.s4,
+          children: [
+            Text(
+              saudacao,
+              style: AppTypography.h2.copyWith(color: AppColors.navy900),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.blue50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'Pastor Local',
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.blue600,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Avalie as fichas pendentes das igrejas sob sua responsabilidade.',
+          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+        ),
       ],
+    );
+
+    Widget? seletorIgreja;
+    if (_igrejas.isNotEmpty) {
+      seletorIgreja = ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: isDesktop ? 180 : 0,
+          maxWidth: isDesktop ? 240 : double.infinity,
+        ),
+        child: DropdownButtonFormField<String?>(
+          key: const Key('dropdownFiltroIgreja'),
+          initialValue: _igrejaFiltroId,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            labelText: 'Igreja',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Todas as igrejas'),
+            ),
+            ..._igrejas.map(
+              (igreja) => DropdownMenuItem<String?>(
+                value: igreja.id,
+                child: Text(
+                  igreja.nome,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+          onChanged: (novo) {
+            setState(() => _igrejaFiltroId = novo);
+          },
+        ),
+      );
+    }
+
+    if (!isDesktop && seletorIgreja != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            infoPastor,
+            const SizedBox(height: AppSpacing.s8),
+            seletorIgreja,
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: infoPastor),
+          if (seletorIgreja != null) ...[
+            const SizedBox(width: AppSpacing.s12),
+            seletorIgreja,
+          ],
+        ],
+      ),
     );
   }
 
@@ -540,16 +624,18 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
     final kpiPendencias = MetricCard(
       title: 'Pendências',
       value: '$_countPendencias',
-      icon: Icons.inbox_outlined,
-      variant: MetricVariant.primary,
+      icon: Icons.assignment_outlined,
+      variant: MetricVariant.danger,
+      subtitle: 'aguardando análise',
+      subtitleColor: AppColors.danger,
       badge: _filtroKpi == null && _countPendencias > 0
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.blue600,
+                color: AppColors.dangerBg,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('Fila', style: TextStyle(color: Colors.white, fontSize: 11)),
+              child: const Text('Fila', style: TextStyle(color: AppColors.danger, fontSize: 11, fontWeight: FontWeight.bold)),
             )
           : null,
       onTap: () {
@@ -560,16 +646,18 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
     final kpiRenovacoes = MetricCard(
       title: 'Renovações',
       value: '$_countRenovacoes',
-      icon: Icons.autorenew_rounded,
-      variant: MetricVariant.warning,
+      icon: Icons.sync,
+      variant: MetricVariant.primary,
+      subtitle: 'neste ano',
+      subtitleColor: AppColors.blue600,
       badge: _filtroKpi == 'RENOVACOES'
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.warning,
+                color: AppColors.blue50,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('Ativo', style: TextStyle(color: Colors.white, fontSize: 11)),
+              child: const Text('Ativo', style: TextStyle(color: AppColors.blue600, fontSize: 11, fontWeight: FontWeight.bold)),
             )
           : null,
       onTap: () {
@@ -582,9 +670,10 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
     final kpiAtivos = MetricCard(
       title: 'Ativos',
       value: _metricasAtivos != null ? '$_metricasAtivos' : '--',
-      icon: Icons.check_circle_outline,
+      icon: Icons.people_outline,
       variant: MetricVariant.success,
-      subtitle: 'Voluntários vigentes',
+      subtitle: 'em todas as igrejas',
+      subtitleColor: AppColors.success,
     );
 
     final kpiProximosVencimento = MetricCard(
@@ -592,10 +681,23 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
       value: _metricasProximosVencimento != null ? '$_metricasProximosVencimento' : '--',
       icon: Icons.schedule_outlined,
       variant: MetricVariant.warning,
-      subtitle: 'Janela de 60 dias',
+      subtitle: 'até 60 dias',
+      subtitleColor: AppColors.warning,
     );
 
-    if (maxWidth >= 600) {
+    if (maxWidth >= 1024) {
+      return Row(
+        children: [
+          Expanded(child: kpiPendencias),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(child: kpiRenovacoes),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(child: kpiAtivos),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(child: kpiProximosVencimento),
+        ],
+      );
+    } else if (maxWidth >= 600) {
       return Row(
         children: [
           Expanded(child: kpiPendencias),
@@ -705,8 +807,8 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
             columns: const [
               DataColumn(label: Text('Voluntário', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Igreja', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Equipe(s)', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Data de Envio', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Enviado em', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Status / Tipo', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
             ],
@@ -781,7 +883,7 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
                           icon: const Icon(Icons.assignment_outlined, size: 16),
                           label: const Text('Analisar'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.navy900,
+                            backgroundColor: AppColors.blue600,
                             foregroundColor: Colors.white,
                             minimumSize: const Size(100, AppGeometry.minTouchTarget),
                           ),
@@ -943,7 +1045,7 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
                   icon: const Icon(Icons.assignment_outlined, size: 16),
                   label: const Text('Analisar'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.navy900,
+                    backgroundColor: AppColors.blue600,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(110, AppGeometry.minTouchTarget),
                   ),

@@ -123,6 +123,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Clica em Aprovar
+    await tester.ensureVisible(find.byKey(const Key('btnAprovar_ficha-01')));
     await tester.tap(find.byKey(const Key('btnAprovar_ficha-01')));
     await tester.pumpAndSettle();
 
@@ -153,6 +154,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Clica em Recusar
+    await tester.ensureVisible(find.byKey(const Key('btnRecusar_ficha-01')));
     await tester.tap(find.byKey(const Key('btnRecusar_ficha-01')));
     await tester.pumpAndSettle();
 
@@ -226,8 +228,11 @@ void main() {
     expect(find.byType(DataTable), findsOneWidget);
     expect(find.text('Voluntário'), findsOneWidget);
     expect(find.descendant(of: find.byType(DataTable), matching: find.text('Igreja')), findsOneWidget);
-    expect(find.text('Equipe(s)'), findsOneWidget);
-    expect(find.text('Data de Envio'), findsOneWidget);
+    expect(find.text('Equipes'), findsOneWidget);
+    expect(find.text('Enviado em'), findsOneWidget);
+    expect(find.text('Pendências recentes'), findsOneWidget);
+    expect(find.byKey(const Key('linkVerTodas')), findsOneWidget);
+    expect(find.byKey(const Key('btnAnalisar_ficha-01')), findsOneWidget);
     expect(find.byKey(const Key('btnAprovar_ficha-01')), findsOneWidget);
   });
 
@@ -316,5 +321,27 @@ void main() {
     expect(find.text('Tentar novamente'), findsOneWidget);
     expect(find.text('Pendências'), findsNothing);
     expect(find.byType(DataTable), findsNothing);
+  });
+
+  testWidgets('Frente 3 S04: TopBar exibe saudação, badge Pastor Local e KPIs com subtítulos semânticos', (tester) async {
+    final gateway = MemoriaPastorLocalGateway(
+      pendenciasIniciais: [itemExemplo1],
+      igrejasIniciais: [igreja1, igreja2],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaMaanaim(),
+        home: FilaPastorScreen(gateway: gateway, userName: 'Moisés'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Olá, Pr. Moisés'), findsOneWidget);
+    expect(find.text('Pastor Local'), findsOneWidget);
+    expect(find.text('aguardando análise'), findsOneWidget);
+    expect(find.text('neste ano'), findsOneWidget);
+    expect(find.text('em todas as igrejas'), findsOneWidget);
+    expect(find.text('até 60 dias'), findsOneWidget);
   });
 }

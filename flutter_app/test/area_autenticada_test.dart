@@ -42,6 +42,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
         home: AreaAutenticada(_AuthAdmin(() async => false))));
     await tester.pump();
+    await tester.pump();
     expect(find.byType(AdminShell), findsNothing);
     expect(find.textContaining('rascunho'), findsOneWidget);
   });
