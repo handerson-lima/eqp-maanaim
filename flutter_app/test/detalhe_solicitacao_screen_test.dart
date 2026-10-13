@@ -73,6 +73,7 @@ DetalheSolicitacaoDados _criarDadosExemplo({
   bool elegivelPdf = false,
   bool multiEquipe = true,
   String estadoFicha = 'AGUARDANDO_PASTOR_LOCAL',
+  List<DocumentoEvidenciaModel>? documentos,
 }) {
   return DetalheSolicitacaoDados(
     fichaId: 'ficha-123',
@@ -102,7 +103,7 @@ DetalheSolicitacaoDados _criarDadosExemplo({
           ciclo: 'INICIAL',
         ),
     ],
-    documentos: [
+    documentos: documentos ?? [
       const DocumentoEvidenciaModel(
         tipo: 'TERMO_ADESAO',
         titulo: 'Termo de Adesão ao Voluntariado',
@@ -384,7 +385,7 @@ void main() {
       expect(gateway.chamadasObterDetalhe, chamadasIniciais + 1);
     });
 
-    testWidgets('Exibição Condicional de Documentos: PDF visível apenas se houver participação elegível',
+    testWidgets('WP-06A: documentos sem recurso autorizado não oferecem ações falsas',
         (tester) async {
       // 1. Sem elegibilidade -> PDF indisponível
       final gatewaySemElegivel = MockDetalheSolicitacaoGateway(
@@ -403,9 +404,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('btnVisualizarDoc_PDF_APROVACAO')), findsNothing);
-      expect(find.text('Indisponível'), findsOneWidget);
+      expect(find.byKey(const Key('btnVisualizarDoc_TERMO_ADESAO')), findsNothing);
+      expect(find.byKey(const Key('btnVerFichaPdf')), findsNothing);
+      expect(find.byKey(const Key('itemDoc_FICHA_CADASTRAL')), findsNothing);
+      expect(find.text('Consulta indisponível nesta tela'), findsWidgets);
 
-      // 2. Com elegibilidade -> PDF disponível
+      // 2. Elegibilidade no DTO não substitui recurso privado reautorizado.
       final gatewayComElegivel = MockDetalheSolicitacaoGateway(
         dados: _criarDadosExemplo(elegivelPdf: true),
       );
@@ -421,7 +425,32 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('btnVisualizarDoc_PDF_APROVACAO')), findsOneWidget);
+      expect(find.byKey(const Key('btnVisualizarDoc_PDF_APROVACAO')), findsNothing);
+      expect(find.byKey(const Key('btnVisualizarDoc_TERMO_ADESAO')), findsNothing);
+      expect(find.byKey(const Key('btnVerFichaPdf')), findsNothing);
+    });
+
+    testWidgets('WP-06A: lista vazia informa ausência de documento autorizado sem ação',
+        (tester) async {
+      final gateway = MockDetalheSolicitacaoGateway(
+        dados: _criarDadosExemplo(documentos: const []),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DetalheSolicitacaoScreen(
+            fichaId: 'ficha-123',
+            papel: PapelContextualAnalise.pastorLocal,
+            gateway: gateway,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nenhum documento autorizado disponível'), findsOneWidget);
+      expect(find.byKey(const Key('documentosAutorizadosVazio')), findsOneWidget);
+      expect(find.byKey(const Key('btnVerFichaPdf')), findsNothing);
+      expect(find.byType(TextButton), findsNothing);
     });
   });
 
@@ -649,7 +678,7 @@ void main() {
       expect(find.byKey(const Key('chipStatusAguardandoAprovacao')), findsOneWidget);
       expect(find.text('Aguardando sua aprovação'), findsOneWidget);
       expect(find.text('FV-2026-00123'), findsOneWidget);
-      expect(find.byKey(const Key('btnVerFichaPdf')), findsOneWidget);
+      expect(find.byKey(const Key('btnVerFichaPdf')), findsNothing);
       expect(find.byKey(const Key('inputObservacaoDecisao')), findsOneWidget);
       expect(find.text('✓ Aprovar'), findsOneWidget);
       expect(find.text('✕ Rejeitar'), findsOneWidget);

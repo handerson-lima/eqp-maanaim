@@ -48,6 +48,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   String? _filtroKpi; // null = todas; 'RENOVACOES' = apenas renovações
   int? _metricasAtivos;
   int? _metricasExpirados;
+  int _sequenciaCarregamento = 0;
 
   @override
   void initState() {
@@ -64,9 +65,12 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   }
 
   Future<void> _carregarFila() async {
+    final sequencia = ++_sequenciaCarregamento;
     setState(() {
       _carregando = true;
       _erro = null;
+      _metricasAtivos = null;
+      _metricasExpirados = null;
     });
 
     try {
@@ -74,10 +78,12 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
 
       if (widget.dashboardRenovacaoGateway != null) {
         try {
-          final resDashboard = await widget.dashboardRenovacaoGateway!.obterDashboardRenovacao(
-            papelDesejado: PapelDashboard.coordenador,
-            anoVigencia: _anoFiltro,
-          );
+          final resDashboard = await widget.dashboardRenovacaoGateway!
+              .obterDashboardRenovacao(
+                papelDesejado: PapelDashboard.coordenador,
+                anoVigencia: _anoFiltro,
+              );
+          if (!mounted || sequencia != _sequenciaCarregamento) return;
           if (resDashboard.metricasCoordenador != null) {
             _metricasAtivos = resDashboard.metricasCoordenador!.totalAtivos;
             _metricasExpirados = resDashboard.metricasCoordenador!.expirados;
@@ -87,13 +93,13 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
         }
       }
 
-      if (!mounted) return;
+      if (!mounted || sequencia != _sequenciaCarregamento) return;
       setState(() {
         _pendencias = pendencias;
         _carregando = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || sequencia != _sequenciaCarregamento) return;
       setState(() {
         _erro = 'Não foi possível carregar a fila do coordenador.';
         _carregando = false;
@@ -128,7 +134,8 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   }
 
   int get _countAguardando => _pendenciasNoEscopoAno.length;
-  int get _countRenovacoes => _pendenciasNoEscopoAno.where((p) => p.isRenovacaoAnual).length;
+  int get _countRenovacoes =>
+      _pendenciasNoEscopoAno.where((p) => p.isRenovacaoAnual).length;
 
   List<int> get _anosDisponiveis {
     final anos = <int>{DateTime.now().year, 2026};
@@ -147,7 +154,9 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   String _obterProporcaoEquipes(ItemFilaCoordenador item) {
     if (item.participacoes.isEmpty) return 'Proporção indisponível';
     final totalSolicitadas = item.participacoes.length;
-    final totalAprovadas = item.participacoes.where((p) => p.elegivelAtivacao).length;
+    final totalAprovadas = item.participacoes
+        .where((p) => p.elegivelAtivacao)
+        .length;
     return '$totalAprovadas/$totalSolicitadas equipes aprovadas';
   }
 
@@ -277,8 +286,12 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                         padding: const EdgeInsets.all(AppSpacing.s12),
                         decoration: BoxDecoration(
                           color: AppColors.blue50,
-                          borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
-                          border: Border.all(color: AppColors.blue600.withValues(alpha: 0.3)),
+                          borderRadius: BorderRadius.circular(
+                            AppGeometry.radiusInput,
+                          ),
+                          border: Border.all(
+                            color: AppColors.blue600.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,14 +330,21 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                         maxLength: 500,
                         decoration: InputDecoration(
                           labelText: 'Observação interna (opcional)',
-                          labelStyle: const TextStyle(color: AppColors.textSecondary),
+                          labelStyle: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: AppGeometry.inputBorderRadius,
-                            borderSide: const BorderSide(color: AppColors.border),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: AppGeometry.inputBorderRadius,
-                            borderSide: const BorderSide(color: AppColors.blue600, width: 2),
+                            borderSide: const BorderSide(
+                              color: AppColors.blue600,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -335,11 +355,16 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('Cancelar', style: TextStyle(color: AppColors.textSecondary)),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
                 ),
                 ElevatedButton(
                   key: const Key('btnConfirmarAtivacaoModal'),
-                  onPressed: confirmouReuniao ? () => Navigator.of(ctx).pop(true) : null,
+                  onPressed: confirmouReuniao
+                      ? () => Navigator.of(ctx).pop(true)
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.success,
                     foregroundColor: Colors.white,
@@ -416,13 +441,21 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                         padding: const EdgeInsets.all(AppSpacing.s12),
                         decoration: BoxDecoration(
                           color: AppColors.warningBg,
-                          borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
-                          border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                          borderRadius: BorderRadius.circular(
+                            AppGeometry.radiusInput,
+                          ),
+                          border: Border.all(
+                            color: AppColors.warning.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: const Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.info_outline, color: AppColors.warning, size: 20),
+                            Icon(
+                              Icons.info_outline,
+                              color: AppColors.warning,
+                              size: 20,
+                            ),
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -445,19 +478,27 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                         maxLength: 500,
                         decoration: InputDecoration(
                           labelText: 'Justificativa interna obrigatória *',
-                          labelStyle: const TextStyle(color: AppColors.textSecondary),
+                          labelStyle: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
                           errorText: erroJustificativa,
                           border: OutlineInputBorder(
                             borderRadius: AppGeometry.inputBorderRadius,
-                            borderSide: const BorderSide(color: AppColors.border),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: AppGeometry.inputBorderRadius,
-                            borderSide: const BorderSide(color: AppColors.danger, width: 2),
+                            borderSide: const BorderSide(
+                              color: AppColors.danger,
+                              width: 2,
+                            ),
                           ),
                         ),
                         onChanged: (texto) {
-                          if (erroJustificativa != null && texto.trim().length >= 5) {
+                          if (erroJustificativa != null &&
+                              texto.trim().length >= 5) {
                             setDialogState(() => erroJustificativa = null);
                           }
                         },
@@ -469,7 +510,10 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('Cancelar', style: TextStyle(color: AppColors.textSecondary)),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
                 ),
                 ElevatedButton(
                   key: const Key('btnConfirmarRecusaModal'),
@@ -477,7 +521,8 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                     final texto = justificativaController.text.trim();
                     if (texto.length < 5) {
                       setDialogState(() {
-                        erroJustificativa = 'Mínimo de 5 caracteres obrigatório.';
+                        erroJustificativa =
+                            'Mínimo de 5 caracteres obrigatório.';
                       });
                       return;
                     }
@@ -577,7 +622,9 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Erro ao registrar decisão do coordenador. Tente novamente.'),
+          content: Text(
+            'Erro ao registrar decisão do coordenador. Tente novamente.',
+          ),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -589,68 +636,72 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   }
 
   Widget _badgeAguardando() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: AppColors.blue50,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: AppColors.blue600.withValues(alpha: 0.3)),
-        ),
-        child: const Text(
-          'Aguardando Coordenação',
-          style: TextStyle(
-            color: AppColors.blue600,
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: AppColors.blue50,
+      borderRadius: BorderRadius.circular(4),
+      border: Border.all(color: AppColors.blue600.withValues(alpha: 0.3)),
+    ),
+    child: const Text(
+      'Aguardando Coordenação',
+      style: TextStyle(
+        color: AppColors.blue600,
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  );
+
+  Widget _badgeRenovacaoAnual(int? ano) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: AppColors.navy900.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(4),
+      border: Border.all(color: AppColors.navy900.withValues(alpha: 0.2)),
+    ),
+    child: Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 4,
+      children: [
+        const Icon(Icons.sync_outlined, size: 12, color: AppColors.navy900),
+        Text(
+          ano != null ? 'Ciclo Anual $ano' : 'Ciclo Anual',
+          style: const TextStyle(
+            color: AppColors.navy900,
             fontSize: 11,
             fontWeight: FontWeight.bold,
           ),
         ),
-      );
-
-  Widget _badgeRenovacaoAnual(int? ano) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: AppColors.navy900.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: AppColors.navy900.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.sync_outlined, size: 12, color: AppColors.navy900),
-            const SizedBox(width: 4),
-            Text(
-              ano != null ? 'Ciclo Anual $ano' : 'Ciclo Anual',
-              style: const TextStyle(
-                color: AppColors.navy900,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 
   Future<void> _abrirDetalheSolicitacao(ItemFilaCoordenador item) async {
-    final resultado = await Navigator.of(context).push<ResultadoDecisaoContextual>(
-      MaterialPageRoute(
-        builder: (_) => DetalheSolicitacaoScreen(
-          fichaId: item.fichaId,
-          nomeVoluntarioInicial: item.voluntarioNome,
-          papel: PapelContextualAnalise.coordenadorGeral,
-          isRenovacaoAnual: item.isRenovacaoAnual,
-          cicloId: item.cicloId,
-          versaoInicial: item.versaoFicha,
-          gateway: widget.detalheGateway ??
-              CompostoDetalheSolicitacaoGateway(coordenadorGateway: widget.gateway),
-          onDecisaoConcluida: (res) {
-            if (mounted) {
-              setState(() {
-                _pendencias.removeWhere((p) => p.fichaId == res.fichaId);
-              });
-            }
-          },
-        ),
-      ),
-    );
+    final resultado = await Navigator.of(context)
+        .push<ResultadoDecisaoContextual>(
+          MaterialPageRoute(
+            builder: (_) => DetalheSolicitacaoScreen(
+              fichaId: item.fichaId,
+              nomeVoluntarioInicial: item.voluntarioNome,
+              papel: PapelContextualAnalise.coordenadorGeral,
+              isRenovacaoAnual: item.isRenovacaoAnual,
+              cicloId: item.cicloId,
+              versaoInicial: item.versaoFicha,
+              gateway:
+                  widget.detalheGateway ??
+                  CompostoDetalheSolicitacaoGateway(
+                    coordenadorGateway: widget.gateway,
+                  ),
+              onDecisaoConcluida: (res) {
+                if (mounted) {
+                  setState(() {
+                    _pendencias.removeWhere((p) => p.fichaId == res.fichaId);
+                  });
+                }
+              },
+            ),
+          ),
+        );
 
     if (resultado != null && mounted) {
       setState(() {
@@ -724,7 +775,9 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
 
   Widget _buildCardPendencia(ItemFilaCoordenador item) {
     final totalSolicitadas = item.participacoes.length;
-    final totalAprovadas = item.participacoes.where((p) => p.elegivelAtivacao).length;
+    final totalAprovadas = item.participacoes
+        .where((p) => p.elegivelAtivacao)
+        .length;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -754,7 +807,8 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                 Wrap(
                   spacing: 4,
                   children: [
-                    if (item.isRenovacaoAnual) _badgeRenovacaoAnual(item.anoVigencia),
+                    if (item.isRenovacaoAnual)
+                      _badgeRenovacaoAnual(item.anoVigencia),
                     _badgeAguardando(),
                   ],
                 ),
@@ -768,20 +822,35 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
               children: [
                 Text(
                   'Igreja: ${item.nomeIgreja}',
-                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 Text(
                   'Profissão: ${item.profissao.isNotEmpty ? item.profissao : "Não informada"}',
-                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                Text(
+                  'Enviado em: ${_formatarData(item.enviadoEm)}',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 CpfText(
                   cpf: item.cpfMascarado,
                   incluirRotuloVisual: true,
                   destaqueMonospaced: true,
-                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
@@ -790,7 +859,11 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.check, size: 12, color: AppColors.success),
+                      const Icon(
+                        Icons.check,
+                        size: 12,
+                        color: AppColors.success,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '✓ $totalAprovadas de $totalSolicitadas',
@@ -804,11 +877,16 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.blue50,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.blue600.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.blue600.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Text(
                     _obterProporcaoEquipes(item),
@@ -826,7 +904,11 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Icon(Icons.check_circle_outline, size: 14, color: AppColors.success),
+                  const Icon(
+                    Icons.check_circle_outline,
+                    size: 14,
+                    color: AppColors.success,
+                  ),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
@@ -902,10 +984,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
               }).toList(),
             ),
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: _acoesDaFicha(item),
-            ),
+            Align(alignment: Alignment.centerRight, child: _acoesDaFicha(item)),
           ],
         ),
       ),
@@ -923,7 +1002,10 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.s12, bottom: AppSpacing.s8),
+          padding: const EdgeInsets.only(
+            top: AppSpacing.s12,
+            bottom: AppSpacing.s8,
+          ),
           child: Text(
             'Processos aguardando aprovação final',
             style: AppTypography.h3.copyWith(color: AppColors.navy900),
@@ -934,109 +1016,181 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 960),
             child: DataTable(
+              columnSpacing: AppSpacing.s12,
+              horizontalMargin: AppSpacing.s8,
               headingRowColor: WidgetStateProperty.all(AppColors.blue50),
-              dataRowMinHeight: 64,
-              dataRowMaxHeight: 88,
+              dataRowMinHeight: 144,
+              dataRowMaxHeight: 220,
               columns: const [
-                DataColumn(label: Text('Voluntário', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Igreja', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('CPF', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Data de Envio', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Proporção de Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(
+                  label: Text(
+                    'Voluntário',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Igreja',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Data de Envio',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Equipes aprovadas',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Ações',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
               ],
               rows: _pendenciasFiltradas.map((item) {
                 final totalSolicitadas = item.participacoes.length;
-                final totalAprovadas = item.participacoes.where((p) => p.elegivelAtivacao).length;
+                final totalAprovadas = item.participacoes
+                    .where((p) => p.elegivelAtivacao)
+                    .length;
 
                 return DataRow(
                   key: ValueKey('linhaCoordenador_${item.fichaId}'),
                   cells: [
                     DataCell(
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            item.voluntarioNome,
-                            key: Key('tabelaVoluntario_${item.fichaId}'),
-                            style: AppTypography.label.copyWith(color: AppColors.navy900),
-                          ),
-                          if (item.isRenovacaoAnual)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: _badgeRenovacaoAnual(item.anoVigencia),
+                      SizedBox(
+                        width: 190,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              item.voluntarioNome,
+                              key: Key('tabelaVoluntario_${item.fichaId}'),
+                              style: AppTypography.label.copyWith(
+                                color: AppColors.navy900,
+                              ),
                             ),
-                        ],
+                            if (item.isRenovacaoAnual)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: _badgeRenovacaoAnual(item.anoVigencia),
+                              ),
+                            if (item.profissao.isNotEmpty)
+                              Text(
+                                item.profissao,
+                                style: AppTypography.caption,
+                              ),
+                            CpfText(
+                              cpf: item.cpfMascarado,
+                              destaqueMonospaced: true,
+                              style: AppTypography.caption,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    DataCell(Text(item.nomeIgreja, style: AppTypography.caption)),
-                    DataCell(CpfText(
-                      cpf: item.cpfMascarado,
-                      destaqueMonospaced: true,
-                      style: AppTypography.caption,
-                    )),
-                    DataCell(Text(_formatarData(item.enviadoEm), style: AppTypography.caption)),
                     DataCell(
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.success.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.success),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.check, size: 12, color: AppColors.success),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '✓ $totalAprovadas de $totalSolicitadas',
-                                  style: const TextStyle(
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                  ),
+                      SizedBox(
+                        width: 140,
+                        child: Text(
+                          item.nomeIgreja,
+                          style: AppTypography.caption,
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      Text(
+                        _formatarData(item.enviadoEm),
+                        style: AppTypography.caption,
+                      ),
+                    ),
+                    DataCell(
+                      SizedBox(
+                        width: 300,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.success.withValues(
+                                  alpha: 0.12,
                                 ),
-                              ],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.success),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.check,
+                                    size: 12,
+                                    color: AppColors.success,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '✓ $totalAprovadas de $totalSolicitadas',
+                                    style: const TextStyle(
+                                      color: AppColors.success,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _obterProporcaoEquipes(item),
-                            key: Key('proporcaoEquipes_${item.fichaId}'),
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.textSecondary,
-                              fontSize: 11,
+                            const SizedBox(height: 2),
+                            Text(
+                              _obterProporcaoEquipes(item),
+                              key: Key('proporcaoEquipes_${item.fichaId}'),
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 11,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: AppSpacing.s4),
+                            Wrap(
+                              spacing: AppSpacing.s4,
+                              runSpacing: AppSpacing.s4,
+                              children: item.participacoes.map((part) {
+                                final parecer = _parecerDe(part);
+                                return Chip(
+                                  visualDensity: VisualDensity.compact,
+                                  backgroundColor: parecer.fundo,
+                                  avatar: Icon(
+                                    parecer.icone,
+                                    size: 14,
+                                    color: parecer.cor,
+                                  ),
+                                  label: Text(
+                                    '${part.nomeEquipe}: ${parecer.texto}',
+                                    style: AppTypography.caption.copyWith(
+                                      color: parecer.cor,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     DataCell(
-                      Wrap(
-                        spacing: AppSpacing.s4,
-                        runSpacing: AppSpacing.s4,
-                        children: item.participacoes.map((part) {
-                          final parecer = _parecerDe(part);
-                          return Chip(
-                            visualDensity: VisualDensity.compact,
-                            backgroundColor: parecer.fundo,
-                            avatar: Icon(parecer.icone, size: 14, color: parecer.cor),
-                            label: Text(
-                              '${part.nomeEquipe}: ${parecer.texto}',
-                              style: AppTypography.caption.copyWith(color: parecer.cor),
-                            ),
-                          );
-                        }).toList(),
+                      SizedBox(
+                        width: 180,
+                        child: _acoesDaFicha(item, compact: true),
                       ),
                     ),
-                    DataCell(_acoesDaFicha(item, compact: false)),
                   ],
                 );
               }).toList(),
@@ -1057,8 +1211,8 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
         message: _filtroKpi != null
             ? 'Nenhuma solicitação de renovação anual pendente para o coordenador.'
             : _anoFiltro != null
-                ? 'Nenhuma solicitação pendente para o ano $_anoFiltro.'
-                : 'Não há solicitações com todas as equipes resolvidas aguardando conclusão do Coordenador.',
+            ? 'Nenhuma solicitação pendente para o ano $_anoFiltro.'
+            : 'Não há solicitações com todas as equipes resolvidas aguardando conclusão do Coordenador.',
       ),
     );
   }
@@ -1131,10 +1285,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: AppSpacing.s12,
         runSpacing: AppSpacing.s8,
-        children: [
-          saudacao,
-          dropdownAno,
-        ],
+        children: [saudacao, dropdownAno],
       ),
     );
   }
@@ -1155,7 +1306,14 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                 color: AppColors.danger.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('Fila', style: TextStyle(fontSize: 10, color: AppColors.danger, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Fila',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             )
           : null,
       onTap: () {
@@ -1180,7 +1338,14 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                 color: AppColors.blue50,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('Filtro ativo', style: TextStyle(fontSize: 10, color: AppColors.blue600, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Filtro ativo',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AppColors.blue600,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             )
           : null,
       onTap: () {
@@ -1192,8 +1357,8 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
 
     final kpiAtivos = MetricCard(
       title: 'Ativos',
-      value: _metricasAtivos != null ? '$_metricasAtivos' : '623',
-      subtitle: 'voluntários',
+      value: _metricasAtivos != null ? '$_metricasAtivos' : '—',
+      subtitle: _metricasAtivos != null ? 'participações' : 'Indisponível',
       subtitleColor: AppColors.success,
       icon: Icons.people_outline,
       variant: MetricVariant.success,
@@ -1201,8 +1366,8 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
 
     final kpiExpirados = MetricCard(
       title: 'Expirados',
-      value: _metricasExpirados != null ? '$_metricasExpirados' : '15',
-      subtitle: 'não renovaram',
+      value: _metricasExpirados != null ? '$_metricasExpirados' : '—',
+      subtitle: _metricasExpirados != null ? 'participações' : 'Indisponível',
       subtitleColor: AppColors.danger,
       icon: Icons.event_busy_outlined,
       variant: MetricVariant.danger,
@@ -1245,7 +1410,10 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
 
   Widget _buildBannerFiltroAtivo() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s16,
+        vertical: AppSpacing.s8,
+      ),
       decoration: BoxDecoration(
         color: AppColors.blue50,
         borderRadius: AppGeometry.cardBorderRadius,
@@ -1278,14 +1446,16 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   Widget _buildConteudo() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 1024;
+        final isDesktop = constraints.maxWidth >= 1200;
 
         return RefreshIndicator(
           onRefresh: _carregarFila,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.symmetric(
-              horizontal: isDesktop ? AppSpacing.s32 : AppSpacing.pagePaddingMobile,
+              horizontal: isDesktop
+                  ? AppSpacing.s32
+                  : AppSpacing.pagePaddingMobile,
               vertical: AppSpacing.s8,
             ),
             child: Center(
@@ -1336,38 +1506,44 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
               ),
             )
           : _erro != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
-                      const SizedBox(height: AppSpacing.s12),
-                      Text(
-                        _erro!,
-                        style: AppTypography.body.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: AppSpacing.s16),
-                      ElevatedButton(
-                        onPressed: _carregarFila,
-                        child: const Text('Tentar novamente'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: AppColors.danger,
                   ),
-                )
-              : _buildConteudo(),
+                  const SizedBox(height: AppSpacing.s12),
+                  Text(
+                    _erro!,
+                    style: AppTypography.body.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s16),
+                  ElevatedButton(
+                    onPressed: _carregarFila,
+                    child: const Text('Tentar novamente'),
+                  ),
+                ],
+              ),
+            )
+          : _buildConteudo(),
     );
 
     if (widget.dentroDeShell) {
-      return Container(
-        color: AppColors.background,
-        child: corpo,
-      );
+      return Container(color: AppColors.background, child: corpo);
     }
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Fila de Conclusão do Coordenador'),
+        title: Text(
+          'Fila de Conclusão do Coordenador',
+          style: AppTypography.h3.copyWith(color: Colors.white),
+        ),
         backgroundColor: AppColors.navy900,
         foregroundColor: Colors.white,
         actions: [

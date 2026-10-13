@@ -27,11 +27,7 @@ void main() {
           ),
         ],
         equipes: [
-          EquipeCatalogo(
-            id: 'eq-louvor',
-            nome: 'Música e Louvor',
-            ativo: true,
-          ),
+          EquipeCatalogo(id: 'eq-louvor', nome: 'Música e Louvor', ativo: true),
           EquipeCatalogo(
             id: 'eq-intercessao',
             nome: 'Intercessão',
@@ -44,11 +40,7 @@ void main() {
   });
 
   Widget criarAppTeste({required Widget child}) {
-    return MaterialApp(
-      home: Scaffold(
-        body: child,
-      ),
-    );
+    return MaterialApp(home: Scaffold(body: child));
   }
 
   final fichaAtiva = FichaModel(
@@ -96,167 +88,269 @@ void main() {
   );
 
   group('S09 — FichaDocumentoViewerWidget Component Tests', () {
-    testWidgets('1. Renderiza moldura institucional, toolbar com controles e folha A4', (tester) async {
-      bool downloadDisparado = false;
+    testWidgets(
+      '1. Renderiza moldura institucional, toolbar com controles e folha A4',
+      (tester) async {
+        bool downloadDisparado = false;
 
-      await tester.pumpWidget(
-        criarAppTeste(
-          child: SingleChildScrollView(
-            child: FichaDocumentoViewerWidget(
-              ficha: fichaAtiva,
-              participacoes: const [participacaoAtiva, participacaoEmAprovacao],
-              nomeIgreja: 'Igreja Central',
-              codigoIgreja: '001',
-              emailVoluntario: 'gabriel@maanaim.org',
-              termoVersao: '2026',
-              aceiteEm: '2026-01-12T14:30:00Z',
-              onBaixarPdf: () => downloadDisparado = true,
+        await tester.pumpWidget(
+          criarAppTeste(
+            child: SingleChildScrollView(
+              child: FichaDocumentoViewerWidget(
+                ficha: fichaAtiva,
+                participacoes: const [
+                  participacaoAtiva,
+                  participacaoEmAprovacao,
+                ],
+                nomeIgreja: 'Igreja Central',
+                codigoIgreja: '001',
+                emailVoluntario: 'gabriel@maanaim.org',
+                termoVersao: '2026',
+                aceiteEm: '2026-01-12T14:30:00Z',
+                onBaixarPdf: () => downloadDisparado = true,
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Toolbar de controles do documento
-      expect(find.byKey(const Key('toolbar_documento_viewer')), findsOneWidget);
-      expect(find.byKey(const Key('btn_doc_zoom_out')), findsOneWidget);
-      expect(find.byKey(const Key('btn_doc_zoom_in')), findsOneWidget);
-      expect(find.byKey(const Key('btn_doc_zoom_fit')), findsOneWidget);
-      expect(find.byKey(const Key('btn_doc_imprimir')), findsOneWidget);
-      expect(find.byKey(const Key('btn_doc_baixar')), findsOneWidget);
-      expect(find.text('1 / 2'), findsOneWidget);
-      expect(find.text('100%'), findsOneWidget);
+        // Toolbar de controles do documento
+        expect(
+          find.byKey(const Key('toolbar_documento_viewer')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('btn_doc_zoom_out')), findsOneWidget);
+        expect(find.byKey(const Key('btn_doc_zoom_in')), findsOneWidget);
+        expect(find.byKey(const Key('btn_doc_zoom_fit')), findsOneWidget);
+        expect(find.byKey(const Key('btn_doc_imprimir')), findsOneWidget);
+        expect(find.byKey(const Key('btn_doc_baixar')), findsOneWidget);
+        expect(find.text('1 / 2'), findsOneWidget);
+        expect(find.text('100%'), findsOneWidget);
 
-      // Testar interação de zoom
-      await tester.tap(find.byKey(const Key('btn_doc_zoom_in')));
-      await tester.pumpAndSettle();
-      expect(find.text('125%'), findsOneWidget);
+        // Testar interação de zoom
+        await tester.tap(find.byKey(const Key('btn_doc_zoom_in')));
+        await tester.pumpAndSettle();
+        expect(find.text('125%'), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('btn_doc_zoom_out')));
-      await tester.pumpAndSettle();
-      expect(find.text('100%'), findsOneWidget);
+        await tester.tap(find.byKey(const Key('btn_doc_zoom_out')));
+        await tester.pumpAndSettle();
+        expect(find.text('100%'), findsOneWidget);
 
-      // Botão de download na toolbar
-      await tester.tap(find.byKey(const Key('btn_doc_baixar')));
-      expect(downloadDisparado, isTrue);
+        // Botão de download na toolbar
+        await tester.tap(find.byKey(const Key('btn_doc_baixar')));
+        expect(downloadDisparado, isTrue);
 
-      // Cabeçalho do documento na folha estilizada
-      expect(find.text('FICHA DE VOLUNTÁRIO'), findsOneWidget);
-      expect(find.byKey(const Key('texto_id_documento_fv')), findsOneWidget);
-      expect(find.text('ATIVA'), findsWidgets);
+        // Cabeçalho do documento na folha estilizada
+        expect(find.text('FICHA DE VOLUNTÁRIO'), findsOneWidget);
+        expect(find.byKey(const Key('texto_id_documento_fv')), findsNothing);
+        expect(find.text('ATIVA'), findsWidgets);
 
-      // Bloco 1 — Dados do Voluntário
-      expect(find.text('Gabriel Silva'), findsOneWidget);
-      expect(find.text('(11) 98765-4321'), findsOneWidget);
-      expect(find.text('gabriel@maanaim.org'), findsOneWidget);
-      expect(find.text('Igreja Central - 001'), findsOneWidget);
-      expect(find.text('Versão 2026'), findsOneWidget);
+        // Bloco 1 — Dados do Voluntário
+        expect(find.text('Gabriel Silva'), findsOneWidget);
+        expect(find.text('(11) 98765-4321'), findsOneWidget);
+        expect(find.text('gabriel@maanaim.org'), findsOneWidget);
+        expect(find.text('Igreja Central - 001'), findsOneWidget);
+        expect(find.text('Versão 2026'), findsOneWidget);
 
-      // Bloco 2 — Tabela de Equipes
-      expect(find.text('Música e Louvor'), findsOneWidget);
-      expect(find.text('Intercessão'), findsOneWidget);
-      expect(find.text('EM APROVAÇÃO'), findsOneWidget);
-    });
+        // Bloco 2 — Tabela de Equipes
+        expect(find.text('Música e Louvor'), findsOneWidget);
+        expect(find.text('Intercessão'), findsOneWidget);
+        expect(find.text('EM APROVAÇÃO'), findsOneWidget);
+      },
+    );
 
-    testWidgets('2. Preserva neutralidade de orientações para cancelamento / decisão negativa', (tester) async {
-      const participacaoCancelada = ParticipacaoModel(
-        id: 'part-3',
-        fichaId: 'user-123',
-        equipeId: 'eq-louvor',
-        nomeEquipe: 'Música e Louvor',
-        estado: 'CANCELADA_COORDENADOR',
-        ciclo: 'INICIAL',
-        proximaAcao: 'Procure o Pastor da igreja local para mais informações',
-        versao: 1,
-        criadoEm: '2026-01-01T00:00:00Z',
-      );
+    testWidgets(
+      'WP-06A: campos ausentes não geram dados pessoais ou probatórios sintéticos',
+      (tester) async {
+        const fichaSemOpcionais = FichaModel(
+          id: 'firestore-opaco',
+          nomeCompleto: 'Pessoa Persistida',
+          profissao: 'Profissão Persistida',
+          cpf: '12345678900',
+          igrejaId: 'igreja-sem-projecao',
+          estado: 'ATIVA',
+          versao: 1,
+        );
+        const participacaoSemProva = ParticipacaoModel(
+          id: 'part-sem-prova',
+          fichaId: 'firestore-opaco',
+          equipeId: 'eq-1',
+          nomeEquipe: 'Equipe Persistida',
+          estado: 'ATIVA',
+          ciclo: 'INICIAL',
+          proximaAcao: 'Ativa',
+        );
 
-      await tester.pumpWidget(
-        criarAppTeste(
-          child: SingleChildScrollView(
-            child: FichaDocumentoViewerWidget(
-              ficha: fichaAtiva,
-              participacoes: const [participacaoCancelada],
-              nomeIgreja: 'Igreja Central',
+        await tester.pumpWidget(
+          criarAppTeste(
+            child: SingleChildScrollView(
+              child: FichaDocumentoViewerWidget(
+                ficha: fichaSemOpcionais,
+                participacoes: const [participacaoSemProva],
+                participacaoSelecionada: participacaoSemProva,
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Invariante canônica: nunca exibe "Rejeitada", exibe traço para aprovação não realizada e chip neutro
-      expect(find.text('REJEITADA'), findsNothing);
-      expect(find.text('Rejeitado'), findsNothing);
-      expect(find.text('—'), findsWidgets);
-      expect(find.text('Informação'), findsOneWidget);
-    });
+        for (final sintetico in [
+          'FV-2026-00123',
+          '(84) 9 9123-4567',
+          'voluntario@maanaim.org.br',
+          'Goianinha - 240008',
+          '01/01/2026 a 31/12/2026',
+          'Versão 2026',
+          '10/01/2026 às 14:32',
+          'Pr. Luando dos Santos',
+          '12/01/2026',
+        ]) {
+          expect(find.text(sintetico), findsNothing);
+        }
+        expect(find.text('Não disponível'), findsWidgets);
+        expect(find.byKey(const Key('texto_id_documento_fv')), findsNothing);
+        expect(find.byKey(const Key('btn_doc_imprimir')), findsNothing);
+        expect(find.byKey(const Key('btn_doc_baixar')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      '2. Preserva neutralidade de orientações para cancelamento / decisão negativa',
+      (tester) async {
+        const participacaoCancelada = ParticipacaoModel(
+          id: 'part-3',
+          fichaId: 'user-123',
+          equipeId: 'eq-louvor',
+          nomeEquipe: 'Música e Louvor',
+          estado: 'CANCELADA_COORDENADOR',
+          ciclo: 'INICIAL',
+          proximaAcao: 'Procure o Pastor da igreja local para mais informações',
+          versao: 1,
+          criadoEm: '2026-01-01T00:00:00Z',
+        );
+
+        await tester.pumpWidget(
+          criarAppTeste(
+            child: SingleChildScrollView(
+              child: FichaDocumentoViewerWidget(
+                ficha: fichaAtiva,
+                participacoes: const [participacaoCancelada],
+                nomeIgreja: 'Igreja Central',
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Invariante canônica: nunca exibe "Rejeitada" nem inventa prova de aprovação.
+        expect(find.text('REJEITADA'), findsNothing);
+        expect(find.text('Rejeitado'), findsNothing);
+        expect(find.text('INATIVA'), findsNothing);
+        expect(find.text('FINALIZADA'), findsNothing);
+        expect(find.text('Informação'), findsNothing);
+        expect(find.text('Consulte o Pastor'), findsNothing);
+        expect(find.text('Não disponível'), findsWidgets);
+        // O documento não inventa nem replica um estado negativo; a orientação
+        // canônica pertence à tela de acompanhamento do voluntário.
+        expect(
+          find.text('Procure o Pastor da igreja local para mais informações'),
+          findsNothing,
+        );
+      },
+    );
   });
 
   group('S09 — MinhaFichaScreen Integration Tests', () {
-    testWidgets('3. Exibe cabeçalho S09 com título, subtítulo e botão primário Baixar PDF', (tester) async {
-      final fichaGateway = TesteFichaMockGateway(ficha: fichaAtiva);
-      final participacaoGateway = TesteParticipacaoMockGateway([participacaoAtiva]);
+    testWidgets(
+      '3. Exibe cabeçalho S09 com título, subtítulo e botão primário Baixar PDF',
+      (tester) async {
+        final fichaGateway = TesteFichaMockGateway(ficha: fichaAtiva);
+        final participacaoGateway = TesteParticipacaoMockGateway([
+          participacaoAtiva,
+        ]);
 
-      tester.view.physicalSize = const Size(1200, 1000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+        tester.view.physicalSize = const Size(1200, 1000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(
-        criarAppTeste(
-          child: MinhaFichaScreen(
-            fichaGateway: fichaGateway,
-            participacaoGateway: participacaoGateway,
-            catalogoGateway: catalogoGateway,
-            pdfTermoGateway: pdfGateway,
+        await tester.pumpWidget(
+          criarAppTeste(
+            child: MinhaFichaScreen(
+              fichaGateway: fichaGateway,
+              participacaoGateway: participacaoGateway,
+              catalogoGateway: catalogoGateway,
+              pdfTermoGateway: pdfGateway,
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Cabeçalho da página
-      expect(find.widgetWithText(PageHeader, 'Minha Ficha'), findsOneWidget);
-      expect(find.text('Visualize e baixe sua ficha de voluntário'), findsOneWidget);
+        // Cabeçalho da página
+        expect(find.widgetWithText(PageHeader, 'Minha Ficha'), findsOneWidget);
+        expect(
+          find.text('Visualize e baixe sua ficha de voluntário'),
+          findsOneWidget,
+        );
 
-      // Botão primário Baixar PDF presente quando há participação ativa
-      expect(find.byKey(const Key('btn_baixar_pdf_principal')), findsOneWidget);
+        // Botão primário Baixar PDF presente quando há participação ativa
+        expect(
+          find.byKey(const Key('btn_baixar_pdf_principal')),
+          findsOneWidget,
+        );
 
-      // Menu de ações secundárias presente
-      expect(find.byKey(const Key('btn_menu_acoes_secundarias')), findsOneWidget);
+        // Menu de ações secundárias presente
+        expect(
+          find.byKey(const Key('btn_menu_acoes_secundarias')),
+          findsOneWidget,
+        );
 
-      // Viewer do documento no layout desktop
-      expect(find.byKey(const Key('ficha_documento_viewer')), findsOneWidget);
-    });
+        // Viewer do documento no layout desktop
+        expect(find.byKey(const Key('ficha_documento_viewer')), findsOneWidget);
+      },
+    );
 
-    testWidgets('4. Botão primário Baixar PDF não aparece quando voluntário não possui equipe ativa', (tester) async {
-      final fichaPendente = fichaAtiva.copyWith(estado: 'AGUARDANDO_PASTOR_LOCAL');
-      final fichaGateway = TesteFichaMockGateway(ficha: fichaPendente);
-      final participacaoGateway = TesteParticipacaoMockGateway([participacaoEmAprovacao]);
+    testWidgets(
+      '4. Botão primário Baixar PDF não aparece quando voluntário não possui equipe ativa',
+      (tester) async {
+        final fichaPendente = fichaAtiva.copyWith(
+          estado: 'AGUARDANDO_PASTOR_LOCAL',
+        );
+        final fichaGateway = TesteFichaMockGateway(ficha: fichaPendente);
+        final participacaoGateway = TesteParticipacaoMockGateway([
+          participacaoEmAprovacao,
+        ]);
 
-      tester.view.physicalSize = const Size(1200, 1000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+        tester.view.physicalSize = const Size(1200, 1000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(
-        criarAppTeste(
-          child: MinhaFichaScreen(
-            fichaGateway: fichaGateway,
-            participacaoGateway: participacaoGateway,
-            catalogoGateway: catalogoGateway,
-            pdfTermoGateway: pdfGateway,
+        await tester.pumpWidget(
+          criarAppTeste(
+            child: MinhaFichaScreen(
+              fichaGateway: fichaGateway,
+              participacaoGateway: participacaoGateway,
+              catalogoGateway: catalogoGateway,
+              pdfTermoGateway: pdfGateway,
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Botão de download no topo omitido para quem não tem participação ativa
-      expect(find.byKey(const Key('btn_baixar_pdf_principal')), findsNothing);
-    });
+        // Botão de download no topo omitido para quem não tem participação ativa
+        expect(find.byKey(const Key('btn_baixar_pdf_principal')), findsNothing);
+      },
+    );
 
-    testWidgets('5. Renderização mobile (390x844) sem overflow de layout', (tester) async {
+    testWidgets('5. Renderização mobile (390x844) sem overflow de layout', (
+      tester,
+    ) async {
       final fichaGateway = TesteFichaMockGateway(ficha: fichaAtiva);
-      final participacaoGateway = TesteParticipacaoMockGateway([participacaoAtiva, participacaoEmAprovacao]);
+      final participacaoGateway = TesteParticipacaoMockGateway([
+        participacaoAtiva,
+        participacaoEmAprovacao,
+      ]);
 
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
@@ -276,13 +370,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('layout_mobile_empilhado')), findsOneWidget);
-      expect(find.byKey(const Key('ficha_documento_viewer_mobile')), findsOneWidget);
+      expect(
+        find.byKey(const Key('ficha_documento_viewer_mobile')),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('6. Renderização desktop (1280x800) sem overflow de layout', (tester) async {
+    testWidgets('6. Renderização desktop (1280x800) sem overflow de layout', (
+      tester,
+    ) async {
       final fichaGateway = TesteFichaMockGateway(ficha: fichaAtiva);
-      final participacaoGateway = TesteParticipacaoMockGateway([participacaoAtiva]);
+      final participacaoGateway = TesteParticipacaoMockGateway([
+        participacaoAtiva,
+      ]);
 
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;

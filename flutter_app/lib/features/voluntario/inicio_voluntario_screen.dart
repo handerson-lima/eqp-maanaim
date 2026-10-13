@@ -70,7 +70,8 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
 
     try {
       final fichaResp = await widget.fichaGateway.obterMinhaFicha();
-      final participacoes = await widget.participacaoGateway.obterMinhasParticipacoes();
+      final participacoes = await widget.participacaoGateway
+          .obterMinhasParticipacoes();
 
       List<EquipeCatalogo> catalogo = const [];
       try {
@@ -90,7 +91,8 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _erroCarregamento = 'Não foi possível carregar os dados do início. Tente novamente.';
+        _erroCarregamento =
+            'Não foi possível carregar os dados do início. Tente novamente.';
         _carregando = false;
       });
     }
@@ -156,7 +158,9 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
     }
   }
 
-  Future<void> _abrirManifestacaoRenovacao(ParticipacaoModel participacao) async {
+  Future<void> _abrirManifestacaoRenovacao(
+    ParticipacaoModel participacao,
+  ) async {
     if (widget.onNavegarRenovacao != null) {
       widget.onNavegarRenovacao!();
       return;
@@ -166,7 +170,9 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
       participacoesElegiveis: [participacao],
       participacaoPreSelecionadaId: participacao.id,
       onConfirmar: (manifestacoes) async {
-        await widget.participacaoGateway.manifestarRenovacao(manifestacoes: manifestacoes);
+        await widget.participacaoGateway.manifestarRenovacao(
+          manifestacoes: manifestacoes,
+        );
       },
     );
 
@@ -286,10 +292,7 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
                             color: AppColors.navy900,
                           ),
                         ),
-                        StatusChip(
-                          status: 'RASCUNHO',
-                          label: 'RASCUNHO',
-                        ),
+                        StatusChip(status: 'RASCUNHO', label: 'RASCUNHO'),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.s4),
@@ -357,10 +360,7 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
                             color: AppColors.navy900,
                           ),
                         ),
-                        StatusChip(
-                          status: 'AGUARDANDO',
-                          label: 'EM APROVAÇÃO',
-                        ),
+                        StatusChip(status: 'AGUARDANDO', label: 'EM APROVAÇÃO'),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.s4),
@@ -394,7 +394,8 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
     final cardEquipes = _construirCardMinhasEquipesContadores();
     final cardValidade = _construirCardValidadeFicha();
     final equipeProxima = _obterEquipeMaisProximaDoVencimento();
-    final temVigenciaCritica = equipeProxima != null &&
+    final temVigenciaCritica =
+        equipeProxima != null &&
         equipeProxima.diasParaVencimento != null &&
         equipeProxima.diasParaVencimento! <= 30;
 
@@ -422,10 +423,7 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
 
   Widget _construirCardMinhasEquipesContadores() {
     final totalAtivas = _participacoes.where((p) => p.isAtiva).length;
-    final totalEmAprovacao = _participacoes
-        .where((p) => !p.isAtiva && !p.isRejeitada && !p.isRascunho)
-        .length;
-    final totalRejeitadas = _participacoes.where((p) => p.isRejeitada).length;
+    final totalEmAprovacao = _participacoes.where((p) => p.isPendente).length;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.cardPadding),
@@ -468,14 +466,6 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
                 color: AppColors.warning,
                 bg: AppColors.warningBg,
               ),
-              const SizedBox(width: AppSpacing.s8),
-              _construirIndicadorCol(
-                icon: Icons.cancel_outlined,
-                count: totalRejeitadas,
-                label: 'Pendentes / Rejeitadas',
-                color: const Color(0xFFD32F2F),
-                bg: AppColors.dangerBg,
-              ),
             ],
           ),
         ],
@@ -496,10 +486,7 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
-          border: Border.all(
-            color: color.withValues(alpha: 0.15),
-            width: 1,
-          ),
+          border: Border.all(color: color.withValues(alpha: 0.15), width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -549,7 +536,8 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
     double progresso = 0.0;
     Color corSubtitulo = AppColors.textSecondary;
 
-    final bool temVigenciaCritica = equipeProxima != null &&
+    final bool temVigenciaCritica =
+        equipeProxima != null &&
         equipeProxima.diasParaVencimento != null &&
         equipeProxima.diasParaVencimento! <= 30;
 
@@ -590,8 +578,11 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
             children: [
               const Text(
                 'Validade da Ficha',
@@ -604,16 +595,25 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
               ),
               if (temVigenciaCritica)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.warningBg,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: AppColors.warning.withValues(alpha: 0.5),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.warning_amber_rounded, size: 12, color: AppColors.warning),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 12,
+                        color: AppColors.warning,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'Janela de Renovação',
@@ -635,7 +635,9 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: temVigenciaCritica ? AppColors.warningBg : AppColors.blue50,
+                  color: temVigenciaCritica
+                      ? AppColors.warningBg
+                      : AppColors.blue50,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: temVigenciaCritica
@@ -646,7 +648,9 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
                 ),
                 child: Icon(
                   Icons.calendar_today_outlined,
-                  color: temVigenciaCritica ? AppColors.warning : AppColors.blue600,
+                  color: temVigenciaCritica
+                      ? AppColors.warning
+                      : AppColors.blue600,
                   size: 22,
                 ),
               ),
@@ -780,12 +784,13 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
     final emJanela = p.isEmJanelaRenovacao;
     final baixando = _baixandoPdfParticipacaoId == p.id;
     final isAtiva = p.isAtiva;
+    final isNegativa = p.isRejeitada || p.estado.contains('CANCELADA');
 
     final String dataContextual;
     if (isAtiva && p.vigenciaInicio != null) {
       dataContextual =
           'Aprovada em ${VigenciaBadge.formatarData(p.vigenciaInicio)}';
-    } else if (p.vigenciaInicio != null) {
+    } else if (!isNegativa && p.vigenciaInicio != null) {
       dataContextual =
           'Enviada em ${VigenciaBadge.formatarData(p.vigenciaInicio)}';
     } else {
@@ -797,11 +802,16 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
       chipStatus = const StatusChip(status: 'ATIVA', label: 'ATIVA');
     } else if (p.isRascunho) {
       chipStatus = const StatusChip(status: 'RASCUNHO', label: 'RASCUNHO');
-    } else if (p.isRejeitada) {
-      chipStatus = const StatusChip(status: 'INATIVA', label: 'FINALIZADA');
+    } else if (isNegativa) {
+      chipStatus = const Text(
+        mensagemNeutraCanonica,
+        style: TextStyle(color: AppColors.navy900, fontWeight: FontWeight.w600),
+      );
     } else {
-      chipStatus =
-          const StatusChip(status: 'AGUARDANDO', label: 'EM APROVAÇÃO');
+      chipStatus = const StatusChip(
+        status: 'AGUARDANDO',
+        label: 'EM APROVAÇÃO',
+      );
     }
 
     return Container(
@@ -822,107 +832,145 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isAtiva ? AppColors.blue50 : AppColors.warningBg,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isAtiva
-                      ? Icons.description_outlined
-                      : Icons.hourglass_top_outlined,
-                  color: isAtiva ? AppColors.blue600 : AppColors.warning,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      p.nomeEquipe,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cabecalho = Row(
+                children: [
+                  if (!isNegativa) ...[
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: isAtiva ? AppColors.blue50 : AppColors.warningBg,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isAtiva
+                            ? Icons.description_outlined
+                            : Icons.hourglass_top_outlined,
+                        color: isAtiva ? AppColors.blue600 : AppColors.warning,
+                        size: 20,
                       ),
                     ),
-                    if (!ehDesktop) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        dataContextual,
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                    const SizedBox(width: AppSpacing.s12),
                   ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s8),
-              chipStatus,
-              if (emJanela) ...[
-                const SizedBox(width: AppSpacing.s8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.warningBg,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          p.nomeEquipe,
+                          style: const TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        if (!ehDesktop && !isNegativa) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            dataContextual,
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.autorenew, size: 12, color: AppColors.warning),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Renovação Aberta',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.warning,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
+                  const SizedBox(width: AppSpacing.s8),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                ],
+              );
+
+              final estados = Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.s8,
+                runSpacing: AppSpacing.s8,
+                children: [
+                  chipStatus,
+                  if (emJanela)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.warningBg,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: AppColors.warning.withValues(alpha: 0.5),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
-              if (ehDesktop) ...[
-                const SizedBox(width: AppSpacing.s24),
-                Text(
-                  dataContextual,
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-              const SizedBox(width: AppSpacing.s12),
-              const Icon(
-                Icons.chevron_right,
-                color: AppColors.textSecondary,
-                size: 20,
-              ),
-            ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.autorenew,
+                            size: 12,
+                            color: AppColors.warning,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Renovação Aberta',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.warning,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (ehDesktop && !isNegativa)
+                    Text(
+                      dataContextual,
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                ],
+              );
+
+              if (constraints.maxWidth < 560) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    cabecalho,
+                    const SizedBox(height: AppSpacing.s8),
+                    Align(alignment: Alignment.centerLeft, child: estados),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: cabecalho),
+                  const SizedBox(width: AppSpacing.s12),
+                  estados,
+                ],
+              );
+            },
           ),
           if (emJanela || isAtiva) ...[
             const SizedBox(height: AppSpacing.s12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
               children: [
                 if (emJanela)
                   PrimaryButton(
                     label: 'Renovar Equipe',
                     onPressed: () => _abrirManifestacaoRenovacao(p),
                   ),
-                if (emJanela && isAtiva) const SizedBox(width: AppSpacing.s8),
                 if (isAtiva)
                   SecondaryButton(
                     label: baixando ? 'Baixando...' : 'Comprovante / PDF',

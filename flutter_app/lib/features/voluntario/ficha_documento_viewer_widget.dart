@@ -44,10 +44,12 @@ class FichaDocumentoViewerWidget extends StatefulWidget {
   final bool exibirToolbar;
 
   @override
-  State<FichaDocumentoViewerWidget> createState() => _FichaDocumentoViewerWidgetState();
+  State<FichaDocumentoViewerWidget> createState() =>
+      _FichaDocumentoViewerWidgetState();
 }
 
-class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget> {
+class _FichaDocumentoViewerWidgetState
+    extends State<FichaDocumentoViewerWidget> {
   double _zoom = 1.0;
 
   void _ajustarZoom(double delta) {
@@ -90,25 +92,17 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
     }
   }
 
-  String _gerarIdentificadorDocumento(FichaModel? ficha) {
-    if (ficha == null) return 'FV-2026-00001';
+  String? _identificadorDocumentoPersistido(FichaModel? ficha) {
+    if (ficha == null) return null;
     final id = ficha.id.trim();
     if (id.startsWith('FV-')) return id;
-
-    // Extrai números ou sufixo único
-    final digitos = id.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digitos.isNotEmpty) {
-      final numFicha = digitos.padLeft(5, '0');
-      final finalNum = numFicha.length > 5 ? numFicha.substring(numFicha.length - 5) : numFicha;
-      return 'FV-2026-$finalNum';
-    }
-    return 'FV-2026-00123';
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     final ficha = widget.ficha;
-    final idDocumento = _gerarIdentificadorDocumento(ficha);
+    final idDocumento = _identificadorDocumentoPersistido(ficha);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -117,7 +111,9 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
         return Container(
           key: const Key('moldura_documento_viewer'),
           decoration: BoxDecoration(
-            color: const Color(0xFF283344), // Fundo escuro/neutro institucional (referência S09)
+            color: const Color(
+              0xFF283344,
+            ), // Fundo escuro/neutro institucional (referência S09)
             borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
             border: Border.all(color: const Color(0xFF3B485C)),
             boxShadow: const [
@@ -171,9 +167,7 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
           topLeft: Radius.circular(AppGeometry.radiusCard),
           topRight: Radius.circular(AppGeometry.radiusCard),
         ),
-        border: Border(
-          bottom: BorderSide(color: Color(0xFF334155)),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xFF334155))),
       ),
       child: Wrap(
         alignment: WrapAlignment.spaceBetween,
@@ -212,13 +206,23 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
                 IconButton(
                   key: const Key('btn_doc_zoom_out'),
                   tooltip: 'Diminuir zoom',
-                  icon: const Icon(Icons.remove, size: 16, color: Colors.white70),
+                  icon: const Icon(
+                    Icons.remove,
+                    size: 16,
+                    color: Colors.white70,
+                  ),
                   onPressed: () => _ajustarZoom(-0.25),
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                   padding: EdgeInsets.zero,
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF283344),
                     borderRadius: BorderRadius.circular(4),
@@ -237,15 +241,25 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
                   tooltip: 'Aumentar zoom',
                   icon: const Icon(Icons.add, size: 16, color: Colors.white70),
                   onPressed: () => _ajustarZoom(0.25),
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                   padding: EdgeInsets.zero,
                 ),
                 IconButton(
                   key: const Key('btn_doc_zoom_fit'),
                   tooltip: 'Ajustar zoom',
-                  icon: const Icon(Icons.fit_screen_outlined, size: 16, color: Colors.white70),
+                  icon: const Icon(
+                    Icons.fit_screen_outlined,
+                    size: 16,
+                    color: Colors.white70,
+                  ),
                   onPressed: _resetarZoom,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                   padding: EdgeInsets.zero,
                 ),
               ],
@@ -255,24 +269,17 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                key: const Key('btn_doc_imprimir'),
-                tooltip: 'Imprimir documento',
-                icon: const Icon(Icons.print_outlined, size: 18, color: Colors.white70),
-                onPressed: () {
-                  if (widget.onBaixarPdf != null) {
-                    widget.onBaixarPdf!();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Preparando documento para impressão...'),
-                        backgroundColor: AppColors.navy900,
-                      ),
-                    );
-                  }
-                },
-              ),
-              if (widget.onBaixarPdf != null)
+              if (widget.onBaixarPdf != null) ...[
+                IconButton(
+                  key: const Key('btn_doc_imprimir'),
+                  tooltip: 'Imprimir documento',
+                  icon: const Icon(
+                    Icons.print_outlined,
+                    size: 18,
+                    color: Colors.white70,
+                  ),
+                  onPressed: widget.onBaixarPdf,
+                ),
                 IconButton(
                   key: const Key('btn_doc_baixar'),
                   tooltip: 'Baixar PDF oficial',
@@ -285,9 +292,14 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.download_outlined, size: 18, color: Colors.white),
+                      : const Icon(
+                          Icons.download_outlined,
+                          size: 18,
+                          color: Colors.white,
+                        ),
                   onPressed: widget.isBaixandoPdf ? null : widget.onBaixarPdf,
                 ),
+              ],
             ],
           ),
         ],
@@ -295,7 +307,11 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
     );
   }
 
-  Widget _buildFolhaDocumento(FichaModel? ficha, String idDocumento, bool isMobile) {
+  Widget _buildFolhaDocumento(
+    FichaModel? ficha,
+    String? idDocumento,
+    bool isMobile,
+  ) {
     final statusFicha = ficha?.estado ?? 'RASCUNHO';
 
     return Container(
@@ -342,13 +358,17 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
     );
   }
 
-  Widget _buildCabecalhoDocumento(String idDocumento, String statusFicha, bool isMobile) {
-    final statusWidget = StatusChip(
-      status: statusFicha == 'REJEITADA' ? 'INATIVA' : statusFicha,
-      label: statusFicha == 'ATIVA'
-          ? 'ATIVA'
-          : (statusFicha == 'REJEITADA' ? 'Consulte o Pastor' : null),
-    );
+  Widget _buildCabecalhoDocumento(
+    String? idDocumento,
+    String statusFicha,
+    bool isMobile,
+  ) {
+    final statusWidget = statusFicha == 'REJEITADA'
+        ? const SizedBox.shrink()
+        : StatusChip(
+            status: statusFicha,
+            label: statusFicha == 'ATIVA' ? 'ATIVA' : null,
+          );
 
     if (isMobile) {
       return Column(
@@ -359,10 +379,7 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: AppSpacing.s8,
             runSpacing: AppSpacing.s8,
-            children: [
-              LogoMaanaim.topBar(height: 32),
-              statusWidget,
-            ],
+            children: [LogoMaanaim.topBar(height: 32), statusWidget],
           ),
           const SizedBox(height: AppSpacing.s12),
           const Text(
@@ -374,16 +391,19 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
               letterSpacing: 1.1,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            idDocumento,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
-              fontFamily: 'monospace',
+          if (idDocumento != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              idDocumento,
+              key: const Key('texto_id_documento_fv'),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
+                fontFamily: 'monospace',
+              ),
             ),
-          ),
+          ],
         ],
       );
     }
@@ -409,18 +429,20 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
                   letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                idDocumento,
-                key: const Key('texto_id_documento_fv'),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.navy900,
-                  letterSpacing: 0.5,
-                  fontFamily: 'monospace',
+              if (idDocumento != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  idDocumento,
+                  key: const Key('texto_id_documento_fv'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy900,
+                    letterSpacing: 0.5,
+                    fontFamily: 'monospace',
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -432,29 +454,39 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
   }
 
   Widget _buildBlocoDadosVoluntario(FichaModel? ficha, bool isMobile) {
-    final nome = ficha?.nomeCompleto.isNotEmpty == true ? ficha!.nomeCompleto : 'Voluntário';
+    final nome = ficha?.nomeCompleto.isNotEmpty == true
+        ? ficha!.nomeCompleto
+        : 'Não disponível';
     final telefone = ficha?.telefone != null && ficha!.telefone!.isNotEmpty
         ? ficha.telefone!
-        : '(84) 9 9123-4567';
-    final email = widget.emailVoluntario ?? 'voluntario@maanaim.org.br';
+        : 'Não disponível';
+    final email = widget.emailVoluntario?.trim().isNotEmpty == true
+        ? widget.emailVoluntario!.trim()
+        : 'Não disponível';
 
-    final nomeIgreja = widget.nomeIgreja ?? 'Goianinha';
-    final codIgreja = widget.codigoIgreja ?? '240008';
-    final igrejaRotulo = '$nomeIgreja - $codIgreja';
+    final nomeIgreja = widget.nomeIgreja?.trim();
+    final codIgreja = widget.codigoIgreja?.trim();
+    final igrejaRotulo = [
+      nomeIgreja,
+      codIgreja,
+    ].whereType<String>().where((valor) => valor.isNotEmpty).join(' - ');
 
-    final vigencia = '01/01/2026 a 31/12/2026';
+    final participacao = widget.participacaoSelecionada;
+    final vigencia =
+        participacao?.vigenciaInicio != null &&
+            participacao?.vigenciaFim != null
+        ? '${_formatarData(participacao!.vigenciaInicio)} a ${_formatarData(participacao.vigenciaFim)}'
+        : 'Não disponível';
     final termo = widget.termoVersao != null
         ? 'Versão ${widget.termoVersao}'
         : (ficha?.termoAceito != null
-            ? 'Versão ${ficha!.termoAceito!.numeroVersao}'
-            : 'Versão 2026');
+              ? 'Versão ${ficha!.termoAceito!.numeroVersao}'
+              : 'Não disponível');
     final aceite = widget.aceiteEm != null
         ? _formatarDataHora(widget.aceiteEm)
         : (ficha?.termoAceito != null
-            ? _formatarDataHora(ficha!.termoAceito!.aceitoEm)
-            : (ficha?.atualizadoEm != null
-                ? _formatarDataHora(ficha!.atualizadoEm)
-                : '10/01/2026 às 14:32'));
+              ? _formatarDataHora(ficha!.termoAceito!.aceitoEm)
+              : 'Não disponível');
 
     final col1 = [
       _buildItemDado('Nome:', nome, isDestaque: true),
@@ -463,7 +495,10 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
     ];
 
     final col2 = [
-      _buildItemDado('Igreja:', igrejaRotulo),
+      _buildItemDado(
+        'Igreja:',
+        igrejaRotulo.isEmpty ? 'Não disponível' : igrejaRotulo,
+      ),
       _buildItemDado('Vigência:', vigencia),
       _buildItemDado('Termo:', termo),
       _buildItemDado('Aceite em:', aceite),
@@ -508,7 +543,11 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
     );
   }
 
-  Widget _buildItemDado(String rotulo, String valor, {bool isDestaque = false}) {
+  Widget _buildItemDado(
+    String rotulo,
+    String valor, {
+    bool isDestaque = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.s8),
       child: Row(
@@ -606,16 +645,17 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
         children: [
           // Cabeçalho da Tabela
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s16,
+              vertical: AppSpacing.s12,
+            ),
             decoration: const BoxDecoration(
               color: Color(0xFFF8FAFC),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(AppGeometry.radiusInput),
                 topRight: Radius.circular(AppGeometry.radiusInput),
               ),
-              border: Border(
-                bottom: BorderSide(color: Color(0xFFE2E8F0)),
-              ),
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
             ),
             child: const Row(
               children: [
@@ -655,7 +695,7 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
                 Expanded(
                   flex: 2,
                   child: Text(
-                    'Data',
+                    'Início da vigência',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -673,31 +713,36 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
             final p = entry.value;
             final isUltima = idx == participacoes.length - 1;
 
-            final nomeEquipe = p.nomeEquipe.isNotEmpty ? p.nomeEquipe : p.equipeId;
-            final aprovadoPor = p.isAtiva
-                ? (p.proximaAcao.contains('Pr.') ? p.proximaAcao : 'Pr. Luando dos Santos')
-                : '—';
-            final dataStr = p.isAtiva
-                ? (p.atualizadoEm != null
-                    ? _formatarData(p.atualizadoEm)
-                    : (p.criadoEm != null ? _formatarData(p.criadoEm) : '12/01/2026'))
-                : '—';
+            final nomeEquipe = p.nomeEquipe.isNotEmpty
+                ? p.nomeEquipe
+                : p.equipeId;
+            const aprovadoPor = 'Não disponível';
+            final dataStr = p.vigenciaInicio != null
+                ? _formatarData(p.vigenciaInicio)
+                : 'Não disponível';
 
             final isNegativa = p.isRejeitada || p.estado.contains('CANCELADA');
-            final statusChip = StatusChip(
-              status: isNegativa ? 'INATIVA' : p.estado,
-              label: p.isAtiva
-                  ? 'ATIVA'
-                  : (isNegativa
-                      ? 'Informação'
-                      : (p.isPendente ? 'EM APROVAÇÃO' : null)),
-            );
+            final statusChip = isNegativa
+                ? const SizedBox.shrink()
+                : StatusChip(
+                    status: p.estado,
+                    label: p.isAtiva
+                        ? 'ATIVA'
+                        : (p.isPendente ? 'EM APROVAÇÃO' : null),
+                  );
 
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s16,
+                vertical: AppSpacing.s12,
+              ),
               decoration: BoxDecoration(
                 color: idx.isEven ? Colors.white : const Color(0xFFFAFAFC),
-                border: isUltima ? null : const Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                border: isUltima
+                    ? null
+                    : const Border(
+                        bottom: BorderSide(color: Color(0xFFF1F5F9)),
+                      ),
               ),
               child: Row(
                 children: [
@@ -753,14 +798,10 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
     return Column(
       children: participacoes.map((p) {
         final nomeEquipe = p.nomeEquipe.isNotEmpty ? p.nomeEquipe : p.equipeId;
-        final aprovadoPor = p.isAtiva
-            ? (p.proximaAcao.contains('Pr.') ? p.proximaAcao : 'Pr. Luando dos Santos')
-            : '—';
-        final dataStr = p.isAtiva
-            ? (p.atualizadoEm != null
-                ? _formatarData(p.atualizadoEm)
-                : (p.criadoEm != null ? _formatarData(p.criadoEm) : '12/01/2026'))
-            : '—';
+        const aprovadoPor = 'Não disponível';
+        final dataStr = p.vigenciaInicio != null
+            ? _formatarData(p.vigenciaInicio)
+            : 'Não disponível';
 
         final isNegativa = p.isRejeitada || p.estado.contains('CANCELADA');
 
@@ -788,25 +829,32 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
                       ),
                     ),
                   ),
-                  StatusChip(
-                    status: isNegativa ? 'INATIVA' : p.estado,
-                    label: p.isAtiva
-                        ? 'ATIVA'
-                        : (isNegativa
-                            ? 'Informação'
-                            : (p.isPendente ? 'EM APROVAÇÃO' : null)),
-                  ),
+                  if (isNegativa)
+                    const SizedBox.shrink()
+                  else
+                    StatusChip(
+                      status: p.estado,
+                      label: p.isAtiva
+                          ? 'ATIVA'
+                          : (p.isPendente ? 'EM APROVAÇÃO' : null),
+                    ),
                 ],
               ),
               const SizedBox(height: AppSpacing.s8),
               Text(
                 'Aprovado por: $aprovadoPor',
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
-                'Data: $dataStr',
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                'Início da vigência: $dataStr',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
               if (p.isAtiva && widget.onBaixarTermoPdf != null) ...[
                 const SizedBox(height: AppSpacing.s8),
@@ -815,7 +863,11 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
                   child: OutlinedButton.icon(
                     key: Key('btn_doc_termo_pdf_${p.id}'),
                     onPressed: () => widget.onBaixarTermoPdf!(p),
-                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 14, color: AppColors.blue600),
+                    icon: const Icon(
+                      Icons.picture_as_pdf_outlined,
+                      size: 14,
+                      color: AppColors.blue600,
+                    ),
                     label: const Text(
                       'Baixar Termo em PDF',
                       style: TextStyle(fontSize: 12, color: AppColors.blue600),
@@ -833,13 +885,11 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
     );
   }
 
-  Widget _buildRodapeDocumento(FichaModel? ficha, String idDocumento) {
+  Widget _buildRodapeDocumento(FichaModel? ficha, String? idDocumento) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.s12),
       decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Color(0xFFF1F5F9)),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
       ),
       child: Wrap(
         alignment: WrapAlignment.spaceBetween,
@@ -857,7 +907,9 @@ class _FichaDocumentoViewerWidgetState extends State<FichaDocumentoViewerWidget>
             ),
           ),
           Text(
-            'Documento emitido eletronicamente • $idDocumento',
+            idDocumento == null
+                ? 'Visualização de dados persistidos'
+                : 'Visualização de dados persistidos • $idDocumento',
             style: const TextStyle(
               fontSize: 10,
               color: AppColors.textSecondary,

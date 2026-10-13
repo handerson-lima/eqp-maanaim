@@ -1,9 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eqp_maanaim/features/admin/admin_shell.dart';
 import 'package:eqp_maanaim/features/coordenador/fila_coordenador_screen.dart';
 import 'package:eqp_maanaim/features/coordenador/coordenador_service.dart';
+import 'package:eqp_maanaim/features/renovacao/dashboard_renovacao_service.dart';
+import 'package:eqp_maanaim/ui/components/metrics.dart';
 import 'package:eqp_maanaim/ui/theme.dart';
+
+class _DashboardZeroGateway implements DashboardRenovacaoGateway {
+  bool falhar = false;
+
+  @override
+  Future<ResultadoDashboardRenovacaoModel> obterDashboardRenovacao({
+    PapelDashboard? papelDesejado,
+    String? igrejaId,
+    String? equipeId,
+    String? estadoRenovacao,
+    int? anoVigencia,
+    int? limite,
+    int? pagina,
+  }) async {
+    if (falhar) throw Exception('indisponível');
+    return const ResultadoDashboardRenovacaoModel(
+      papelResolvido: PapelDashboard.coordenador,
+      metricasCoordenador: MetricasRenovacaoCoordenadorModel(
+        totalAtivos: 0,
+        emJanelaRenovacao: 0,
+        pendentesPastorLocal: 0,
+        pendentesResponsaveis: 0,
+        aguardandoCoordenador: 0,
+        renovadosConcluidos: 0,
+        expirados: 0,
+      ),
+      totalItens: 0,
+      pagina: 1,
+      totalPaginas: 1,
+    );
+  }
+}
 
 void main() {
   final part1 = const ParticipacaoItemCoordenador(
@@ -44,38 +79,234 @@ void main() {
     participacoes: [part1, part2],
   );
 
-  Widget criarApp(CoordenadorGateway gateway) {
+  Widget criarApp(
+    CoordenadorGateway gateway, {
+    DashboardRenovacaoGateway? dashboardRenovacaoGateway,
+  }) {
     return MaterialApp(
       theme: temaMaanaim(),
-      home: FilaCoordenadorScreen(gateway: gateway),
+      home: FilaCoordenadorScreen(
+        gateway: gateway,
+        dashboardRenovacaoGateway: dashboardRenovacaoGateway,
+      ),
     );
   }
 
-  testWidgets('exibe cards de pendências com dados do voluntário, parecer local e equipes', (tester) async {
-    final gateway = MemoriaCoordenadorGateway(
-      pendenciasIniciais: [itemExemplo1],
-    );
+  testWidgets(
+    'exibe cards de pendências com dados do voluntário, parecer local e equipes',
+    (tester) async {
+      final gateway = MemoriaCoordenadorGateway(
+        pendenciasIniciais: [itemExemplo1],
+      );
 
-    await tester.pumpWidget(criarApp(gateway));
+      await tester.pumpWidget(criarApp(gateway));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fila de Conclusão do Coordenador'), findsOneWidget);
+      expect(find.text('Lucas Oliveira'), findsOneWidget);
+      expect(find.text('Igreja: Igreja Central'), findsOneWidget);
+      expect(find.text('CPF: 111.***.***-22'), findsOneWidget);
+      expect(find.text('Profissão: Analista de Sistemas'), findsOneWidget);
+      expect(
+        find.textContaining('Aprovado pelo Pastor Local: Pastor Paulo'),
+        findsOneWidget,
+      );
+      expect(find.text('Cozinha'), findsOneWidget);
+      expect(find.text('Louvor'), findsOneWidget);
+      expect(find.text('Aguardando Coordenação'), findsOneWidget);
+      expect(find.byKey(const Key('btnAprovar_ficha-01')), findsOneWidget);
+      expect(find.byKey(const Key('btnRecusar_ficha-01')), findsOneWidget);
+    },
+  );
+
+  testWidgets('WP-06A: topbar navy usa título branco', (tester) async {
+    await tester.pumpWidget(
+      criarApp(MemoriaCoordenadorGateway(pendenciasIniciais: [itemExemplo1])),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('Fila de Conclusão do Coordenador'), findsOneWidget);
+    final titulo = tester.widget<Text>(
+      find.text('Fila de Conclusão do Coordenador'),
+    );
+    expect(titulo.style?.color, Colors.white);
+  });
+
+  testWidgets(
+    'WP-06A: métricas ausentes são informadas sem números fictícios',
+    (tester) async {
+      await tester.pumpWidget(
+        criarApp(MemoriaCoordenadorGateway(pendenciasIniciais: [itemExemplo1])),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Indisponível'), findsNWidgets(2));
+      expect(find.text('623'), findsNothing);
+      expect(find.text('15'), findsNothing);
+    },
+  );
+
+  testWidgets('WP-06A: métricas reais iguais a zero permanecem zero', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      criarApp(
+        MemoriaCoordenadorGateway(pendenciasIniciais: [itemExemplo1]),
+        dashboardRenovacaoGateway: _DashboardZeroGateway(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final metricas = tester
+        .widgetList<MetricCard>(find.byType(MetricCard))
+        .toList();
+    expect(metricas.singleWhere((m) => m.title == 'Ativos').value, '0');
+    expect(metricas.singleWhere((m) => m.title == 'Expirados').value, '0');
+    expect(
+      metricas.singleWhere((m) => m.title == 'Ativos').subtitle,
+      'participações',
+    );
+    expect(
+      metricas.singleWhere((m) => m.title == 'Expirados').subtitle,
+      'participações',
+    );
+  });
+
+  testWidgets(
+    'WP-06A TEC-H03: falha de atualização não preserva métricas antigas',
+    (tester) async {
+      final dashboard = _DashboardZeroGateway();
+      await tester.pumpWidget(
+        criarApp(
+          MemoriaCoordenadorGateway(pendenciasIniciais: [itemExemplo1]),
+          dashboardRenovacaoGateway: dashboard,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Indisponível'), findsNothing);
+
+      dashboard.falhar = true;
+      await tester.tap(find.byTooltip('Atualizar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Indisponível'), findsNWidgets(2));
+    },
+  );
+
+  testWidgets('WP-06A: 1024px preserva campos e ações em cartão sem corte', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1024, 768);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      criarApp(MemoriaCoordenadorGateway(pendenciasIniciais: [itemExemplo1])),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(DataTable), findsNothing);
     expect(find.text('Lucas Oliveira'), findsOneWidget);
     expect(find.text('Igreja: Igreja Central'), findsOneWidget);
     expect(find.text('CPF: 111.***.***-22'), findsOneWidget);
-    expect(find.text('Profissão: Analista de Sistemas'), findsOneWidget);
-    expect(find.textContaining('Aprovado pelo Pastor Local: Pastor Paulo'), findsOneWidget);
+    expect(find.text('Enviado em: 06/10/2026'), findsOneWidget);
     expect(find.text('Cozinha'), findsOneWidget);
-    expect(find.text('Louvor'), findsOneWidget);
-    expect(find.text('Aguardando Coordenação'), findsOneWidget);
-    expect(find.byKey(const Key('btnAprovar_ficha-01')), findsOneWidget);
+    expect(find.byKey(const Key('btnAnalisar_ficha-01')), findsOneWidget);
     expect(find.byKey(const Key('btnRecusar_ficha-01')), findsOneWidget);
+    expect(find.byKey(const Key('btnAprovar_ficha-01')), findsOneWidget);
   });
 
-  testWidgets('exibe mensagem amigável quando fila está vazia', (tester) async {
-    final gateway = MemoriaCoordenadorGateway(
-      pendenciasIniciais: [],
+  testWidgets('WP-06A: 1440px mantém tabela desktop e todas as ações', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      criarApp(MemoriaCoordenadorGateway(pendenciasIniciais: [itemExemplo1])),
     );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(DataTable), findsOneWidget);
+    expect(find.text('Data de Envio'), findsOneWidget);
+    expect(find.text('Equipes aprovadas'), findsOneWidget);
+    expect(find.text('Ações'), findsOneWidget);
+    expect(find.byKey(const Key('btnAnalisar_ficha-01')), findsOneWidget);
+    expect(find.byKey(const Key('btnRecusar_ficha-01')), findsOneWidget);
+    expect(find.byKey(const Key('btnAprovar_ficha-01')), findsOneWidget);
+
+    for (final finder in [
+      find.text('Voluntário'),
+      find.text('Igreja'),
+      find.text('Data de Envio'),
+      find.text('Equipes aprovadas'),
+      find.text('Ações'),
+      find.byKey(const Key('btnAnalisar_ficha-01')),
+      find.byKey(const Key('btnRecusar_ficha-01')),
+      find.byKey(const Key('btnAprovar_ficha-01')),
+    ]) {
+      final rect = tester.getRect(finder);
+      expect(rect.left, greaterThanOrEqualTo(0));
+      expect(rect.right, lessThanOrEqualTo(1440));
+    }
+  });
+
+  testWidgets(
+    'WP-06A: teclado percorre as três ações do Coordenador em 1024px',
+    (tester) async {
+      tester.view.physicalSize = const Size(1024, 768);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        criarApp(MemoriaCoordenadorGateway(pendenciasIniciais: [itemExemplo1])),
+      );
+      await tester.pumpAndSettle();
+
+      final acoes = <Finder>[
+        find.byKey(const Key('btnAnalisar_ficha-01')),
+        find.byKey(const Key('btnRecusar_ficha-01')),
+        find.byKey(const Key('btnAprovar_ficha-01')),
+      ];
+      final visitadas = <int>{};
+
+      bool focoDentroDe(Finder finder) {
+        final contextoFocado = FocusManager.instance.primaryFocus?.context;
+        if (contextoFocado == null) return false;
+        return finder.evaluate().any((alvo) {
+          if (identical(alvo, contextoFocado)) return true;
+          var encontrou = false;
+          contextoFocado.visitAncestorElements((ancestral) {
+            if (identical(ancestral, alvo)) {
+              encontrou = true;
+              return false;
+            }
+            return true;
+          });
+          return encontrou;
+        });
+      }
+
+      for (
+        var passo = 0;
+        passo < 30 && visitadas.length < acoes.length;
+        passo++
+      ) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        for (var i = 0; i < acoes.length; i++) {
+          if (focoDentroDe(acoes[i])) visitadas.add(i);
+        }
+      }
+
+      expect(visitadas, {0, 1, 2});
+    },
+  );
+
+  testWidgets('exibe mensagem amigável quando fila está vazia', (tester) async {
+    final gateway = MemoriaCoordenadorGateway(pendenciasIniciais: []);
 
     await tester.pumpWidget(criarApp(gateway));
     await tester.pumpAndSettle();
@@ -89,7 +320,9 @@ void main() {
     );
   });
 
-  testWidgets('aprovação exige confirmação explícita da Reunião de Pastores', (tester) async {
+  testWidgets('aprovação exige confirmação explícita da Reunião de Pastores', (
+    tester,
+  ) async {
     final gateway = MemoriaCoordenadorGateway(
       pendenciasIniciais: [itemExemplo1],
     );
@@ -129,68 +362,79 @@ void main() {
     expect(gateway.historicoDecisoes.first['confirmouReuniaoPastores'], true);
   });
 
-  testWidgets('decisão desfavorável exige justificativa interna com mínimo de 5 caracteres', (tester) async {
-    final gateway = MemoriaCoordenadorGateway(
-      pendenciasIniciais: [itemExemplo1],
-    );
+  testWidgets(
+    'decisão desfavorável exige justificativa interna com mínimo de 5 caracteres',
+    (tester) async {
+      final gateway = MemoriaCoordenadorGateway(
+        pendenciasIniciais: [itemExemplo1],
+      );
 
-    await tester.pumpWidget(criarApp(gateway));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(criarApp(gateway));
+      await tester.pumpAndSettle();
 
-    // Clica em "Recusar"
-    await tester.tap(find.byKey(const Key('btnRecusar_ficha-01')));
-    await tester.pumpAndSettle();
+      // Clica em "Recusar"
+      await tester.tap(find.byKey(const Key('btnRecusar_ficha-01')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Decisão Desfavorável'), findsOneWidget);
-    expect(
-      find.text(
-        'A justificativa interna será gravada como evidência restrita da decisão (não vai para a auditoria geral). Ao voluntário será exibido exclusivamente: "Procure o Pastor da igreja local para mais informações".',
-      ),
-      findsOneWidget,
-    );
+      expect(find.text('Decisão Desfavorável'), findsOneWidget);
+      expect(
+        find.text(
+          'A justificativa interna será gravada como evidência restrita da decisão (não vai para a auditoria geral). Ao voluntário será exibido exclusivamente: "Procure o Pastor da igreja local para mais informações".',
+        ),
+        findsOneWidget,
+      );
 
-    // Tenta confirmar sem preencher
-    await tester.tap(find.byKey(const Key('btnConfirmarRecusaModal')));
-    await tester.pumpAndSettle();
+      // Tenta confirmar sem preencher
+      await tester.tap(find.byKey(const Key('btnConfirmarRecusaModal')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Mínimo de 5 caracteres obrigatório.'), findsOneWidget);
-    expect(gateway.historicoDecisoes, isEmpty);
+      expect(find.text('Mínimo de 5 caracteres obrigatório.'), findsOneWidget);
+      expect(gateway.historicoDecisoes, isEmpty);
 
-    // Digita justificativa válida
-    await tester.enterText(
-      find.byKey(const Key('campoJustificativaRecusa')),
-      'Decisão contrária em reunião de pastores por pendência cadastral.',
-    );
-    await tester.pumpAndSettle();
+      // Digita justificativa válida
+      await tester.enterText(
+        find.byKey(const Key('campoJustificativaRecusa')),
+        'Decisão contrária em reunião de pastores por pendência cadastral.',
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('btnConfirmarRecusaModal')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btnConfirmarRecusaModal')));
+      await tester.pumpAndSettle();
 
-    expect(
-      find.text('Decisão desfavorável registrada com sucesso.'),
-      findsOneWidget,
-    );
-    expect(gateway.historicoDecisoes, hasLength(1));
-    expect(gateway.historicoDecisoes.first['decisao'], 'DESFAVORAVEL');
-    expect(
-      gateway.historicoDecisoes.first['observacao'],
-      'Decisão contrária em reunião de pastores por pendência cadastral.',
-    );
-  });
+      expect(
+        find.text('Decisão desfavorável registrada com sucesso.'),
+        findsOneWidget,
+      );
+      expect(gateway.historicoDecisoes, hasLength(1));
+      expect(gateway.historicoDecisoes.first['decisao'], 'DESFAVORAVEL');
+      expect(
+        gateway.historicoDecisoes.first['observacao'],
+        'Decisão contrária em reunião de pastores por pendência cadastral.',
+      );
+    },
+  );
 
-  testWidgets('exibe mensagem de erro e botão de tentar novamente quando carregar falhar', (tester) async {
-    final gateway = MemoriaCoordenadorGateway(
-      erroAoObterFila: Exception('Falha de conexão'),
-    );
+  testWidgets(
+    'exibe mensagem de erro e botão de tentar novamente quando carregar falhar',
+    (tester) async {
+      final gateway = MemoriaCoordenadorGateway(
+        erroAoObterFila: Exception('Falha de conexão'),
+      );
 
-    await tester.pumpWidget(criarApp(gateway));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(criarApp(gateway));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Não foi possível carregar a fila do coordenador.'), findsOneWidget);
-    expect(find.text('Tentar novamente'), findsOneWidget);
-  });
+      expect(
+        find.text('Não foi possível carregar a fila do coordenador.'),
+        findsOneWidget,
+      );
+      expect(find.text('Tentar novamente'), findsOneWidget);
+    },
+  );
 
-  testWidgets('falha ao decidir exibe aviso e mantém o item na fila', (tester) async {
+  testWidgets('falha ao decidir exibe aviso e mantém o item na fila', (
+    tester,
+  ) async {
     final gateway = MemoriaCoordenadorGateway(
       pendenciasIniciais: [itemExemplo1],
       erroAoDecidir: Exception('falha simulada'),
@@ -214,11 +458,15 @@ void main() {
   });
 
   testWidgets('AdminShell conecta a Fila do Coordenador', (tester) async {
-    final gateway = MemoriaCoordenadorGateway(pendenciasIniciais: [itemExemplo1]);
+    final gateway = MemoriaCoordenadorGateway(
+      pendenciasIniciais: [itemExemplo1],
+    );
 
-    await tester.pumpWidget(MaterialApp(
-      home: AdminShell(onSair: () {}, coordenador: gateway),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminShell(onSair: () {}, coordenador: gateway),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Fila do Coordenador'), findsOneWidget);
@@ -228,139 +476,168 @@ void main() {
     expect(find.byType(FilaCoordenadorScreen), findsOneWidget);
   });
 
-  testWidgets('Story 8.6: Coordenador Desktop (1280x800) renderiza 4 KPIs e DataTable com colunas e proporção de equipes', (tester) async {
-    tester.view.physicalSize = const Size(1280, 800);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'Story 8.6: Coordenador Desktop (1280x800) renderiza 4 KPIs e DataTable com colunas e proporção de equipes',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    final gateway = MemoriaCoordenadorGateway(
-      pendenciasIniciais: [itemExemplo1],
-    );
+      final gateway = MemoriaCoordenadorGateway(
+        pendenciasIniciais: [itemExemplo1],
+      );
 
-    await tester.pumpWidget(criarApp(gateway));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(criarApp(gateway));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Aguardando aprovação'), findsOneWidget);
-    expect(find.text('Renovações'), findsOneWidget);
-    expect(find.text('Ativos'), findsOneWidget);
-    expect(find.text('Expirados'), findsOneWidget);
-    expect(find.byType(DataTable), findsOneWidget);
-    expect(find.text('Voluntário'), findsOneWidget);
-    expect(find.text('Igreja'), findsOneWidget);
-    expect(find.text('CPF'), findsOneWidget);
-    expect(find.text('Data de Envio'), findsOneWidget);
-    expect(find.text('Proporção de Equipes'), findsOneWidget);
-    expect(find.text('Equipes'), findsOneWidget);
-    expect(find.text('1/2 equipes aprovadas'), findsOneWidget);
-    expect(find.byKey(const Key('btnAprovar_ficha-01')), findsOneWidget);
-    expect(find.byKey(const Key('btnRecusar_ficha-01')), findsOneWidget);
-  });
+      expect(find.text('Aguardando aprovação'), findsOneWidget);
+      expect(find.text('Renovações'), findsOneWidget);
+      expect(find.text('Ativos'), findsOneWidget);
+      expect(find.text('Expirados'), findsOneWidget);
+      expect(find.byType(DataTable), findsOneWidget);
+      expect(find.text('Voluntário'), findsOneWidget);
+      expect(find.text('Igreja'), findsOneWidget);
+      expect(find.text('Data de Envio'), findsOneWidget);
+      expect(find.text('Equipes aprovadas'), findsOneWidget);
+      expect(find.text('1/2 equipes aprovadas'), findsOneWidget);
+      expect(find.byKey(const Key('btnAprovar_ficha-01')), findsOneWidget);
+      expect(find.byKey(const Key('btnRecusar_ficha-01')), findsOneWidget);
+    },
+  );
 
-  testWidgets('Story 8.6: Coordenador Mobile (390x844) renderiza cartões com touch targets acessíveis (>=44px)', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'Story 8.6: Coordenador Mobile (390x844) renderiza cartões com touch targets acessíveis (>=44px)',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    final gateway = MemoriaCoordenadorGateway(
-      pendenciasIniciais: [itemExemplo1],
-    );
+      final gateway = MemoriaCoordenadorGateway(
+        pendenciasIniciais: [itemExemplo1],
+      );
 
-    await tester.pumpWidget(criarApp(gateway));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(criarApp(gateway));
+      await tester.pumpAndSettle();
 
-    final btnAprovar = tester.getRect(find.byKey(const Key('btnAprovar_ficha-01')));
-    final btnRecusar = tester.getRect(find.byKey(const Key('btnRecusar_ficha-01')));
-    expect(btnAprovar.height, greaterThanOrEqualTo(44.0));
-    expect(btnRecusar.height, greaterThanOrEqualTo(44.0));
-    expect(find.byKey(const Key('proporcaoEquipes_ficha-01')), findsOneWidget);
-    expect(find.text('1/2 equipes aprovadas'), findsOneWidget);
-  });
+      final btnAprovar = tester.getRect(
+        find.byKey(const Key('btnAprovar_ficha-01')),
+      );
+      final btnRecusar = tester.getRect(
+        find.byKey(const Key('btnRecusar_ficha-01')),
+      );
+      expect(btnAprovar.height, greaterThanOrEqualTo(44.0));
+      expect(btnRecusar.height, greaterThanOrEqualTo(44.0));
+      expect(
+        find.byKey(const Key('proporcaoEquipes_ficha-01')),
+        findsOneWidget,
+      );
+      expect(find.text('1/2 equipes aprovadas'), findsOneWidget);
+    },
+  );
 
-  testWidgets('Story 8.6: Calcula proporção 2/3 equipes aprovadas sem inferir histórico', (tester) async {
-    final part3 = const ParticipacaoItemCoordenador(
-      participacaoId: 'part-03',
-      equipeId: 'eq-estacionamento',
-      nomeEquipe: 'Estacionamento',
-      estado: 'AGUARDANDO_COORDENADOR',
-      proximaAcao: 'Aguardando coordenador',
-      responsavelNome: 'Pr. Marcos',
-      elegivelAtivacao: true,
-    );
+  testWidgets(
+    'Story 8.6: Calcula proporção 2/3 equipes aprovadas sem inferir histórico',
+    (tester) async {
+      final part3 = const ParticipacaoItemCoordenador(
+        participacaoId: 'part-03',
+        equipeId: 'eq-estacionamento',
+        nomeEquipe: 'Estacionamento',
+        estado: 'AGUARDANDO_COORDENADOR',
+        proximaAcao: 'Aguardando coordenador',
+        responsavelNome: 'Pr. Marcos',
+        elegivelAtivacao: true,
+      );
 
-    final item3Equipes = ItemFilaCoordenador(
-      fichaId: 'ficha-tripla',
-      voluntarioUid: 'vol-tripla',
-      voluntarioNome: 'Renata Castro',
-      profissao: 'Arquiteta',
-      cpfMascarado: '333.***.***-44',
-      igrejaId: 'igreja-central',
-      nomeIgreja: 'Igreja Central',
-      versaoFicha: 1,
-      enviadoEm: '2026-10-06T10:00:00Z',
-      participacoes: [part1, part2, part3], // 2 elegíveis (part1 e part3), 1 recusada (part2)
-    );
+      final item3Equipes = ItemFilaCoordenador(
+        fichaId: 'ficha-tripla',
+        voluntarioUid: 'vol-tripla',
+        voluntarioNome: 'Renata Castro',
+        profissao: 'Arquiteta',
+        cpfMascarado: '333.***.***-44',
+        igrejaId: 'igreja-central',
+        nomeIgreja: 'Igreja Central',
+        versaoFicha: 1,
+        enviadoEm: '2026-10-06T10:00:00Z',
+        participacoes: [
+          part1,
+          part2,
+          part3,
+        ], // 2 elegíveis (part1 e part3), 1 recusada (part2)
+      );
 
-    final gateway = MemoriaCoordenadorGateway(
-      pendenciasIniciais: [item3Equipes],
-    );
+      final gateway = MemoriaCoordenadorGateway(
+        pendenciasIniciais: [item3Equipes],
+      );
 
-    await tester.pumpWidget(criarApp(gateway));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(criarApp(gateway));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('proporcaoEquipes_ficha-tripla')), findsOneWidget);
-    expect(find.text('2/3 equipes aprovadas'), findsOneWidget);
-  });
+      expect(
+        find.byKey(const Key('proporcaoEquipes_ficha-tripla')),
+        findsOneWidget,
+      );
+      expect(find.text('2/3 equipes aprovadas'), findsOneWidget);
+    },
+  );
 
-  testWidgets('Story 8.6: Clique no KPI Renovações filtra solicitações e toggle desfaz', (tester) async {
-    final partRenov = const ParticipacaoItemCoordenador(
-      participacaoId: 'part-renov',
-      equipeId: 'eq-musica',
-      nomeEquipe: 'Música',
-      estado: 'AGUARDANDO_COORDENADOR',
-      proximaAcao: 'Aguardando',
-      elegivelAtivacao: true,
-      isRenovacaoAnual: true,
-      anoVigencia: 2026,
-    );
+  testWidgets(
+    'Story 8.6: Clique no KPI Renovações filtra solicitações e toggle desfaz',
+    (tester) async {
+      final partRenov = const ParticipacaoItemCoordenador(
+        participacaoId: 'part-renov',
+        equipeId: 'eq-musica',
+        nomeEquipe: 'Música',
+        estado: 'AGUARDANDO_COORDENADOR',
+        proximaAcao: 'Aguardando',
+        elegivelAtivacao: true,
+        isRenovacaoAnual: true,
+        anoVigencia: 2026,
+      );
 
-    final itemRenov = ItemFilaCoordenador(
-      fichaId: 'ficha-renov',
-      voluntarioUid: 'vol-renov',
-      voluntarioNome: 'Daniel Moreira',
-      profissao: 'Músico',
-      cpfMascarado: '444.***.***-55',
-      igrejaId: 'igreja-central',
-      nomeIgreja: 'Igreja Central',
-      versaoFicha: 1,
-      enviadoEm: '2026-10-06T10:00:00Z',
-      participacoes: [partRenov],
-    );
+      final itemRenov = ItemFilaCoordenador(
+        fichaId: 'ficha-renov',
+        voluntarioUid: 'vol-renov',
+        voluntarioNome: 'Daniel Moreira',
+        profissao: 'Músico',
+        cpfMascarado: '444.***.***-55',
+        igrejaId: 'igreja-central',
+        nomeIgreja: 'Igreja Central',
+        versaoFicha: 1,
+        enviadoEm: '2026-10-06T10:00:00Z',
+        participacoes: [partRenov],
+      );
 
-    final gateway = MemoriaCoordenadorGateway(
-      pendenciasIniciais: [itemExemplo1, itemRenov],
-    );
+      final gateway = MemoriaCoordenadorGateway(
+        pendenciasIniciais: [itemExemplo1, itemRenov],
+      );
 
-    await tester.pumpWidget(criarApp(gateway));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(criarApp(gateway));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Lucas Oliveira'), findsOneWidget);
-    expect(find.text('Daniel Moreira'), findsOneWidget);
+      expect(find.text('Lucas Oliveira'), findsOneWidget);
+      expect(find.text('Daniel Moreira'), findsOneWidget);
 
-    await tester.tap(find.text('Renovações'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Renovações'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Exibindo apenas solicitações de Renovação Anual'), findsOneWidget);
-    expect(find.text('Lucas Oliveira'), findsNothing);
-    expect(find.text('Daniel Moreira'), findsOneWidget);
+      expect(
+        find.text('Exibindo apenas solicitações de Renovação Anual'),
+        findsOneWidget,
+      );
+      expect(find.text('Lucas Oliveira'), findsNothing);
+      expect(find.text('Daniel Moreira'), findsOneWidget);
 
-    await tester.tap(find.text('Limpar filtro'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Limpar filtro'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Lucas Oliveira'), findsOneWidget);
-    expect(find.text('Daniel Moreira'), findsOneWidget);
-  });
+      expect(find.text('Lucas Oliveira'), findsOneWidget);
+      expect(find.text('Daniel Moreira'), findsOneWidget);
+    },
+  );
 
-  testWidgets('Story 8.6: Seletor de Ano filtra itens da fila do coordenador', (tester) async {
+  testWidgets('Story 8.6: Seletor de Ano filtra itens da fila do coordenador', (
+    tester,
+  ) async {
     final part2025 = const ParticipacaoItemCoordenador(
       participacaoId: 'part-2025',
       equipeId: 'eq-musica',
@@ -406,57 +683,66 @@ void main() {
     expect(find.text('Voluntário Ano 2025'), findsOneWidget);
   });
 
-  testWidgets('Frente 3 S06: TopBar exibe saudação, badge Coordenador, título de tabela e proporção consolidada', (tester) async {
-    tester.view.physicalSize = const Size(1280, 800);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'Frente 3 S06: TopBar exibe saudação, badge Coordenador, título de tabela e proporção consolidada',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    final gateway = MemoriaCoordenadorGateway(
-      pendenciasIniciais: [itemExemplo1],
-    );
+      final gateway = MemoriaCoordenadorGateway(
+        pendenciasIniciais: [itemExemplo1],
+      );
 
-    await tester.pumpWidget(criarApp(gateway));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(criarApp(gateway));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Olá, Pr. André'), findsOneWidget);
-    expect(find.text('Coordenador do Maanaim'), findsOneWidget);
-    expect(find.text('Processos aguardando aprovação final'), findsOneWidget);
-    expect(find.text('✓ 1 de 2'), findsOneWidget);
-    expect(find.byKey(const Key('btnAnalisar_ficha-01')), findsOneWidget);
-  });
+      expect(find.text('Olá, Pr. André'), findsOneWidget);
+      expect(find.text('Coordenador do Maanaim'), findsOneWidget);
+      expect(find.text('Processos aguardando aprovação final'), findsOneWidget);
+      expect(find.text('✓ 1 de 2'), findsOneWidget);
+      expect(find.byKey(const Key('btnAnalisar_ficha-01')), findsOneWidget);
+    },
+  );
 
-  testWidgets('WP-05: Modais de aprovação e recusa renderizam sem overflow em viewport 360x640', (tester) async {
-    tester.view.physicalSize = const Size(360, 640);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'WP-05: Modais de aprovação e recusa renderizam sem overflow em viewport 360x640',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    final gateway = MemoriaCoordenadorGateway(
-      pendenciasIniciais: [itemExemplo1],
-    );
+      final gateway = MemoriaCoordenadorGateway(
+        pendenciasIniciais: [itemExemplo1],
+      );
 
-    await tester.pumpWidget(criarApp(gateway));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(criarApp(gateway));
+      await tester.pumpAndSettle();
 
-    // Abre modal de aprovação (Homologar)
-    await tester.ensureVisible(find.byKey(const Key('btnAprovar_ficha-01')));
-    await tester.tap(find.byKey(const Key('btnAprovar_ficha-01')));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    expect(find.byKey(const Key('btnConfirmarAtivacaoModal')), findsOneWidget);
+      // Abre modal de aprovação (Homologar)
+      await tester.ensureVisible(find.byKey(const Key('btnAprovar_ficha-01')));
+      await tester.tap(find.byKey(const Key('btnAprovar_ficha-01')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.byKey(const Key('btnConfirmarAtivacaoModal')),
+        findsOneWidget,
+      );
 
-    // Fecha modal
-    await tester.tap(find.text('Cancelar'));
-    await tester.pumpAndSettle();
+      // Fecha modal
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
 
-    // Abre modal de recusa (Decisão Desfavorável)
-    await tester.ensureVisible(find.byKey(const Key('btnRecusar_ficha-01')));
-    await tester.tap(find.byKey(const Key('btnRecusar_ficha-01')));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    expect(find.byKey(const Key('btnConfirmarRecusaModal')), findsOneWidget);
+      // Abre modal de recusa (Decisão Desfavorável)
+      await tester.ensureVisible(find.byKey(const Key('btnRecusar_ficha-01')));
+      await tester.tap(find.byKey(const Key('btnRecusar_ficha-01')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('btnConfirmarRecusaModal')), findsOneWidget);
 
-    await tester.tap(find.text('Cancelar'));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-  });
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

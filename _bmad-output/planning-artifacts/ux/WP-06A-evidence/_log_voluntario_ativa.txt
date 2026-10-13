@@ -1,0 +1,34 @@
+[39348:7199342:1013/062950.121200:INFO:components/enterprise/browser/controller/chrome_browser_cloud_management_controller.cc:241] No machine level policy manager exists.
+[39356:7199506:1013/062950.615696:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.634131:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.656699:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.657032:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.657350:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.657608:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.657844:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.658125:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+Trying to load the allocator multiple times. This is *not* supported.
+[39356:7199506:1013/062950.816865:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.823441:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.829547:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.831211:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062950.831527:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39348:7199342:1013/062952.469264:INFO:CONSOLE:1] "Injecting <script> tag. Using callback.", source: http://127.0.0.1:7357/flutter_bootstrap.js (1)
+[39348:7199342:1013/062952.485806:INFO:CONSOLE:1015] "DDC is about to load 1/2 scripts with pool size = 1000", source: http://127.0.0.1:7357/ddc_module_loader.js (1015)
+[39356:7199506:1013/062952.589200:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062952.722699:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062952.790729:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062952.895707:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39356:7199506:1013/062952.948500:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39348:7199342:1013/062953.028616:INFO:CONSOLE:1015] "DDC is about to load 704/704 scripts with pool size = 1000", source: http://127.0.0.1:7357/ddc_module_loader.js (1015)
+[39356:7199506:1013/062953.073543:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39348:7199421:1013/062953.119467:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[39356:7199506:1013/062953.190182:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39348:7199342:1013/062954.307771:INFO:CONSOLE:0] "<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">", source: http://127.0.0.1:7357/?p=voluntario&c=cheia&w=360&h=800 (0)
+[39356:7199506:1013/062954.409611:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39348:7199342:1013/062955.345534:INFO:CONSOLE:1586] "Starting application from main method in: org-dartlang-app:///web_entrypoint.dart.", source: http://127.0.0.1:7357/ddc_module_loader.js (1586)
+[39348:7199342:1013/062955.397090:INFO:CONSOLE:245800] "WARNING: Falling back to CPU-only rendering. Reason: webGLVersion is -1", source: http://127.0.0.1:7357/dart_sdk.js (245800)
+[39348:7199342:1013/062955.737427:INFO:CONSOLE:245800] "Found an existing <meta name="viewport"> tag. Flutter Web uses its own viewport configuration for better compatibility with Flutter. This tag will be replaced.", source: http://127.0.0.1:7357/dart_sdk.js (245800)
+49488 bytes written to file /Users/usuario/eqp_maanaim/_bmad-output/planning-artifacts/ux/WP-06A-evidence/_tmp_voluntario_ativa.png
+[39357:7199503:1013/062956.873595:WARNING:net/extras/sqlite/sqlite_persistent_store_backend_base.cc:182] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:232 to client_task_runner_.
+[39357:7199503:1013/062956.874190:WARNING:net/extras/sqlite/sqlite_persistent_store_backend_base.cc:182] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:232 to client_task_runner_.

@@ -123,7 +123,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         if (temParticipacaoAtiva)
           ElevatedButton.icon(
             key: const Key('btn_baixar_pdf_principal'),
-            onPressed: _baixandoPdfPrincipal ? null : _executarDownloadPdfPrincipal,
+            onPressed: _baixandoPdfPrincipal
+                ? null
+                : _executarDownloadPdfPrincipal,
             icon: _baixandoPdfPrincipal
                 ? const SizedBox(
                     width: 16,
@@ -140,7 +142,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               foregroundColor: Colors.white,
               minimumSize: const Size(44, 44),
               elevation: 0,
-              textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
             ),
           ),
         _obterActionStatusChip(),
@@ -154,16 +159,25 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       return const StatusChip(status: 'ATIVA', label: 'Ativa');
     }
     if (_ficha?.estado == 'REJEITADA') {
-      return const StatusChip(status: 'INATIVA', label: 'Consulte o Pastor');
+      return const SizedBox.shrink();
     }
     if (_ficha?.estado == 'AGUARDANDO_COORDENADOR') {
-      return const StatusChip(status: 'AGUARDANDO', label: 'Aguardando Coordenador');
+      return const StatusChip(
+        status: 'AGUARDANDO',
+        label: 'Aguardando Coordenador',
+      );
     }
     if (_ficha?.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE') {
-      return const StatusChip(status: 'AGUARDANDO', label: 'Aguardando Equipes');
+      return const StatusChip(
+        status: 'AGUARDANDO',
+        label: 'Aguardando Equipes',
+      );
     }
     if (_isAguardandoPastor) {
-      return const StatusChip(status: 'AGUARDANDO_PASTOR_LOCAL', label: 'Aguardando Pastor Local');
+      return const StatusChip(
+        status: 'AGUARDANDO_PASTOR_LOCAL',
+        label: 'Aguardando Pastor Local',
+      );
     }
     return StatusChip(status: _ficha?.estado ?? 'RASCUNHO');
   }
@@ -224,7 +238,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             value: 'solicitar_equipe',
             child: Row(
               children: [
-                Icon(Icons.group_add_outlined, size: 18, color: AppColors.navy900),
+                Icon(
+                  Icons.group_add_outlined,
+                  size: 18,
+                  color: AppColors.navy900,
+                ),
                 SizedBox(width: 8),
                 Text('Solicitar nova equipe'),
               ],
@@ -237,7 +255,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               children: [
                 Icon(Icons.cancel_outlined, size: 18, color: AppColors.danger),
                 SizedBox(width: 8),
-                Text('Cancelar voluntariado', style: TextStyle(color: AppColors.danger)),
+                Text(
+                  'Cancelar voluntariado',
+                  style: TextStyle(color: AppColors.danger),
+                ),
               ],
             ),
           ),
@@ -271,23 +292,20 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   String? _obterCodigoIgreja(String? id) {
     if (id == null || id.isEmpty) return null;
     final match = _igrejas.cast<IgrejaCatalogo?>().firstWhere(
-          (i) => i?.id == id,
-          orElse: () => null,
-        );
+      (i) => i?.id == id,
+      orElse: () => null,
+    );
     return match?.codigo;
   }
 
-  String _obterEmailVoluntario() {
+  String? _obterEmailVoluntario() {
     if (widget.userName != null && widget.userName!.contains('@')) {
       return widget.userName!;
     }
-    return 'voluntario@maanaim.org.br';
+    return null;
   }
 
-  /// Mensagem neutra canônica do voluntário. Prefere o valor projetado pelo
-  /// servidor (`mensagemVoluntario`) e só recorre ao literal como fallback.
-  String get _mensagemNegativaVoluntario =>
-      _ficha?.mensagemVoluntario ?? mensagemNeutraCanonica;
+  String get _mensagemNegativaVoluntario => mensagemNeutraCanonica;
 
   @override
   void initState() {
@@ -383,11 +401,15 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
           if (participacoes.isNotEmpty) {
             if (_participacaoSelecionada == null ||
-                !participacoes.any((p) => p.id == _participacaoSelecionada!.id)) {
-              _participacaoSelecionada = participacoes.cast<ParticipacaoModel?>().firstWhere(
-                (p) => p?.isAtiva == true,
-                orElse: () => participacoes.first,
-              );
+                !participacoes.any(
+                  (p) => p.id == _participacaoSelecionada!.id,
+                )) {
+              _participacaoSelecionada = participacoes
+                  .cast<ParticipacaoModel?>()
+                  .firstWhere(
+                    (p) => p?.isAtiva == true,
+                    orElse: () => participacoes.first,
+                  );
             } else {
               _participacaoSelecionada = participacoes.firstWhere(
                 (p) => p.id == _participacaoSelecionada!.id,
@@ -404,7 +426,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             setState(() {
               _carregandoEventos = true;
             });
-            final ev = await _historicoService.consultarLinhaDoTempoAutorizada();
+            final ev = await _historicoService
+                .consultarLinhaDoTempoAutorizada();
             if (mounted) {
               setState(() {
                 _eventosHistorico = ev;
@@ -451,8 +474,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 !novas.any((p) => p.id == _participacaoSelecionada!.id)) {
               _participacaoSelecionada = novas.isNotEmpty ? novas.first : null;
             } else {
-              _participacaoSelecionada =
-                  novas.firstWhere((p) => p.id == _participacaoSelecionada!.id);
+              _participacaoSelecionada = novas.firstWhere(
+                (p) => p.id == _participacaoSelecionada!.id,
+              );
             }
             _equipesSelecionadasIds = novas
                 .where((p) => p.isRascunho)
@@ -481,17 +505,14 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         final erroMsg = e.toString().contains('Ficha permanente não encontrada')
             ? 'Preencha e salve a ficha antes de selecionar as equipes.'
             : e.toString().contains('Equipe inválida')
-                ? 'Uma das equipes selecionadas é inválida ou está inativa.'
-                : 'Não foi possível salvar as equipes. Tente novamente.';
+            ? 'Uma das equipes selecionadas é inválida ou está inativa.'
+            : 'Não foi possível salvar as equipes. Tente novamente.';
         setState(() {
           _salvandoEquipes = false;
           _erroEquipes = erroMsg;
         });
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
-            content: Text(erroMsg),
-            backgroundColor: AppColors.danger,
-          ),
+          SnackBar(content: Text(erroMsg), backgroundColor: AppColors.danger),
         );
       }
     }
@@ -510,11 +531,15 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
     // Validações básicas de cliente antes do envio
     if (nome.length < 3) {
-      setState(() => _erroSalvar = 'Informe o nome completo (mínimo 3 caracteres).');
+      setState(
+        () => _erroSalvar = 'Informe o nome completo (mínimo 3 caracteres).',
+      );
       return;
     }
     if (profissao.length < 2) {
-      setState(() => _erroSalvar = 'Informe a profissão (mínimo 2 caracteres).');
+      setState(
+        () => _erroSalvar = 'Informe a profissão (mínimo 2 caracteres).',
+      );
       return;
     }
     final erroCpf = cpfValido(cpf);
@@ -523,7 +548,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       return;
     }
     if (igrejaId.isEmpty) {
-      setState(() => _erroSalvar = 'Selecione a igreja local onde você congrega.');
+      setState(
+        () => _erroSalvar = 'Selecione a igreja local onde você congrega.',
+      );
       return;
     }
 
@@ -562,8 +589,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         final mensagem = e.toString().contains('CPF inválido')
             ? 'CPF inválido. Verifique os dígitos informados.'
             : e.toString().contains('Igreja inválida')
-                ? 'Igreja inválida ou inativa.'
-                : 'Não foi possível salvar a ficha. Verifique os dados e tente novamente.';
+            ? 'Igreja inválida ou inativa.'
+            : 'Não foi possível salvar a ficha. Verifique os dados e tente novamente.';
 
         setState(() {
           _salvando = false;
@@ -571,10 +598,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         });
 
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
-            content: Text(mensagem),
-            backgroundColor: AppColors.danger,
-          ),
+          SnackBar(content: Text(mensagem), backgroundColor: AppColors.danger),
         );
       }
     }
@@ -596,18 +620,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
     final String? nomeValidoFicha =
         (_ficha?.nomeCompleto.isNotEmpty == true &&
-                !_ficha!.nomeCompleto.contains('@') &&
-                _ficha!.nomeCompleto.toLowerCase() != 'voluntário')
-            ? _ficha!.nomeCompleto
-            : null;
+            !_ficha!.nomeCompleto.contains('@') &&
+            _ficha!.nomeCompleto.toLowerCase() != 'voluntário')
+        ? _ficha!.nomeCompleto
+        : null;
 
     final String? nomeValidoWidget =
         (widget.userName != null &&
-                widget.userName!.isNotEmpty &&
-                !widget.userName!.contains('@') &&
-                widget.userName!.toLowerCase() != 'voluntário')
-            ? widget.userName
-            : null;
+            widget.userName!.isNotEmpty &&
+            !widget.userName!.contains('@') &&
+            widget.userName!.toLowerCase() != 'voluntário')
+        ? widget.userName
+        : null;
 
     final String nomeExibicao =
         nomeValidoFicha ?? nomeValidoWidget ?? 'Voluntário';
@@ -643,18 +667,15 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             ),
           )
         : _erroCarregamento != null
-            ? ErrorState(
-                title: 'Erro ao carregar ficha',
-                message: _erroCarregamento!,
-                onRetry: _carregarDados,
-              )
-            : _buildConteudo();
+        ? ErrorState(
+            title: 'Erro ao carregar ficha',
+            message: _erroCarregamento!,
+            onRetry: _carregarDados,
+          )
+        : _buildConteudo();
 
     if (widget.dentroDeShell) {
-      return Container(
-        color: AppColors.background,
-        child: corpo,
-      );
+      return Container(color: AppColors.background, child: corpo);
     }
 
     return AppShell(
@@ -733,17 +754,25 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   padding: const EdgeInsets.all(AppSpacing.s12),
                   decoration: BoxDecoration(
                     color: AppColors.successBg,
-                    borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                    borderRadius: BorderRadius.circular(
+                      AppGeometry.radiusInput,
+                    ),
                     border: Border.all(color: AppColors.success),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                      const Icon(
+                        Icons.check_circle,
+                        color: AppColors.success,
+                        size: 20,
+                      ),
                       const SizedBox(width: AppSpacing.s8),
                       Expanded(
                         child: Text(
                           _mensagemSucesso!,
-                          style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                          style: AppTypography.body.copyWith(
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ),
                     ],
@@ -757,17 +786,25 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   padding: const EdgeInsets.all(AppSpacing.s12),
                   decoration: BoxDecoration(
                     color: AppColors.dangerBg,
-                    borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                    borderRadius: BorderRadius.circular(
+                      AppGeometry.radiusInput,
+                    ),
                     border: Border.all(color: AppColors.danger),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                      const Icon(
+                        Icons.error_outline,
+                        color: AppColors.danger,
+                        size: 20,
+                      ),
                       const SizedBox(width: AppSpacing.s8),
                       Expanded(
                         child: Text(
                           _erroSalvar!,
-                          style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                          style: AppTypography.body.copyWith(
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ),
                     ],
@@ -800,7 +837,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                               _buildSecaoTermo(),
                               const SizedBox(height: AppSpacing.s24),
                               _buildSecaoEnvioAprovacao(pendencias),
-                              if (!_isRascunho || _eventosHistorico.isNotEmpty) ...[
+                              if (!_isRascunho ||
+                                  _eventosHistorico.isNotEmpty) ...[
                                 const SizedBox(height: AppSpacing.s24),
                                 _buildSecaoHistorico(),
                               ],
@@ -818,25 +856,37 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                                   key: const Key('ficha_documento_viewer'),
                                   ficha: _ficha,
                                   participacoes: _participacoes,
-                                  participacaoSelecionada: _participacaoSelecionada,
-                                  nomeIgreja: _obterNomeIgreja(_ficha?.igrejaId),
-                                  codigoIgreja: _obterCodigoIgreja(_ficha?.igrejaId),
+                                  participacaoSelecionada:
+                                      _participacaoSelecionada,
+                                  nomeIgreja: _obterNomeIgreja(
+                                    _ficha?.igrejaId,
+                                  ),
+                                  codigoIgreja: _obterCodigoIgreja(
+                                    _ficha?.igrejaId,
+                                  ),
                                   emailVoluntario: _obterEmailVoluntario(),
-                                  termoVersao: _termoVigente?.numeroVersao.toString(),
-                                  aceiteEm: _ficha?.termoAceito?.aceitoEm ?? _ficha?.atualizadoEm,
-                                  onBaixarPdf: _participacoes.any((p) => p.isAtiva)
+                                  termoVersao: _ficha?.termoAceito?.numeroVersao
+                                      .toString(),
+                                  aceiteEm: _ficha?.termoAceito?.aceitoEm,
+                                  onBaixarPdf:
+                                      _participacoes.any((p) => p.isAtiva)
                                       ? _executarDownloadPdfPrincipal
                                       : null,
                                   isBaixandoPdf: _baixandoPdfPrincipal,
                                   onBaixarTermoPdf: _baixarTermoPdf,
-                                  baixandoParticipacaoId: _baixandoPdfParticipacaoId,
-                                  onSelecionarParticipacao: (p) => setState(() => _participacaoSelecionada = p),
+                                  baixandoParticipacaoId:
+                                      _baixandoPdfParticipacaoId,
+                                  onSelecionarParticipacao: (p) => setState(
+                                    () => _participacaoSelecionada = p,
+                                  ),
                                 ),
                                 const SizedBox(height: AppSpacing.s24),
                               ],
                               if (_participacoes.isNotEmpty)
                                 PdfPreviewPanel(
-                                  key: Key('preview_pdf_desktop_${_participacaoSelecionada?.id}'),
+                                  key: Key(
+                                    'preview_pdf_desktop_${_participacaoSelecionada?.id}',
+                                  ),
                                   fichaId: _ficha?.id ?? '',
                                   participacao: _participacaoSelecionada,
                                   pdfTermoGateway: widget.pdfTermoGateway,
@@ -862,7 +912,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                         _buildCardSeletorParticipacao(),
                         const SizedBox(height: AppSpacing.s20),
                         PdfPreviewPanel(
-                          key: Key('preview_pdf_mobile_${_participacaoSelecionada?.id}'),
+                          key: Key(
+                            'preview_pdf_mobile_${_participacaoSelecionada?.id}',
+                          ),
                           fichaId: _ficha?.id ?? '',
                           participacao: _participacaoSelecionada,
                           pdfTermoGateway: widget.pdfTermoGateway,
@@ -879,15 +931,17 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           nomeIgreja: _obterNomeIgreja(_ficha?.igrejaId),
                           codigoIgreja: _obterCodigoIgreja(_ficha?.igrejaId),
                           emailVoluntario: _obterEmailVoluntario(),
-                          termoVersao: _termoVigente?.numeroVersao.toString(),
-                          aceiteEm: _ficha?.termoAceito?.aceitoEm ?? _ficha?.atualizadoEm,
+                          termoVersao: _ficha?.termoAceito?.numeroVersao
+                              .toString(),
+                          aceiteEm: _ficha?.termoAceito?.aceitoEm,
                           onBaixarPdf: _participacoes.any((p) => p.isAtiva)
                               ? _executarDownloadPdfPrincipal
                               : null,
                           isBaixandoPdf: _baixandoPdfPrincipal,
                           onBaixarTermoPdf: _baixarTermoPdf,
                           baixandoParticipacaoId: _baixandoPdfParticipacaoId,
-                          onSelecionarParticipacao: (p) => setState(() => _participacaoSelecionada = p),
+                          onSelecionarParticipacao: (p) =>
+                              setState(() => _participacaoSelecionada = p),
                         ),
                       ],
                       const SizedBox(height: AppSpacing.s24),
@@ -945,22 +999,14 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         children: [
           _buildLinhaInfo('Nome Completo', _ficha!.nomeCompleto),
           _buildLinhaInfo('Profissão', _ficha!.profissao),
-          _buildLinhaInfo(
-            'CPF',
-            _ficha!.cpf,
-            destaqueMonospaced: true,
-          ),
-          if (nomeIgreja != null)
-            _buildLinhaInfo('Igreja Local', nomeIgreja),
+          _buildLinhaInfo('CPF', _ficha!.cpf, destaqueMonospaced: true),
+          if (nomeIgreja != null) _buildLinhaInfo('Igreja Local', nomeIgreja),
           _buildLinhaInfo('Versão da Ficha', 'v${_ficha!.versao}'),
           const SizedBox(height: AppSpacing.s12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Versão: ${_ficha!.versao}',
-                style: AppTypography.caption,
-              ),
+              Text('Versão: ${_ficha!.versao}', style: AppTypography.caption),
               if (_ficha!.atualizadoEm != null)
                 Flexible(
                   child: Text(
@@ -1130,7 +1176,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   Widget _buildCardSeletorParticipacao() {
     if (_participacoes.isEmpty) return const SizedBox.shrink();
 
-    final idSelecionado = _participacoes.any((p) => p.id == _participacaoSelecionada?.id)
+    final idSelecionado =
+        _participacoes.any((p) => p.id == _participacaoSelecionada?.id)
         ? _participacaoSelecionada?.id
         : (_participacoes.isNotEmpty ? _participacoes.first.id : null);
 
@@ -1147,9 +1194,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             runSpacing: AppSpacing.s8,
             children: _participacoes.map((p) {
               final eq = _equipes.cast<EquipeCatalogo?>().firstWhere(
-                    (e) => e?.id == p.equipeId,
-                    orElse: () => null,
-                  );
+                (e) => e?.id == p.equipeId,
+                orElse: () => null,
+              );
               final nome = p.nomeEquipe.isNotEmpty
                   ? p.nomeEquipe
                   : (eq?.nome ?? p.equipeId);
@@ -1160,7 +1207,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 selected: selecionado,
                 selectedColor: AppColors.blue50,
                 labelStyle: TextStyle(
-                  color: selecionado ? AppColors.blue600 : AppColors.textPrimary,
+                  color: selecionado
+                      ? AppColors.blue600
+                      : AppColors.textPrimary,
                   fontWeight: selecionado ? FontWeight.w600 : FontWeight.w400,
                 ),
                 onSelected: (sel) {
@@ -1175,7 +1224,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           ),
           const SizedBox(height: AppSpacing.s12),
           DropdownButtonFormField<String>(
-            key: ValueKey('seletor_participacao_${_participacoes.map((p) => p.id).join('_')}'),
+            key: ValueKey(
+              'seletor_participacao_${_participacoes.map((p) => p.id).join('_')}',
+            ),
             initialValue: idSelecionado,
             isExpanded: true,
             decoration: const InputDecoration(
@@ -1183,19 +1234,19 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             ),
             items: _participacoes.map((p) {
               final eq = _equipes.cast<EquipeCatalogo?>().firstWhere(
-                    (e) => e?.id == p.equipeId,
-                    orElse: () => null,
-                  );
+                (e) => e?.id == p.equipeId,
+                orElse: () => null,
+              );
               final nome = p.nomeEquipe.isNotEmpty
                   ? p.nomeEquipe
                   : (eq?.nome ?? p.equipeId);
               final statusTexto = p.isAtiva
                   ? 'Aprovada'
-                  : (p.isRejeitada ? 'Informação' : p.estado);
+                  : (p.isRejeitada ? null : p.estado);
               return DropdownMenuItem<String>(
                 value: p.id,
                 child: Text(
-                  '$nome ($statusTexto)',
+                  statusTexto == null ? nome : '$nome ($statusTexto)',
                   overflow: TextOverflow.ellipsis,
                 ),
               );
@@ -1203,8 +1254,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             onChanged: (novoId) {
               if (novoId == null) return;
               setState(() {
-                _participacaoSelecionada =
-                    _participacoes.firstWhere((p) => p.id == novoId);
+                _participacaoSelecionada = _participacoes.firstWhere(
+                  (p) => p.id == novoId,
+                );
               });
             },
           ),
@@ -1226,7 +1278,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.description_outlined, size: 48, color: AppColors.textSecondary),
+            Icon(
+              Icons.description_outlined,
+              size: 48,
+              color: AppColors.textSecondary,
+            ),
             SizedBox(height: AppSpacing.s16),
             Text(
               'Nenhum documento disponível',
@@ -1240,10 +1296,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             Text(
               'Ao cadastrar equipes e obter aprovação, os termos probatórios individuais estarão disponíveis aqui.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -1267,13 +1320,17 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   String? _obterNomeIgreja(String? id) {
     if (id == null || id.isEmpty) return null;
     final match = _igrejas.cast<IgrejaCatalogo?>().firstWhere(
-          (i) => i?.id == id,
-          orElse: () => null,
-        );
+      (i) => i?.id == id,
+      orElse: () => null,
+    );
     return match?.rotulo ?? match?.nome ?? id;
   }
 
-  Widget _buildLinhaInfo(String rotulo, String valor, {bool destaqueMonospaced = false}) {
+  Widget _buildLinhaInfo(
+    String rotulo,
+    String valor, {
+    bool destaqueMonospaced = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
       child: Row(
@@ -1283,7 +1340,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             width: 130,
             child: Text(
               rotulo,
-              style: AppTypography.label.copyWith(color: AppColors.textSecondary),
+              style: AppTypography.label.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           Expanded(
@@ -1326,12 +1385,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                  const Icon(
+                    Icons.check_circle,
+                    color: AppColors.success,
+                    size: 20,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Text(
                       _mensagemSucessoEquipes!,
-                      style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -1349,12 +1414,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                  const Icon(
+                    Icons.error_outline,
+                    color: AppColors.danger,
+                    size: 20,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Text(
                       _erroEquipes!,
-                      style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -1384,7 +1455,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
               child: Text(
                 'Nenhuma equipe encontrada.',
-                style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             )
           else
@@ -1392,7 +1465,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               spacing: AppSpacing.s8,
               runSpacing: AppSpacing.s8,
               children: equipesFiltradas.map((equipe) {
-                final isSelecionada = _equipesSelecionadasIds.contains(equipe.id);
+                final isSelecionada = _equipesSelecionadasIds.contains(
+                  equipe.id,
+                );
                 return FilterChip(
                   key: Key('chip_equipe_${equipe.id}'),
                   label: Text(equipe.nome),
@@ -1400,13 +1475,21 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   selectedColor: const Color(0xFFEFF6FF),
                   checkmarkColor: AppColors.blue600,
                   labelStyle: AppTypography.body.copyWith(
-                    color: isSelecionada ? AppColors.blue600 : AppColors.textPrimary,
-                    fontWeight: isSelecionada ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelecionada
+                        ? AppColors.blue600
+                        : AppColors.textPrimary,
+                    fontWeight: isSelecionada
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                    borderRadius: BorderRadius.circular(
+                      AppGeometry.radiusInput,
+                    ),
                     side: BorderSide(
-                      color: isSelecionada ? AppColors.blue600 : AppColors.border,
+                      color: isSelecionada
+                          ? AppColors.blue600
+                          : AppColors.border,
                     ),
                   ),
                   onSelected: _isBloqueadoParaEdicao
@@ -1427,7 +1510,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           const Divider(color: AppColors.border),
           const SizedBox(height: AppSpacing.s16),
           Text(
-            _isBloqueadoParaEdicao ? 'Acompanhamento por Equipe' : 'Participações no Rascunho',
+            _isBloqueadoParaEdicao
+                ? 'Acompanhamento por Equipe'
+                : 'Participações no Rascunho',
             style: AppTypography.h3,
           ),
           const SizedBox(height: AppSpacing.s4),
@@ -1435,7 +1520,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             _isBloqueadoParaEdicao
                 ? 'Situação individual de cada equipe solicitada e vigência anual.'
                 : 'Cada equipe selecionada gera uma participação independente.',
-            style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
           if (_ficha?.estado == 'ATIVA') ...[
             const SizedBox(height: AppSpacing.s12),
@@ -1461,7 +1548,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.autorenew_rounded, color: AppColors.blue600, size: 24),
+                  const Icon(
+                    Icons.autorenew_rounded,
+                    color: AppColors.blue600,
+                    size: 24,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Column(
@@ -1478,7 +1569,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                         const SizedBox(height: 2),
                         Text(
                           'Você possui participações com renovação aberta. Indique se deseja continuar servindo no próximo ano.',
-                          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -1504,9 +1597,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               children: _participacoes.map((p) {
                 final eqId = p.equipeId;
                 final equipe = _equipes.cast<EquipeCatalogo?>().firstWhere(
-                      (e) => e?.id == eqId,
-                      orElse: () => null,
-                    );
+                  (e) => e?.id == eqId,
+                  orElse: () => null,
+                );
                 final nomeEquipe = p.nomeEquipe.isNotEmpty
                     ? p.nomeEquipe
                     : (equipe?.nome ?? eqId);
@@ -1518,7 +1611,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     padding: const EdgeInsets.all(AppSpacing.s12),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                      borderRadius: BorderRadius.circular(
+                        AppGeometry.radiusCard,
+                      ),
                       border: Border.all(color: AppColors.success),
                     ),
                     child: Column(
@@ -1542,7 +1637,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.neutral100,
                                 borderRadius: BorderRadius.circular(4),
@@ -1567,12 +1665,16 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                             ),
                           ],
                         ),
-                        if (p.vigenciaInicio != null && p.vigenciaFim != null) ...[
+                        if (p.vigenciaInicio != null &&
+                            p.vigenciaFim != null) ...[
                           const SizedBox(height: AppSpacing.s8),
                           Row(
                             children: [
-                              const Icon(Icons.calendar_today_outlined,
-                                  size: 14, color: AppColors.blue600),
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: AppColors.blue600,
+                              ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
@@ -1586,7 +1688,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                             ],
                           ),
                         ],
-                        if (p.emAlertaRenovacao || p.situacaoVigencia != null || p.diasParaVencimento != null) ...[
+                        if (p.emAlertaRenovacao ||
+                            p.situacaoVigencia != null ||
+                            p.diasParaVencimento != null) ...[
                           const SizedBox(height: AppSpacing.s4),
                           VigenciaBadge(
                             key: Key('badge_vigencia_${p.id}'),
@@ -1601,7 +1705,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                         if (p.isRenovacaoManifestada) ...[
                           const SizedBox(height: AppSpacing.s4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: p.intencaoRenovacao == 'CONTINUAR'
                                   ? const Color(0xFFEFF6FF)
@@ -1665,17 +1772,29 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                               ),
                               style: OutlinedButton.styleFrom(
                                 minimumSize: const Size(44, 44),
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                side: const BorderSide(color: AppColors.blue600),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                side: const BorderSide(
+                                  color: AppColors.blue600,
+                                ),
                               ),
                             ),
                             if (p.isEmJanelaRenovacao)
                               TextButton.icon(
                                 key: Key('btn_renovar_participacao_${p.id}'),
-                                onPressed: () => _abrirModalRenovacao(participacaoEspecifica: p),
-                                icon: const Icon(Icons.autorenew_rounded, size: 16, color: AppColors.blue600),
+                                onPressed: () => _abrirModalRenovacao(
+                                  participacaoEspecifica: p,
+                                ),
+                                icon: const Icon(
+                                  Icons.autorenew_rounded,
+                                  size: 16,
+                                  color: AppColors.blue600,
+                                ),
                                 label: Text(
-                                  p.isRenovacaoManifestada ? 'Alterar Renovação' : 'Manifestar Renovação',
+                                  p.isRenovacaoManifestada
+                                      ? 'Alterar Renovação'
+                                      : 'Manifestar Renovação',
                                   style: const TextStyle(
                                     color: AppColors.blue600,
                                     fontSize: 12,
@@ -1684,13 +1803,20 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                                 ),
                                 style: TextButton.styleFrom(
                                   minimumSize: const Size(44, 44),
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
                                 ),
                               ),
                             TextButton.icon(
                               key: Key('btn_cancelar_participacao_${p.id}'),
-                              onPressed: () => _abrirModalCancelarParticipacao(p),
-                              icon: const Icon(Icons.cancel_outlined, size: 16, color: AppColors.danger),
+                              onPressed: () =>
+                                  _abrirModalCancelarParticipacao(p),
+                              icon: const Icon(
+                                Icons.cancel_outlined,
+                                size: 16,
+                                color: AppColors.danger,
+                              ),
                               label: const Text(
                                 'Cancelar Participação',
                                 style: TextStyle(
@@ -1701,7 +1827,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                               ),
                               style: TextButton.styleFrom(
                                 minimumSize: const Size(44, 44),
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
                               ),
                             ),
                           ],
@@ -1718,7 +1846,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     padding: const EdgeInsets.all(AppSpacing.s12),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
+                      borderRadius: BorderRadius.circular(
+                        AppGeometry.radiusCard,
+                      ),
                       border: Border.all(color: AppColors.border),
                     ),
                     child: Column(
@@ -1734,29 +1864,32 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: AppSpacing.s8),
-                            const StatusChip(
-                              status: 'INATIVA',
-                              label: 'Informação',
-                              showDot: false,
-                            ),
                           ],
                         ),
                         const SizedBox(height: AppSpacing.s8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.neutral150,
-                            borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                            borderRadius: BorderRadius.circular(
+                              AppGeometry.radiusInput,
+                            ),
                             border: Border.all(color: AppColors.border),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline, size: 18, color: AppColors.navy800),
+                              const Icon(
+                                Icons.info_outline,
+                                size: 18,
+                                color: AppColors.navy800,
+                              ),
                               const SizedBox(width: AppSpacing.s8),
                               Expanded(
                                 child: Text(
-                                  p.proximaAcao,
+                                  _mensagemNegativaVoluntario,
                                   style: AppTypography.body.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.navy900,
@@ -1773,7 +1906,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           child: OutlinedButton.icon(
                             key: Key('btn_solicitar_reativacao_${p.id}'),
                             onPressed: () => _abrirModalSolicitarReativacao(p),
-                            icon: const Icon(Icons.replay_rounded, size: 16, color: AppColors.blue600),
+                            icon: const Icon(
+                              Icons.replay_rounded,
+                              size: 16,
+                              color: AppColors.blue600,
+                            ),
                             label: const Text(
                               'Solicitar Reativação',
                               style: TextStyle(
@@ -1784,7 +1921,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                             ),
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size(44, 44),
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
                               side: const BorderSide(color: AppColors.blue600),
                             ),
                           ),
@@ -1797,12 +1936,12 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 final statusChipLabel = p.estado == 'AGUARDANDO_PASTOR_LOCAL'
                     ? 'Aguardando Pastor Local'
                     : p.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE'
-                        ? 'Aguardando Responsável'
-                        : p.estado == 'AGUARDANDO_COORDENADOR'
-                            ? 'Aguardando Coordenador'
-                            : p.estado == 'RASCUNHO'
-                                ? 'Rascunho'
-                                : 'Em análise';
+                    ? 'Aguardando Responsável'
+                    : p.estado == 'AGUARDANDO_COORDENADOR'
+                    ? 'Aguardando Coordenador'
+                    : p.estado == 'RASCUNHO'
+                    ? 'Rascunho'
+                    : 'Em análise';
 
                 return Container(
                   key: Key('card_participacao_${p.id}'),
@@ -1828,17 +1967,17 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          StatusChip(
-                            status: p.estado,
-                            label: statusChipLabel,
-                          ),
+                          StatusChip(status: p.estado, label: statusChipLabel),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.s4),
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.neutral100,
                               borderRadius: BorderRadius.circular(4),
@@ -1870,7 +2009,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           child: OutlinedButton.icon(
                             key: Key('btn_solicitar_reativacao_${p.id}'),
                             onPressed: () => _abrirModalSolicitarReativacao(p),
-                            icon: const Icon(Icons.replay_rounded, size: 16, color: AppColors.blue600),
+                            icon: const Icon(
+                              Icons.replay_rounded,
+                              size: 16,
+                              color: AppColors.blue600,
+                            ),
                             label: const Text(
                               'Solicitar Reativação',
                               style: TextStyle(
@@ -1881,7 +2024,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                             ),
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size(44, 44),
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
                               side: const BorderSide(color: AppColors.blue600),
                             ),
                           ),
@@ -1894,7 +2039,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           child: TextButton.icon(
                             key: Key('btn_cancelar_participacao_${p.id}'),
                             onPressed: () => _abrirModalCancelarParticipacao(p),
-                            icon: const Icon(Icons.cancel_outlined, size: 16, color: AppColors.danger),
+                            icon: const Icon(
+                              Icons.cancel_outlined,
+                              size: 16,
+                              color: AppColors.danger,
+                            ),
                             label: const Text(
                               'Cancelar Solicitação',
                               style: TextStyle(
@@ -1905,7 +2054,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                             ),
                             style: TextButton.styleFrom(
                               minimumSize: const Size(44, 44),
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
                             ),
                           ),
                         ),
@@ -1925,7 +2076,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 child: OutlinedButton.icon(
                   key: const Key('btn_cancelar_voluntariado'),
                   onPressed: _abrirModalCancelarVoluntariado,
-                  icon: const Icon(Icons.person_off_outlined, size: 18, color: AppColors.danger),
+                  icon: const Icon(
+                    Icons.person_off_outlined,
+                    size: 18,
+                    color: AppColors.danger,
+                  ),
                   label: const Text(
                     'Encerrar Voluntariado',
                     style: TextStyle(
@@ -1950,12 +2105,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, color: AppColors.textSecondary, size: 20),
+                  const Icon(
+                    Icons.info_outline,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
                   const SizedBox(width: AppSpacing.s12),
                   Expanded(
                     child: Text(
                       'Nenhuma equipe selecionada ainda. Marque uma ou mais equipes acima para adicionar ao seu rascunho.',
-                      style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -1965,11 +2126,13 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             Column(
               children: _equipesSelecionadasIds.map((eqId) {
                 final equipe = _equipes.cast<EquipeCatalogo?>().firstWhere(
-                      (e) => e?.id == eqId,
-                      orElse: () => null,
-                    );
+                  (e) => e?.id == eqId,
+                  orElse: () => null,
+                );
                 final nomeEquipe = equipe?.nome ?? eqId;
-                final statusExibicao = _isAguardandoPastor ? 'AGUARDANDO_PASTOR_LOCAL' : 'RASCUNHO';
+                final statusExibicao = _isAguardandoPastor
+                    ? 'AGUARDANDO_PASTOR_LOCAL'
+                    : 'RASCUNHO';
                 final proximaAcaoExibicao = _isAguardandoPastor
                     ? 'Aguardando avaliação do Pastor Local'
                     : 'Aguardando envio da ficha';
@@ -2007,7 +2170,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: AppColors.neutral100,
                                     borderRadius: BorderRadius.circular(4),
@@ -2039,7 +2205,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                         const SizedBox(width: AppSpacing.s8),
                         IconButton(
                           key: Key('botao_remover_equipe_$eqId'),
-                          icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 20,
+                            color: AppColors.danger,
+                          ),
                           tooltip: 'Remover $nomeEquipe',
                           constraints: const BoxConstraints(
                             minWidth: 44,
@@ -2065,7 +2235,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               label: 'Salvar Equipes',
               icon: Icons.save_outlined,
               isLoading: _salvandoEquipes,
-              onPressed: (_isBloqueadoParaEdicao || _salvandoEquipes) ? null : _salvarEquipes,
+              onPressed: (_isBloqueadoParaEdicao || _salvandoEquipes)
+                  ? null
+                  : _salvarEquipes,
             ),
           ),
         ],
@@ -2111,7 +2283,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.check_circle_outline, color: AppColors.success, size: 22),
+            const Icon(
+              Icons.check_circle_outline,
+              color: AppColors.success,
+              size: 22,
+            ),
             const SizedBox(width: AppSpacing.s12),
             Expanded(
               child: Column(
@@ -2127,7 +2303,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   const SizedBox(height: AppSpacing.s4),
                   Text(
                     'Todos os campos obrigatórios foram preenchidos. Você pode salvar suas alterações e prosseguir para escolha de equipes e termo.',
-                    style: AppTypography.caption.copyWith(color: AppColors.textPrimary),
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -2167,7 +2345,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('• ', style: TextStyle(color: Color(0xFFB45309))),
+                        const Text(
+                          '• ',
+                          style: TextStyle(color: Color(0xFFB45309)),
+                        ),
                         Expanded(
                           child: Text(
                             item,
@@ -2309,7 +2490,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.lock_outline, color: AppColors.navy800, size: 22),
+                  const Icon(
+                    Icons.lock_outline,
+                    color: AppColors.navy800,
+                    size: 22,
+                  ),
                   const SizedBox(width: AppSpacing.s12),
                   Expanded(
                     child: Column(
@@ -2327,7 +2512,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           !fichaSalva
                               ? 'Complete e salve sua ficha permanente para habilitar o Termo de Adesão.'
                               : 'Selecione e salve ao menos uma equipe de interesse acima para habilitar o aceite do termo.',
-                          style: AppTypography.caption.copyWith(color: AppColors.textPrimary),
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ],
                     ),
@@ -2346,12 +2533,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                    const Icon(
+                      Icons.check_circle,
+                      color: AppColors.success,
+                      size: 20,
+                    ),
                     const SizedBox(width: AppSpacing.s8),
                     Expanded(
                       child: Text(
                         _mensagemSucessoTermo!,
-                        style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -2370,12 +2563,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppColors.danger,
+                      size: 20,
+                    ),
                     const SizedBox(width: AppSpacing.s8),
                     Expanded(
                       child: Text(
                         _erroTermo!,
-                        style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -2395,9 +2594,13 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     final aceite = _ficha?.termoAceito;
     final versaoVigente = _termoVigente;
     final temAceiteVigente =
-        aceite != null && versaoVigente != null && aceite.versaoId == versaoVigente.id;
+        aceite != null &&
+        versaoVigente != null &&
+        aceite.versaoId == versaoVigente.id;
     final temAceiteDesatualizado =
-        aceite != null && versaoVigente != null && aceite.versaoId != versaoVigente.id;
+        aceite != null &&
+        versaoVigente != null &&
+        aceite.versaoId != versaoVigente.id;
 
     if (temAceiteVigente) {
       return Container(
@@ -2437,8 +2640,14 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             const SizedBox(height: AppSpacing.s12),
             const Divider(color: AppColors.border),
             const SizedBox(height: AppSpacing.s8),
-            _buildLinhaComprovante('Data do Aceite', _formatarData(aceite.aceitoEm)),
-            _buildLinhaComprovante('Versão do Termo', 'Versão ${aceite.numeroVersao}'),
+            _buildLinhaComprovante(
+              'Data do Aceite',
+              _formatarData(aceite.aceitoEm),
+            ),
+            _buildLinhaComprovante(
+              'Versão do Termo',
+              'Versão ${aceite.numeroVersao}',
+            ),
             _buildLinhaComprovante(
               'Hash SHA-256',
               aceite.hashSha256.length >= 16
@@ -2480,12 +2689,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             decoration: BoxDecoration(
               color: AppColors.warningBg,
               borderRadius: BorderRadius.circular(AppGeometry.radiusCard),
-              border: Border.all(color: AppColors.warning.withValues(alpha: 0.6)),
+              border: Border.all(
+                color: AppColors.warning.withValues(alpha: 0.6),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 24),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppColors.warning,
+                  size: 24,
+                ),
                 const SizedBox(width: AppSpacing.s12),
                 Expanded(
                   child: Column(
@@ -2501,7 +2716,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       const SizedBox(height: AppSpacing.s4),
                       Text(
                         'Você aceitou anteriormente a Versão ${aceite.numeroVersao}. Uma nova versão (Versão ${versaoVigente.numeroVersao}) foi publicada e requer sua leitura e novo aceite para prosseguir com o envio.',
-                        style: AppTypography.caption.copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ],
                   ),
@@ -2522,7 +2739,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: AppColors.warning, size: 24),
+                const Icon(
+                  Icons.info_outline,
+                  color: AppColors.warning,
+                  size: 24,
+                ),
                 const SizedBox(width: AppSpacing.s12),
                 Expanded(
                   child: Text(
@@ -2548,7 +2769,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.description_outlined, color: AppColors.navy900, size: 24),
+                    const Icon(
+                      Icons.description_outlined,
+                      color: AppColors.navy900,
+                      size: 24,
+                    ),
                     const SizedBox(width: AppSpacing.s12),
                     Expanded(
                       child: Column(
@@ -2585,7 +2810,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   versaoVigente.conteudo.length > 200
                       ? '${versaoVigente.conteudo.substring(0, 200)}...'
                       : versaoVigente.conteudo,
-                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.s16),
                 const Divider(color: AppColors.border),
@@ -2633,7 +2860,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     label: 'Registrar Aceite Eletrônico',
                     icon: Icons.check_circle_outline,
                     isLoading: _salvandoTermo,
-                    onPressed: (!_declaracaoConcordancia || _salvandoTermo || _isBloqueadoParaEdicao)
+                    onPressed:
+                        (!_declaracaoConcordancia ||
+                            _salvandoTermo ||
+                            _isBloqueadoParaEdicao)
                         ? null
                         : _aceitarTermo,
                   ),
@@ -2645,7 +2875,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     );
   }
 
-  Widget _buildLinhaComprovante(String rotulo, String valor, {String? tooltip}) {
+  Widget _buildLinhaComprovante(
+    String rotulo,
+    String valor, {
+    String? tooltip,
+  }) {
     final textWidget = Text(
       valor,
       style: AppTypography.body.copyWith(
@@ -2659,7 +2893,12 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(rotulo, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+          Text(
+            rotulo,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(width: AppSpacing.s8),
           Flexible(
             child: tooltip != null
@@ -2690,7 +2929,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 Icon(Icons.check_circle_outline, color: AppColors.surface),
                 SizedBox(width: AppSpacing.s8),
                 Expanded(
-                  child: Text('Solicitação enviada com sucesso! A equipe está em análise.'),
+                  child: Text(
+                    'Solicitação enviada com sucesso! A equipe está em análise.',
+                  ),
                 ),
               ],
             ),
@@ -2802,7 +3043,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             backgroundColor: AppColors.navy900,
             content: Row(
               children: [
-                const Icon(Icons.check_circle_outline, color: AppColors.surface),
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: AppColors.surface,
+                ),
                 const SizedBox(width: AppSpacing.s8),
                 Expanded(
                   child: Text(
@@ -2864,8 +3108,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     final fichaId = _ficha?.id;
     if (fichaId == null || fichaId.isEmpty) return;
 
-    final participacoesAfetadas =
-        _participacoes.where((p) => !p.isTerminal).toList();
+    final participacoesAfetadas = _participacoes
+        .where((p) => !p.isTerminal)
+        .toList();
     final commandId = comandoOpaco();
 
     CancelarVoluntariadoDialog.show(
@@ -2888,9 +3133,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               children: [
                 Icon(Icons.warning_amber_rounded, color: AppColors.surface),
                 SizedBox(width: AppSpacing.s8),
-                Expanded(
-                  child: Text('Voluntariado cancelado com sucesso.'),
-                ),
+                Expanded(child: Text('Voluntariado cancelado com sucesso.')),
               ],
             ),
           ),
@@ -2934,7 +3177,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     padding: const EdgeInsets.all(AppSpacing.s12),
                     decoration: BoxDecoration(
                       color: AppColors.background,
-                      borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
+                      borderRadius: BorderRadius.circular(
+                        AppGeometry.radiusInput,
+                      ),
                       border: Border.all(color: AppColors.border),
                     ),
                     child: Column(
@@ -2942,7 +3187,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       children: [
                         Text(
                           termo.titulo,
-                          style: AppTypography.label.copyWith(fontWeight: FontWeight.w700),
+                          style: AppTypography.label.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -2969,10 +3216,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.s16),
-                  Text(
-                    termo.conteudo,
-                    style: AppTypography.body,
-                  ),
+                  Text(termo.conteudo, style: AppTypography.body),
                 ] else ...[
                   const Text('Nenhum termo vigente carregado no momento.'),
                 ],
@@ -3039,7 +3283,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       dense: true,
                       title: Text(
                         'Versão ${item.numeroVersao} - ${item.titulo.isNotEmpty ? item.titulo : 'Termo de Adesão'}',
-                        style: AppTypography.label.copyWith(fontWeight: FontWeight.w700),
+                        style: AppTypography.label.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3047,7 +3293,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                           Text('Aceito em: ${_formatarData(item.aceitoEm)}'),
                           Text(
                             'Hash: $hashCurto',
-                            style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontFamily: 'monospace',
+                            ),
                           ),
                         ],
                       ),
@@ -3075,7 +3324,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   Widget _buildSecaoEnvioAprovacao(List<String> pendencias) {
     final dadosCompletos = pendencias.isEmpty && _ficha != null;
     final temEquipes = _participacoes.isNotEmpty;
-    final termoAceito = _ficha?.termoAceito != null &&
+    final termoAceito =
+        _ficha?.termoAceito != null &&
         _termoVigente != null &&
         _ficha?.termoAceito?.versaoId == _termoVigente?.id;
     final aptoParaEnvio = dadosCompletos && temEquipes && termoAceito;
@@ -3096,7 +3346,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.check_circle, color: AppColors.success, size: 24),
+                  const Icon(
+                    Icons.check_circle,
+                    color: AppColors.success,
+                    size: 24,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Text(
@@ -3122,7 +3376,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               _buildLinhaComprovante('Próxima Ação', 'Atuação voluntária'),
               _buildLinhaComprovante(
                 'Equipes Ativas',
-                _participacoes.where((p) => p.isAtiva).map((p) => p.nomeEquipe).join(', '),
+                _participacoes
+                    .where((p) => p.isAtiva)
+                    .map((p) => p.nomeEquipe)
+                    .join(', '),
               ),
             ],
           ),
@@ -3146,7 +3403,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.info_outline, color: AppColors.navy800, size: 24),
+                  const Icon(
+                    Icons.info_outline,
+                    color: AppColors.navy800,
+                    size: 24,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Text(
@@ -3157,7 +3418,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       ),
                     ),
                   ),
-                  const StatusChip(status: 'INATIVA', label: 'Informação', showDot: false),
+                  const SizedBox.shrink(),
                 ],
               ),
               const SizedBox(height: AppSpacing.s12),
@@ -3190,7 +3451,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.hourglass_top, color: AppColors.blue600, size: 24),
+                  const Icon(
+                    Icons.hourglass_top,
+                    color: AppColors.blue600,
+                    size: 24,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Text(
@@ -3201,7 +3466,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       ),
                     ),
                   ),
-                  const StatusChip(status: 'AGUARDANDO', label: 'Aguardando Coordenador'),
+                  const StatusChip(
+                    status: 'AGUARDANDO',
+                    label: 'Aguardando Coordenador',
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.s12),
@@ -3212,8 +3480,14 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               const SizedBox(height: AppSpacing.s12),
               const Divider(color: AppColors.border),
               const SizedBox(height: AppSpacing.s8),
-              _buildLinhaComprovante('Próximo Responsável', 'Coordenador Geral'),
-              _buildLinhaComprovante('Próxima Ação', 'Homologação e ativação anual'),
+              _buildLinhaComprovante(
+                'Próximo Responsável',
+                'Coordenador Geral',
+              ),
+              _buildLinhaComprovante(
+                'Próxima Ação',
+                'Homologação e ativação anual',
+              ),
               _buildLinhaComprovante(
                 'Equipes em Homologação',
                 _participacoes.map((p) => p.nomeEquipe).join(', '),
@@ -3227,7 +3501,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
     if (_ficha?.estado == 'AGUARDANDO_RESPONSAVEL_EQUIPE') {
       return SectionCard(
         title: 'Status da Solicitação',
-        subtitle: 'Sua solicitação está em análise pelos Responsáveis de Equipe.',
+        subtitle:
+            'Sua solicitação está em análise pelos Responsáveis de Equipe.',
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.s16),
           decoration: BoxDecoration(
@@ -3240,7 +3515,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.people_outline, color: AppColors.blue600, size: 24),
+                  const Icon(
+                    Icons.people_outline,
+                    color: AppColors.blue600,
+                    size: 24,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Text(
@@ -3251,7 +3530,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                       ),
                     ),
                   ),
-                  const StatusChip(status: 'AGUARDANDO', label: 'Aguardando Equipes'),
+                  const StatusChip(
+                    status: 'AGUARDANDO',
+                    label: 'Aguardando Equipes',
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.s12),
@@ -3262,7 +3544,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               const SizedBox(height: AppSpacing.s12),
               const Divider(color: AppColors.border),
               const SizedBox(height: AppSpacing.s8),
-              _buildLinhaComprovante('Próximo Responsável', 'Responsáveis de Equipe'),
+              _buildLinhaComprovante(
+                'Próximo Responsável',
+                'Responsáveis de Equipe',
+              ),
               _buildLinhaComprovante('Próxima Ação', 'Análise de equipes'),
               _buildLinhaComprovante(
                 'Equipes em Análise',
@@ -3290,7 +3575,11 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.check_circle, color: AppColors.blue600, size: 24),
+                  const Icon(
+                    Icons.check_circle,
+                    color: AppColors.blue600,
+                    size: 24,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Text(
@@ -3312,8 +3601,14 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               const SizedBox(height: AppSpacing.s12),
               const Divider(color: AppColors.border),
               const SizedBox(height: AppSpacing.s8),
-              _buildLinhaComprovante('Próximo Responsável', 'Pastor da Igreja Local'),
-              _buildLinhaComprovante('Próxima Ação', 'Avaliação e manifestação pastoral'),
+              _buildLinhaComprovante(
+                'Próximo Responsável',
+                'Pastor da Igreja Local',
+              ),
+              _buildLinhaComprovante(
+                'Próxima Ação',
+                'Avaliação e manifestação pastoral',
+              ),
               _buildLinhaComprovante(
                 'Equipes em Avaliação',
                 _participacoes.map((p) => p.nomeEquipe).join(', '),
@@ -3341,12 +3636,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                  const Icon(
+                    Icons.check_circle,
+                    color: AppColors.success,
+                    size: 20,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Text(
                       _mensagemSucessoEnvio!,
-                      style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -3364,12 +3665,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                  const Icon(
+                    Icons.error_outline,
+                    color: AppColors.danger,
+                    size: 20,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Text(
                       _erroEnvio!,
-                      style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -3458,7 +3765,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   titulo,
                   style: AppTypography.label.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: concluido ? AppColors.textPrimary : AppColors.textSecondary,
+                    color: concluido
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -3504,10 +3813,16 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
   }
 
   void _confirmarEnvio() {
-    final nomeIgreja = _igrejas
-        .cast<IgrejaCatalogo?>()
-        .firstWhere((i) => i?.id == _igrejaSelecionadaId, orElse: () => null)
-        ?.rotulo ?? _igrejaSelecionadaId ?? 'Não informada';
+    final nomeIgreja =
+        _igrejas
+            .cast<IgrejaCatalogo?>()
+            .firstWhere(
+              (i) => i?.id == _igrejaSelecionadaId,
+              orElse: () => null,
+            )
+            ?.rotulo ??
+        _igrejaSelecionadaId ??
+        'Não informada';
 
     final nomesEquipes = _participacoes.map((p) => p.nomeEquipe).join(', ');
 
@@ -3518,7 +3833,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
           children: [
             const Icon(Icons.send_rounded, color: AppColors.blue600),
             const SizedBox(width: AppSpacing.s8),
-            const Expanded(child: Text('Confirmar Envio da Ficha', style: AppTypography.h3)),
+            const Expanded(
+              child: Text('Confirmar Envio da Ficha', style: AppTypography.h3),
+            ),
           ],
         ),
         content: ConstrainedBox(
@@ -3544,8 +3861,14 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                   children: [
                     _buildLinhaResumo('Voluntário', _nomeController.text),
                     _buildLinhaResumo('Igreja Local', nomeIgreja),
-                    _buildLinhaResumo('Equipes', nomesEquipes.isNotEmpty ? nomesEquipes : 'Nenhuma'),
-                    _buildLinhaResumo('Termo Aceito', 'Versão ${_ficha?.termoAceito?.numeroVersao ?? 1}'),
+                    _buildLinhaResumo(
+                      'Equipes',
+                      nomesEquipes.isNotEmpty ? nomesEquipes : 'Nenhuma',
+                    ),
+                    _buildLinhaResumo(
+                      'Termo Aceito',
+                      'Versão ${_ficha?.termoAceito?.numeroVersao ?? 1}',
+                    ),
                   ],
                 ),
               ),
@@ -3555,17 +3878,25 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.warningBg,
                   borderRadius: BorderRadius.circular(AppGeometry.radiusInput),
-                  border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.info_outline, color: AppColors.warning, size: 20),
+                    const Icon(
+                      Icons.info_outline,
+                      color: AppColors.warning,
+                      size: 20,
+                    ),
                     const SizedBox(width: AppSpacing.s8),
                     Expanded(
                       child: Text(
                         'Atenção: Ao enviar, sua ficha entrará em avaliação pelo Pastor Local e ficará bloqueada para alterações cadastrais e de equipes.',
-                        style: AppTypography.caption.copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -3623,12 +3954,15 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
             return p;
           }).toList();
           _enviando = false;
-          _mensagemSucessoEnvio = 'Ficha enviada com sucesso para aprovação do Pastor Local!';
+          _mensagemSucessoEnvio =
+              'Ficha enviada com sucesso para aprovação do Pastor Local!';
         });
 
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
           const SnackBar(
-            content: Text('Ficha enviada com sucesso para aprovação do Pastor Local!'),
+            content: Text(
+              'Ficha enviada com sucesso para aprovação do Pastor Local!',
+            ),
             backgroundColor: AppColors.success,
           ),
         );
@@ -3638,20 +3972,16 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
         final mensagem = e.toString().contains('termo de voluntariado')
             ? 'O termo de voluntariado vigente precisa ser aceito antes do envio.'
             : e.toString().contains('ao menos uma equipe')
-                ? 'Selecione e salve ao menos uma equipe antes do envio.'
-                : 'Não foi possível enviar a ficha para aprovação. Tente novamente.';
+            ? 'Selecione e salve ao menos uma equipe antes do envio.'
+            : 'Não foi possível enviar a ficha para aprovação. Tente novamente.';
         setState(() {
           _enviando = false;
           _erroEnvio = mensagem;
         });
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
-            content: Text(mensagem),
-            backgroundColor: AppColors.danger,
-          ),
+          SnackBar(content: Text(mensagem), backgroundColor: AppColors.danger),
         );
       }
     }
   }
 }
-

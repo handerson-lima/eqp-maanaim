@@ -1064,22 +1064,6 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
               Icons.autorenew_outlined,
             ),
           ],
-          const SizedBox(height: AppSpacing.s20),
-          OutlinedButton.icon(
-            key: const Key('btnVerFichaPdf'),
-            icon: const Icon(Icons.description_outlined, size: 18, color: AppColors.blue600),
-            label: const Text('Ver ficha completa (PDF)'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.blue600,
-              side: const BorderSide(color: AppColors.blue600),
-              minimumSize: const Size(double.infinity, AppGeometry.minTouchTarget),
-            ),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Abrindo ficha completa (PDF)...')),
-              );
-            },
-          ),
         ],
       ),
     );
@@ -1245,20 +1229,6 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
   }
 
   Widget _buildSecaoDocumentosEvidencias(DetalheSolicitacaoDados dados) {
-    final docs = List<DocumentoEvidenciaModel>.from(dados.documentos);
-    // Assegura exibição da Ficha do voluntário se não presente
-    if (!docs.any((d) => d.tipo == 'FICHA_CADASTRAL' || d.titulo.contains('Ficha do voluntário'))) {
-      docs.insert(
-        0,
-        const DocumentoEvidenciaModel(
-          tipo: 'FICHA_CADASTRAL',
-          titulo: 'Ficha do voluntário',
-          descricao: 'Cadastro e dados declarados pelo voluntário',
-          disponivel: true,
-        ),
-      );
-    }
-
     return SectionCard(
       key: const Key('cardSecaoDocumentos'),
       padding: const EdgeInsets.all(AppSpacing.cardPadding),
@@ -1267,7 +1237,13 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
         children: [
           Text('Documentos e Evidências', style: AppTypography.h3),
           const SizedBox(height: AppSpacing.s12),
-          ...docs.map((doc) => _buildItemDocumento(doc)),
+          if (dados.documentos.isEmpty)
+            Text(
+              'Nenhum documento autorizado disponível',
+              key: const Key('documentosAutorizadosVazio'),
+              style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+            ),
+          ...dados.documentos.map((doc) => _buildItemDocumento(doc)),
         ],
       ),
     );
@@ -1309,35 +1285,20 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
               ],
             ),
           ),
-          if (doc.disponivel)
-            TextButton.icon(
-              key: Key('btnVisualizarDoc_${doc.tipo}'),
-              icon: const Icon(Icons.remove_red_eye_outlined, size: 16, color: AppColors.blue600),
-              label: const Text(
-                'Ver documento',
-                style: TextStyle(
-                  color: AppColors.blue600,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Visualizando ${doc.titulo}')),
-                );
-              },
-            )
-          else
-            Container(
+          Flexible(
+            child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                'Indisponível',
+                'Consulta indisponível nesta tela',
+                textAlign: TextAlign.center,
                 style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
               ),
             ),
+          ),
         ],
       ),
     );

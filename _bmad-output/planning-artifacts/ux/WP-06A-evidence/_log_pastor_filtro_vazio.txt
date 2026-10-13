@@ -1,0 +1,39 @@
+[39236:7198272:1013/062920.785539:INFO:components/enterprise/browser/controller/chrome_browser_cloud_management_controller.cc:241] No machine level policy manager exists.
+[39240:7198365:1013/062921.265475:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.271255:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.271587:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.271888:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.272280:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.272558:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.272865:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.273126:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+Trying to load the allocator multiple times. This is *not* supported.
+[39240:7198365:1013/062921.433497:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.439686:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.441494:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.442485:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062921.442819:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39236:7198272:1013/062922.941034:INFO:CONSOLE:1] "Injecting <script> tag. Using callback.", source: http://127.0.0.1:7357/flutter_bootstrap.js (1)
+[39236:7198272:1013/062922.956185:INFO:CONSOLE:1015] "DDC is about to load 1/2 scripts with pool size = 1000", source: http://127.0.0.1:7357/ddc_module_loader.js (1015)
+[39240:7198365:1013/062923.188705:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062923.339185:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062923.394784:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062923.489606:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39236:7198272:1013/062923.495478:INFO:CONSOLE:1015] "DDC is about to load 704/704 scripts with pool size = 1000", source: http://127.0.0.1:7357/ddc_module_loader.js (1015)
+[39240:7198365:1013/062923.591748:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39240:7198365:1013/062923.728457:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39236:7198304:1013/062923.798122:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[39240:7198365:1013/062923.805660:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39236:7198304:1013/062923.814438:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[39236:7198304:1013/062923.826531:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[39236:7198272:1013/062924.721299:INFO:CONSOLE:0] "<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">", source: http://127.0.0.1:7357/?p=pastor&c=filtro&w=390&h=844&auto=t:Renova%C3%A7%C3%B5es (0)
+[39236:7198272:1013/062924.724008:INFO:CONSOLE:1586] "Starting application from main method in: org-dartlang-app:///web_entrypoint.dart.", source: http://127.0.0.1:7357/ddc_module_loader.js (1586)
+[39240:7198365:1013/062924.749639:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[39236:7198272:1013/062924.776825:INFO:CONSOLE:245800] "WARNING: Falling back to CPU-only rendering. Reason: webGLVersion is -1", source: http://127.0.0.1:7357/dart_sdk.js (245800)
+[39236:7198272:1013/062925.995144:INFO:CONSOLE:245800] "Found an existing <meta name="viewport"> tag. Flutter Web uses its own viewport configuration for better compatibility with Flutter. This tag will be replaced.", source: http://127.0.0.1:7357/dart_sdk.js (245800)
+[39236:7198272:1013/062926.875222:INFO:CONSOLE:26346] "WP06 passo t:Renovações => ok", source: http://127.0.0.1:7357/dart_sdk.js (26346)
+56536 bytes written to file /Users/usuario/eqp_maanaim/_bmad-output/planning-artifacts/ux/WP-06A-evidence/_tmp_pastor_filtro_vazio.png
+[39236:7198317:1013/062927.211601:ERROR:base/process/process_mac.cc:45] task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)
+[39236:7198317:1013/062927.211647:ERROR:base/process/process_mac.cc:90] task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)
+[39241:7198354:1013/062927.345640:WARNING:net/extras/sqlite/sqlite_persistent_store_backend_base.cc:182] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:232 to client_task_runner_.
+[39241:7198354:1013/062927.345974:WARNING:net/extras/sqlite/sqlite_persistent_store_backend_base.cc:182] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:232 to client_task_runner_.
