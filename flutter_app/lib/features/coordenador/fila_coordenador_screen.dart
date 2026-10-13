@@ -699,7 +699,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
         key: Key('btnAprovar_${item.fichaId}'),
         onPressed: () => _abrirModalAprovacao(item),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.blue600,
+          backgroundColor: AppColors.success,
           foregroundColor: Colors.white,
           minimumSize: const Size(170, AppGeometry.minTouchTarget),
         ),

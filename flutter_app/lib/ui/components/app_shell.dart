@@ -13,6 +13,7 @@ class AppNavItem {
     this.badge,
     this.route,
     this.enabled = true,
+    this.section,
   });
 
   final String label;
@@ -21,6 +22,7 @@ class AppNavItem {
   final Widget? badge;
   final String? route;
   final bool enabled;
+  final String? section;
 }
 
 /// Sidebar institucional Maanaim (fundo navy-900, largura ~220px no desktop).
@@ -59,25 +61,92 @@ class AppSidebar extends StatelessWidget {
             const Divider(color: AppColors.navy800, height: 1),
             const SizedBox(height: AppSpacing.s12),
 
-            // Itens de navegação
+            // Itens de navegação com suporte a grupos semânticos
             Expanded(
-              child: ListView.separated(
+              child: ListView.builder(
                 padding: EdgeInsets.symmetric(
                   horizontal: isCompact ? AppSpacing.s8 : AppSpacing.s12,
                 ),
                 itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s4),
                 itemBuilder: (context, index) {
                   final item = items[index];
                   final isSelected = index == selectedIndex;
+                  final isNovaSecao = item.section != null &&
+                      (index == 0 || items[index - 1].section != item.section);
 
-                  return _SidebarItemTile(
+                  final tile = _SidebarItemTile(
                     item: item,
                     isSelected: isSelected,
                     isCompact: isCompact,
                     onTap: item.enabled
                         ? () => onDestinationSelected?.call(index)
                         : null,
+                  );
+
+                  if (!isNovaSecao) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.s4),
+                      child: tile,
+                    );
+                  }
+
+                  if (isCompact) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (index > 0)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: AppSpacing.s8),
+                            child: Divider(
+                              color: AppColors.navy800,
+                              height: 1,
+                              thickness: 1,
+                            ),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.s4),
+                          child: tile,
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (index > 0) ...[
+                        const SizedBox(height: AppSpacing.s8),
+                        const Divider(
+                          color: AppColors.navy800,
+                          height: 1,
+                          thickness: 1,
+                        ),
+                      ],
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.s8,
+                          AppSpacing.s12,
+                          AppSpacing.s8,
+                          AppSpacing.s4,
+                        ),
+                        child: Text(
+                          item.section!.toUpperCase(),
+                          style: const TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                            color: Color(0xFF8BA5BE),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.s4),
+                        child: tile,
+                      ),
+                    ],
                   );
                 },
               ),

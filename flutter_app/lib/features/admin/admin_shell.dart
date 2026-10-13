@@ -82,11 +82,13 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   List<_AbaAdmin> get _abas => [
+    // --- Grupo: Cadastros ---
     _AbaAdmin(
       item: const AppNavItem(
         label: 'Igrejas',
         icon: Icons.church_outlined,
         selectedIcon: Icons.church,
+        section: 'Cadastros',
       ),
       builder: () => widget.catalogo != null
           ? IgrejasScreen(
@@ -105,6 +107,7 @@ class _AdminShellState extends State<AdminShell> {
         label: 'Equipes',
         icon: Icons.groups_outlined,
         selectedIcon: Icons.groups,
+        section: 'Cadastros',
       ),
       builder: () => widget.catalogo != null
           ? EquipesScreen(
@@ -120,24 +123,10 @@ class _AdminShellState extends State<AdminShell> {
     ),
     _AbaAdmin(
       item: const AppNavItem(
-        label: 'Carga inicial do catálogo',
-        icon: Icons.cloud_upload_outlined,
-        selectedIcon: Icons.cloud_upload,
-      ),
-      builder: () => widget.seed != null
-          ? SeedCatalogo(widget.seed!)
-          : const Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.cardPadding),
-                child: Text('Serviço de carga inicial indisponível.'),
-              ),
-            ),
-    ),
-    _AbaAdmin(
-      item: const AppNavItem(
         label: 'Pessoas e Papéis',
         icon: Icons.manage_accounts_outlined,
         selectedIcon: Icons.manage_accounts,
+        section: 'Cadastros',
       ),
       builder: () => widget.pessoas != null
           ? PessoasPapeis(widget.pessoas!)
@@ -153,6 +142,7 @@ class _AdminShellState extends State<AdminShell> {
         label: 'Vínculos e Responsáveis',
         icon: Icons.handshake_outlined,
         selectedIcon: Icons.handshake,
+        section: 'Cadastros',
       ),
       builder: () => widget.vinculos != null
           ? VinculosResponsaveis(widget.vinculos!)
@@ -168,6 +158,7 @@ class _AdminShellState extends State<AdminShell> {
         label: 'Termos',
         icon: Icons.description_outlined,
         selectedIcon: Icons.description,
+        section: 'Cadastros',
       ),
       builder: () => widget.termos != null
           ? TermosScreen(gateway: widget.termos!)
@@ -178,11 +169,14 @@ class _AdminShellState extends State<AdminShell> {
               ),
             ),
     ),
+
+    // --- Grupo: Operação ---
     _AbaAdmin(
       item: const AppNavItem(
         label: 'Solicitações por Equipe',
         icon: Icons.pending_actions_outlined,
         selectedIcon: Icons.pending_actions,
+        section: 'Operação',
       ),
       builder: () => widget.solicitacoesPendentes != null
           ? PainelSolicitacoesPendentesScreen(gateway: widget.solicitacoesPendentes!)
@@ -199,6 +193,7 @@ class _AdminShellState extends State<AdminShell> {
           label: 'Fila do Pastor',
           icon: Icons.how_to_reg_outlined,
           selectedIcon: Icons.how_to_reg,
+          section: 'Operação',
         ),
         builder: () => FilaPastorScreen(
           gateway: widget.pastor!,
@@ -212,6 +207,7 @@ class _AdminShellState extends State<AdminShell> {
           label: 'Fila da Equipe',
           icon: Icons.groups_outlined,
           selectedIcon: Icons.groups,
+          section: 'Operação',
         ),
         builder: () => FilaResponsavelEquipeScreen(
           gateway: widget.responsavelEquipe!,
@@ -225,6 +221,7 @@ class _AdminShellState extends State<AdminShell> {
           label: 'Fila do Coordenador',
           icon: Icons.verified_outlined,
           selectedIcon: Icons.verified,
+          section: 'Operação',
         ),
         builder: () => FilaCoordenadorScreen(
           gateway: widget.coordenador!,
@@ -238,6 +235,7 @@ class _AdminShellState extends State<AdminShell> {
         label: 'Renovações',
         icon: Icons.autorenew_outlined,
         selectedIcon: Icons.autorenew,
+        section: 'Operação',
       ),
       builder: () => DashboardRenovacaoScreen(
         gateway: widget.dashboardRenovacao ?? MemoriaDashboardRenovacaoGateway(),
@@ -251,11 +249,30 @@ class _AdminShellState extends State<AdminShell> {
         onSair: widget.onSair,
       ),
     ),
+
+    // --- Grupo: Administração ---
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Carga inicial do catálogo',
+        icon: Icons.cloud_upload_outlined,
+        selectedIcon: Icons.cloud_upload,
+        section: 'Administração',
+      ),
+      builder: () => widget.seed != null
+          ? SeedCatalogo(widget.seed!)
+          : const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.cardPadding),
+                child: Text('Serviço de carga inicial indisponível.'),
+              ),
+            ),
+    ),
     _AbaAdmin(
       item: const AppNavItem(
         label: 'Auditoria & Relatórios',
         icon: Icons.history_edu_outlined,
         selectedIcon: Icons.history_edu,
+        section: 'Administração',
       ),
       builder: () => AuditoriaRelatoriosScreen(
         gateway: widget.auditoria ?? MemoriaAuditoriaGateway(),
@@ -267,6 +284,7 @@ class _AdminShellState extends State<AdminShell> {
         label: 'Retenção e Privacidade',
         icon: Icons.privacy_tip_outlined,
         selectedIcon: Icons.privacy_tip,
+        section: 'Administração',
       ),
       builder: () => ConformidadeRetencaoScreen(
         gateway: widget.retencao ?? MemoriaRetencaoGateway(),

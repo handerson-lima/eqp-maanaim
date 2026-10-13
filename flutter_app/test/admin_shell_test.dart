@@ -151,5 +151,48 @@ void main() {
       expect(find.byType(EquipesScreen), findsOneWidget);
     });
   });
+
+  group('Story UX-REF-001 (WP-02): Agrupamento semântico da navegação administrativa', () {
+    testWidgets('Desktop (1200px): exibe títulos de seção semântica CADASTROS e ADMINISTRAÇÃO', (
+      tester,
+    ) async {
+      _definirTamanho(tester, const Size(1200, 800));
+      await tester.pumpWidget(_shell(onSair: () {}));
+      await tester.pumpAndSettle();
+
+      // Cabeçalhos de seção presentes
+      expect(find.text('CADASTROS'), findsOneWidget);
+      expect(find.text('ADMINISTRAÇÃO'), findsOneWidget);
+
+      // Itens continuam interativos
+      expect(find.text('Igrejas'), findsOneWidget);
+      expect(find.text('Equipes'), findsOneWidget);
+      expect(find.text('Carga inicial do catálogo'), findsOneWidget);
+    });
+
+    testWidgets('Mobile (400px): exibe títulos de seção dentro do Drawer', (tester) async {
+      _definirTamanho(tester, const Size(400, 700));
+      await tester.pumpWidget(_shell(onSair: () {}));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      expect(find.text('CADASTROS'), findsOneWidget);
+      expect(find.text('ADMINISTRAÇÃO'), findsOneWidget);
+    });
+
+    testWidgets('Tablet (800px): modo compacto renderiza sem quebra ou overflow', (tester) async {
+      _definirTamanho(tester, const Size(800, 600));
+      await tester.pumpWidget(_shell(onSair: () {}));
+      await tester.pumpAndSettle();
+
+      final sidebarFinder = find.byType(AppSidebar);
+      expect(sidebarFinder, findsOneWidget);
+      final sidebar = tester.widget<AppSidebar>(sidebarFinder);
+      expect(sidebar.isCompact, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
 

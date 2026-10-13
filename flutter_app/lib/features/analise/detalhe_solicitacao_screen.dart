@@ -755,7 +755,64 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
     );
   }
 
+  String _obterRotuloPapelContextual() {
+    switch (widget.papel) {
+      case PapelContextualAnalise.pastorLocal:
+        return 'Pastor Local';
+      case PapelContextualAnalise.responsavelEquipe:
+        return 'Responsável de Equipe';
+      case PapelContextualAnalise.coordenadorGeral:
+        return 'Coordenador Geral';
+    }
+  }
+
+  IconData _obterIconePapelContextual() {
+    switch (widget.papel) {
+      case PapelContextualAnalise.pastorLocal:
+        return Icons.how_to_reg_outlined;
+      case PapelContextualAnalise.responsavelEquipe:
+        return Icons.groups_outlined;
+      case PapelContextualAnalise.coordenadorGeral:
+        return Icons.verified_outlined;
+    }
+  }
+
+  Widget _buildBadgePapelContextual() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.blue50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.blue600.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_obterIconePapelContextual(), size: 14, color: AppColors.blue600),
+          const SizedBox(width: 4),
+          Text(
+            _obterRotuloPapelContextual(),
+            style: AppTypography.caption.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.blue600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeaderS05(DetalheSolicitacaoDados dados, bool isDesktop) {
+    final botoesStatus = Wrap(
+      spacing: AppSpacing.s8,
+      runSpacing: AppSpacing.s8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        _buildBadgePapelContextual(),
+        _buildChipStatusAguardando(),
+      ],
+    );
+
     if (!isDesktop) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -798,13 +855,16 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.s8),
-          _buildChipStatusAguardando(),
+          botoesStatus,
         ],
       );
     }
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.s12,
+      runSpacing: AppSpacing.s8,
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -838,7 +898,7 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
             Text('Análise da Ficha', style: AppTypography.h2),
           ],
         ),
-        _buildChipStatusAguardando(),
+        botoesStatus,
       ],
     );
   }
@@ -947,6 +1007,14 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
           const Divider(height: AppSpacing.s24),
           Text('Dados Cadastrais Autorizados', style: AppTypography.h3),
           const SizedBox(height: AppSpacing.s12),
+          _buildInfoLinha(
+            'Tipo de solicitação',
+            dados.isRenovacaoAnual
+                ? (dados.anoCiclo != null ? 'Renovação Anual (Ciclo ${dados.anoCiclo})' : 'Renovação Anual')
+                : 'Primeira Solicitação / Adesão',
+            dados.isRenovacaoAnual ? Icons.autorenew : Icons.person_add_alt_outlined,
+          ),
+          const SizedBox(height: AppSpacing.s8),
           if (dados.idade != null) ...[
             _buildInfoLinha('Idade', '${dados.idade} anos', Icons.cake_outlined),
             const SizedBox(height: AppSpacing.s8),
@@ -1093,6 +1161,24 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (ehEscopoDoUsuario) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.s8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.blue600,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'Sua equipe sob avaliação',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
           Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,

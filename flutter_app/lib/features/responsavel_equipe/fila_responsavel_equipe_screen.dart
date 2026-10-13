@@ -812,7 +812,7 @@ class _FilaResponsavelEquipeScreenState
                                 key: Key('btnAnalisar_${item.participacaoId}'),
                                 onPressed: () => _abrirDetalheSolicitacao(item),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.navy900,
+                                  backgroundColor: AppColors.blue600,
                                   foregroundColor: Colors.white,
                                   minimumSize: const Size(100, AppGeometry.minTouchTarget),
                                 ),
@@ -996,7 +996,7 @@ class _FilaResponsavelEquipeScreenState
                     key: Key('btnAnalisar_${item.participacaoId}'),
                     onPressed: () => _abrirDetalheSolicitacao(item),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.navy900,
+                      backgroundColor: AppColors.blue600,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(110, AppGeometry.minTouchTarget),
                     ),
