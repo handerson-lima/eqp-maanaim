@@ -393,6 +393,10 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
   Widget _construirTopCards(bool ehDesktop) {
     final cardEquipes = _construirCardMinhasEquipesContadores();
     final cardValidade = _construirCardValidadeFicha();
+    final equipeProxima = _obterEquipeMaisProximaDoVencimento();
+    final temVigenciaCritica = equipeProxima != null &&
+        equipeProxima.diasParaVencimento != null &&
+        equipeProxima.diasParaVencimento! <= 30;
 
     if (ehDesktop) {
       return Row(
@@ -405,13 +409,14 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
       );
     }
 
+    // No mobile e tablet, prioriza o card de validade quando há vigência crítica ou renovação pendente
+    final listaCards = temVigenciaCritica
+        ? [cardValidade, const SizedBox(height: AppSpacing.s12), cardEquipes]
+        : [cardEquipes, const SizedBox(height: AppSpacing.s12), cardValidade];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        cardEquipes,
-        const SizedBox(height: AppSpacing.s12),
-        cardValidade,
-      ],
+      children: listaCards,
     );
   }
 
@@ -544,6 +549,10 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
     double progresso = 0.0;
     Color corSubtitulo = AppColors.textSecondary;
 
+    final bool temVigenciaCritica = equipeProxima != null &&
+        equipeProxima.diasParaVencimento != null &&
+        equipeProxima.diasParaVencimento! <= 30;
+
     if (equipeProxima != null) {
       if (equipeProxima.vigenciaFim != null) {
         dataVigencia = VigenciaBadge.formatarData(equipeProxima.vigenciaFim);
@@ -568,25 +577,56 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.cardPadding),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: temVigenciaCritica
+            ? AppColors.warningBg.withValues(alpha: 0.18)
+            : AppColors.surface,
         borderRadius: AppGeometry.cardBorderRadius,
         border: Border.all(
-          color: AppColors.border,
-          width: AppGeometry.borderWidth,
+          color: temVigenciaCritica ? AppColors.warning : AppColors.border,
+          width: temVigenciaCritica ? 1.5 : AppGeometry.borderWidth,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'Validade da Ficha',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.navy900,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Validade da Ficha',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navy900,
+                ),
+              ),
+              if (temVigenciaCritica)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.warningBg,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, size: 12, color: AppColors.warning),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Janela de Renovação',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: AppSpacing.s16),
           Row(
@@ -595,16 +635,18 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.blue50,
+                  color: temVigenciaCritica ? AppColors.warningBg : AppColors.blue50,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: const Color(0xFFBFDBFE),
+                    color: temVigenciaCritica
+                        ? AppColors.warning.withValues(alpha: 0.4)
+                        : const Color(0xFFBFDBFE),
                     width: 1,
                   ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.calendar_today_outlined,
-                  color: AppColors.blue600,
+                  color: temVigenciaCritica ? AppColors.warning : AppColors.blue600,
                   size: 22,
                 ),
               ),
@@ -644,7 +686,9 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
               value: progresso,
               minHeight: 8,
               backgroundColor: const Color(0xFFE5E7EB),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.success),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                temVigenciaCritica ? AppColors.warning : AppColors.success,
+              ),
             ),
           ),
         ],
@@ -762,11 +806,13 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: emJanela
+            ? AppColors.warningBg.withValues(alpha: 0.12)
+            : AppColors.surface,
         borderRadius: AppGeometry.cardBorderRadius,
         border: Border.all(
-          color: AppColors.border,
-          width: AppGeometry.borderWidth,
+          color: emJanela ? AppColors.warning : AppColors.border,
+          width: emJanela ? 1.5 : AppGeometry.borderWidth,
         ),
       ),
       padding: const EdgeInsets.symmetric(
@@ -822,6 +868,32 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
               ),
               const SizedBox(width: AppSpacing.s8),
               chipStatus,
+              if (emJanela) ...[
+                const SizedBox(width: AppSpacing.s8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.warningBg,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.autorenew, size: 12, color: AppColors.warning),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Renovação Aberta',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (ehDesktop) ...[
                 const SizedBox(width: AppSpacing.s24),
                 Text(

@@ -253,12 +253,14 @@ class EmptyState extends StatelessWidget {
     required this.title,
     this.message,
     this.icon = Icons.inbox_outlined,
+    this.iconColor,
     this.action,
   });
 
   final String title;
   final String? message;
   final IconData icon;
+  final Color? iconColor;
   final Widget? action;
 
   @override
@@ -279,7 +281,7 @@ class EmptyState extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Icon(icon, size: 28, color: AppColors.textSecondary),
+              child: Icon(icon, size: 28, color: iconColor ?? AppColors.textSecondary),
             ),
             const SizedBox(height: AppSpacing.s16),
             Text(

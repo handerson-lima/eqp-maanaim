@@ -424,4 +424,39 @@ void main() {
     expect(find.text('✓ 1 de 2'), findsOneWidget);
     expect(find.byKey(const Key('btnAnalisar_ficha-01')), findsOneWidget);
   });
+
+  testWidgets('WP-05: Modais de aprovação e recusa renderizam sem overflow em viewport 360x640', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final gateway = MemoriaCoordenadorGateway(
+      pendenciasIniciais: [itemExemplo1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    // Abre modal de aprovação (Homologar)
+    await tester.ensureVisible(find.byKey(const Key('btnAprovar_ficha-01')));
+    await tester.tap(find.byKey(const Key('btnAprovar_ficha-01')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('btnConfirmarAtivacaoModal')), findsOneWidget);
+
+    // Fecha modal
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    // Abre modal de recusa (Decisão Desfavorável)
+    await tester.ensureVisible(find.byKey(const Key('btnRecusar_ficha-01')));
+    await tester.tap(find.byKey(const Key('btnRecusar_ficha-01')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('btnConfirmarRecusaModal')), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }

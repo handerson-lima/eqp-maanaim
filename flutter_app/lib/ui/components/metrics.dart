@@ -23,6 +23,7 @@ class MetricCard extends StatelessWidget {
     this.subtitle,
     this.subtitleColor,
     this.badge,
+    this.isSelected = false,
     this.onTap,
   });
 
@@ -33,6 +34,7 @@ class MetricCard extends StatelessWidget {
   final String? subtitle;
   final Color? subtitleColor;
   final Widget? badge;
+  final bool isSelected;
   final VoidCallback? onTap;
 
   (Color bg, Color fg) _resolveColors() {
@@ -53,16 +55,20 @@ class MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (iconBg, iconFg) = _resolveColors();
+    final isInteractive = onTap != null;
+
+    final border = isSelected
+        ? Border.all(color: iconFg, width: 2)
+        : (isInteractive
+            ? Border.all(color: AppColors.border, width: 1)
+            : Border.all(color: AppColors.border.withValues(alpha: 0.65), width: 1));
 
     Widget cardContent = Container(
       padding: const EdgeInsets.all(AppSpacing.cardPadding),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: isSelected ? iconBg.withValues(alpha: 0.18) : AppColors.surface,
         borderRadius: AppGeometry.cardBorderRadius,
-        border: Border.all(
-          color: AppColors.border,
-          width: AppGeometry.borderWidth,
-        ),
+        border: border,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -82,7 +88,13 @@ class MetricCard extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Icon(icon, color: iconFg, size: 20),
               ),
-              if (badge != null) badge!,
+              if (badge != null)
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4.0),
+                    child: badge!,
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.s16),
@@ -103,8 +115,10 @@ class MetricCard extends StatelessWidget {
             title,
             style: AppTypography.label.copyWith(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           if (subtitle != null) ...[
             const SizedBox(height: AppSpacing.s4),
@@ -121,10 +135,13 @@ class MetricCard extends StatelessWidget {
     );
 
     if (onTap != null) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: AppGeometry.cardBorderRadius,
-        child: cardContent,
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppGeometry.cardBorderRadius,
+          child: cardContent,
+        ),
       );
     }
 

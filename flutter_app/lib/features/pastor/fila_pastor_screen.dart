@@ -126,36 +126,42 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        actionsOverflowButtonSpacing: AppSpacing.s8,
         title: const Text('Confirmar Aprovação da Ficha'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Deseja aprovar a solicitação de voluntariado de ${item.voluntarioNome}?',
-              style: AppTypography.body,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Deseja aprovar a solicitação de voluntariado de ${item.voluntarioNome}?',
+                  style: AppTypography.body,
+                ),
+                const SizedBox(height: AppSpacing.s12),
+                if (item.nomeIgreja != null && item.nomeIgreja!.isNotEmpty)
+                  Text('Igreja: ${item.nomeIgreja}', style: AppTypography.body),
+                const SizedBox(height: AppSpacing.s8),
+                Text(
+                  'Equipes solicitadas: ${item.equipes.map((e) => e.nomeEquipe).join(', ')}',
+                  style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: AppSpacing.s16),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.s12),
+                  decoration: BoxDecoration(
+                    color: AppColors.blue50,
+                    borderRadius: AppGeometry.cardBorderRadius,
+                  ),
+                  child: Text(
+                    'Ao aprovar, a ficha avançará para a avaliação paralela dos Responsáveis de Equipe.',
+                    style: AppTypography.caption.copyWith(color: AppColors.blue600),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.s12),
-            if (item.nomeIgreja != null && item.nomeIgreja!.isNotEmpty)
-              Text('Igreja: ${item.nomeIgreja}', style: AppTypography.body),
-            const SizedBox(height: AppSpacing.s8),
-            Text(
-              'Equipes solicitadas: ${item.equipes.map((e) => e.nomeEquipe).join(', ')}',
-              style: AppTypography.body.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.s16),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.s12),
-              decoration: BoxDecoration(
-                color: AppColors.blue50,
-                borderRadius: AppGeometry.cardBorderRadius,
-              ),
-              child: Text(
-                'Ao aprovar, a ficha avançará para a avaliação paralela dos Responsáveis de Equipe.',
-                style: AppTypography.caption.copyWith(color: AppColors.blue600),
-              ),
-            ),
-          ],
+          ),
         ),
         actions: [
           TextButton(
@@ -192,61 +198,64 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
     final resultado = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
+        actionsOverflowButtonSpacing: AppSpacing.s8,
         title: const Text('Decisão Pastoral Desfavorável'),
-        content: SizedBox(
-          width: 440,
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Voluntário: ${item.voluntarioNome}',
-                  style: AppTypography.h2,
-                ),
-                const SizedBox(height: AppSpacing.s12),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.s12),
-                  decoration: BoxDecoration(
-                    color: AppColors.warningBg,
-                    borderRadius: AppGeometry.cardBorderRadius,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Voluntário: ${item.voluntarioNome}',
+                    style: AppTypography.h2,
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.info_outline, color: AppColors.warning, size: 20),
-                      const SizedBox(width: AppSpacing.s8),
-                      Expanded(
-                        child: Text(
-                          'Atenção: A justificativa registrada permanecerá estritamente interna. '
-                          'Para o voluntário, a mensagem exibida será exclusivamente: '
-                          '"Procure o Pastor da igreja local para mais informações".',
-                          style: AppTypography.caption.copyWith(color: AppColors.warning),
+                  const SizedBox(height: AppSpacing.s12),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.s12),
+                    decoration: BoxDecoration(
+                      color: AppColors.warningBg,
+                      borderRadius: AppGeometry.cardBorderRadius,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline, color: AppColors.warning, size: 20),
+                        const SizedBox(width: AppSpacing.s8),
+                        Expanded(
+                          child: Text(
+                            'Atenção: A justificativa registrada permanecerá estritamente interna. '
+                            'Para o voluntário, a mensagem exibida será exclusivamente: '
+                            '"Procure o Pastor da igreja local para mais informações".',
+                            style: AppTypography.caption.copyWith(color: AppColors.warning),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.s16),
-                TextFormField(
-                  key: const Key('campoJustificativaRecusa'),
-                  controller: controller,
-                  maxLines: 3,
-                  maxLength: 500,
-                  decoration: const InputDecoration(
-                    labelText: 'Justificativa Pastoral Interna *',
-                    hintText: 'Informe o motivo da decisão desfavorável (mínimo 5 caracteres)',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: AppSpacing.s16),
+                  TextFormField(
+                    key: const Key('campoJustificativaRecusa'),
+                    controller: controller,
+                    maxLines: 3,
+                    maxLength: 500,
+                    decoration: const InputDecoration(
+                      labelText: 'Justificativa Pastoral Interna *',
+                      hintText: 'Informe o motivo da decisão desfavorável (mínimo 5 caracteres)',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (valor) {
+                      if (valor == null || valor.trim().length < 5) {
+                        return 'Informe uma justificativa de ao menos 5 caracteres.';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (valor) {
-                    if (valor == null || valor.trim().length < 5) {
-                      return 'Informe uma justificativa de ao menos 5 caracteres.';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -628,6 +637,7 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
       variant: MetricVariant.danger,
       subtitle: 'aguardando análise',
       subtitleColor: AppColors.danger,
+      isSelected: _filtroKpi == null,
       badge: _filtroKpi == null && _countPendencias > 0
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -650,6 +660,7 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
       variant: MetricVariant.primary,
       subtitle: 'neste ano',
       subtitleColor: AppColors.blue600,
+      isSelected: _filtroKpi == 'RENOVACOES',
       badge: _filtroKpi == 'RENOVACOES'
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -765,30 +776,13 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
   }
 
   Widget _buildListaVazia() {
-    return SectionCard(
-      padding: const EdgeInsets.all(AppSpacing.s32),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.check_circle_outline,
-              size: 48,
-              color: AppColors.success,
-            ),
-            const SizedBox(height: AppSpacing.s16),
-            Text(
-              'Nenhuma solicitação pendente',
-              style: AppTypography.h3,
-            ),
-            const SizedBox(height: AppSpacing.s8),
-            Text(
-              'Todas as fichas de voluntários nas suas igrejas foram avaliadas.',
-              style: AppTypography.body.copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    return const SectionCard(
+      padding: EdgeInsets.zero,
+      child: EmptyState(
+        icon: Icons.check_circle_outline,
+        iconColor: AppColors.success,
+        title: 'Nenhuma solicitação pendente',
+        message: 'Todas as fichas de voluntários nas suas igrejas foram avaliadas.',
       ),
     );
   }
@@ -938,40 +932,40 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Text(
+                item.voluntarioNome,
+                style: AppTypography.h3,
+              ),
+              const SizedBox(height: AppSpacing.s4),
+              if (item.nomeIgreja != null)
+                Row(
                   children: [
-                    Text(
-                      item.voluntarioNome,
-                      style: AppTypography.h3,
-                    ),
-                    const SizedBox(height: AppSpacing.s4),
-                    if (item.nomeIgreja != null)
-                      Row(
-                        children: [
-                          const Icon(Icons.church_outlined, size: 16, color: AppColors.blue600),
-                          const SizedBox(width: AppSpacing.s4),
-                          Expanded(
-                            child: Text(
-                              item.nomeIgreja!,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.body.copyWith(
-                                color: AppColors.blue600,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
+                    const Icon(Icons.church_outlined, size: 16, color: AppColors.blue600),
+                    const SizedBox(width: AppSpacing.s4),
+                    Expanded(
+                      child: Text(
+                        item.nomeIgreja!,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.blue600,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
+                    ),
                   ],
                 ),
-              ),
-              if (item.isRenovacaoAnual) ...[
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          Wrap(
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (item.isRenovacaoAnual)
                 Container(
                   key: Key('badgeRenovacaoAnual_${item.fichaId}'),
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -995,8 +989,6 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.s8),
-              ],
               const StatusChip(
                 status: 'AGUARDANDO',
                 label: 'AGUARDANDO AVALIAÇÃO',

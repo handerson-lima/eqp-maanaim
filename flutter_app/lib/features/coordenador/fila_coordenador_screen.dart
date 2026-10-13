@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../ui/tokens.dart';
 import '../../ui/components/cpf_formatter.dart';
+import '../../ui/components/layout_elements.dart';
 import '../../ui/components/metrics.dart';
 import '../analise/detalhe_solicitacao_model.dart';
 import '../analise/detalhe_solicitacao_screen.dart';
@@ -209,6 +210,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
         return StatefulBuilder(
           builder: (dialogCtx, setDialogState) {
             return AlertDialog(
+              actionsOverflowButtonSpacing: AppSpacing.s8,
               backgroundColor: AppColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: AppGeometry.cardBorderRadius,
@@ -222,9 +224,9 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              content: SingleChildScrollView(
-                child: SizedBox(
-                  width: 480,
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,6 +382,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
         return StatefulBuilder(
           builder: (dialogCtx, setDialogState) {
             return AlertDialog(
+              actionsOverflowButtonSpacing: AppSpacing.s8,
               backgroundColor: AppColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: AppGeometry.cardBorderRadius,
@@ -393,9 +396,9 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              content: SingleChildScrollView(
-                child: SizedBox(
-                  width: 480,
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1045,34 +1048,17 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
   }
 
   Widget _buildVazio() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.cardPadding),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.verified_outlined,
-              size: 56,
-              color: AppColors.success.withValues(alpha: 0.8),
-            ),
-            const SizedBox(height: AppSpacing.s12),
-            Text(
-              'Nenhuma solicitação pendente!',
-              style: AppTypography.h2.copyWith(color: AppColors.navy900),
-            ),
-            const SizedBox(height: AppSpacing.s8),
-            Text(
-              _filtroKpi != null
-                  ? 'Nenhuma solicitação de renovação anual pendente para o coordenador.'
-                  : _anoFiltro != null
-                      ? 'Nenhuma solicitação pendente para o ano $_anoFiltro.'
-                      : 'Não há solicitações com todas as equipes resolvidas aguardando conclusão do Coordenador.',
-              textAlign: TextAlign.center,
-              style: AppTypography.body.copyWith(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
+    return SectionCard(
+      padding: EdgeInsets.zero,
+      child: EmptyState(
+        icon: Icons.check_circle_outline,
+        iconColor: AppColors.success,
+        title: 'Nenhuma solicitação pendente!',
+        message: _filtroKpi != null
+            ? 'Nenhuma solicitação de renovação anual pendente para o coordenador.'
+            : _anoFiltro != null
+                ? 'Nenhuma solicitação pendente para o ano $_anoFiltro.'
+                : 'Não há solicitações com todas as equipes resolvidas aguardando conclusão do Coordenador.',
       ),
     );
   }
@@ -1161,6 +1147,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
       subtitleColor: AppColors.danger,
       icon: Icons.hourglass_top_outlined,
       variant: MetricVariant.danger,
+      isSelected: _filtroKpi == null,
       badge: _filtroKpi == null && _countAguardando > 0
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1185,6 +1172,7 @@ class _FilaCoordenadorScreenState extends State<FilaCoordenadorScreen> {
       subtitleColor: AppColors.blue600,
       icon: Icons.sync_outlined,
       variant: MetricVariant.primary,
+      isSelected: _filtroKpi == 'RENOVACOES',
       badge: _filtroKpi == 'RENOVACOES'
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

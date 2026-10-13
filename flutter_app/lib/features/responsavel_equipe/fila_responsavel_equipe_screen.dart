@@ -132,9 +132,10 @@ class _FilaResponsavelEquipeScreenState
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        actionsOverflowButtonSpacing: AppSpacing.s8,
         title: const Text('Confirmar Aprovação da Participação'),
-        content: SizedBox(
-          width: 440,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -198,9 +199,10 @@ class _FilaResponsavelEquipeScreenState
     final resultado = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
+        actionsOverflowButtonSpacing: AppSpacing.s8,
         title: const Text('Decisão Negativa de Equipe'),
-        content: SizedBox(
-          width: 440,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
           child: SingleChildScrollView(
             child: Form(
               key: formKey,
@@ -578,6 +580,7 @@ class _FilaResponsavelEquipeScreenState
       value: '$_countPendencias',
       icon: Icons.inbox_outlined,
       variant: MetricVariant.primary,
+      isSelected: _filtroKpi == null,
       badge: _filtroKpi == null && _countPendencias > 0
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -598,6 +601,7 @@ class _FilaResponsavelEquipeScreenState
       value: '$_countRenovacoes',
       icon: Icons.autorenew_rounded,
       variant: MetricVariant.warning,
+      isSelected: _filtroKpi == 'RENOVACOES',
       badge: _filtroKpi == 'RENOVACOES'
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -700,26 +704,14 @@ class _FilaResponsavelEquipeScreenState
 
   Widget _buildVazio() {
     return SectionCard(
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-      child: Center(
-        child: Column(
-          children: [
-            const Icon(Icons.task_alt, size: 56, color: AppColors.success),
-            const SizedBox(height: AppSpacing.s16),
-            Text(
-              'Nenhuma pendência na fila!',
-              style: AppTypography.h2,
-            ),
-            const SizedBox(height: AppSpacing.s8),
-            Text(
-              _equipeFiltroId != null
-                  ? 'Todas as participações da equipe selecionada foram analisadas.'
-                  : 'Todas as participações sob sua responsabilidade foram avaliadas.',
-              style: AppTypography.body.copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+      padding: EdgeInsets.zero,
+      child: EmptyState(
+        icon: Icons.check_circle_outline,
+        iconColor: AppColors.success,
+        title: 'Nenhuma pendência na fila!',
+        message: _equipeFiltroId != null
+            ? 'Todas as participações da equipe selecionada foram analisadas.'
+            : 'Todas as participações sob sua responsabilidade foram avaliadas.',
       ),
     );
   }
