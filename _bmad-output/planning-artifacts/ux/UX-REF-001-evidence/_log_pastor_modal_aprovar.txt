@@ -1,0 +1,41 @@
+[22256:6899083:1012/231235.036068:INFO:components/enterprise/browser/controller/chrome_browser_cloud_management_controller.cc:241] No machine level policy manager exists.
+[22260:6899184:1012/231235.606925:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.619220:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.619504:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.619750:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.620023:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.620585:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.620850:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.621125:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+Trying to load the allocator multiple times. This is *not* supported.
+[22260:6899184:1012/231235.818236:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.846544:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.853691:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.854038:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231235.854486:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22256:6899083:1012/231237.512230:INFO:CONSOLE:1] "Injecting <script> tag. Using callback.", source: http://127.0.0.1:7357/flutter_bootstrap.js (1)
+[22256:6899083:1012/231237.527492:INFO:CONSOLE:1015] "DDC is about to load 1/2 scripts with pool size = 1000", source: http://127.0.0.1:7357/ddc_module_loader.js (1015)
+[22260:6899184:1012/231237.646754:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231237.788639:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231237.865050:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231237.980750:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22260:6899184:1012/231238.039635:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22256:6899083:1012/231238.103561:INFO:CONSOLE:1015] "DDC is about to load 704/704 scripts with pool size = 1000", source: http://127.0.0.1:7357/ddc_module_loader.js (1015)
+[22260:6899184:1012/231238.205038:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22256:6899125:1012/231238.258819:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[22256:6899125:1012/231238.259023:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[22256:6899125:1012/231238.266821:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[22260:6899184:1012/231238.286647:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22256:6899125:1012/231238.608280:ERROR:google_apis/gcm/engine/mcs_client.cc:702]   Error code: 401  Error message: Authentication Failed: wrong_secret
+[22256:6899125:1012/231238.608429:ERROR:google_apis/gcm/engine/mcs_client.cc:704] Failed to log in to GCM, resetting connection.
+[22256:6899083:1012/231239.513178:INFO:CONSOLE:0] "<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">", source: http://127.0.0.1:7357/?p=pastor&c=cheia&w=360&h=800&auto=x:Aprovar (0)
+[22256:6899083:1012/231239.515589:INFO:CONSOLE:1586] "Starting application from main method in: org-dartlang-app:///web_entrypoint.dart.", source: http://127.0.0.1:7357/ddc_module_loader.js (1586)
+[22256:6899083:1012/231239.569358:INFO:CONSOLE:245800] "WARNING: Falling back to CPU-only rendering. Reason: webGLVersion is -1", source: http://127.0.0.1:7357/dart_sdk.js (245800)
+[22260:6899184:1012/231240.006207:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[22256:6899083:1012/231240.830521:INFO:CONSOLE:245800] "Found an existing <meta name="viewport"> tag. Flutter Web uses its own viewport configuration for better compatibility with Flutter. This tag will be replaced.", source: http://127.0.0.1:7357/dart_sdk.js (245800)
+[22256:6899083:1012/231241.734423:INFO:CONSOLE:26346] "WP06 passo x:Aprovar => ok", source: http://127.0.0.1:7357/dart_sdk.js (26346)
+57344 bytes written to file /Users/usuario/eqp_maanaim/_bmad-output/planning-artifacts/ux/UX-REF-001-evidence/_tmp_pastor_modal_aprovar.png
+[22256:6899137:1012/231242.229031:ERROR:base/process/process_mac.cc:45] task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)
+[22256:6899137:1012/231242.229077:ERROR:base/process/process_mac.cc:90] task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)
+[22261:6899173:1012/231242.375447:WARNING:net/extras/sqlite/sqlite_persistent_store_backend_base.cc:182] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:232 to client_task_runner_.
+[22261:6899173:1012/231242.375954:WARNING:net/extras/sqlite/sqlite_persistent_store_backend_base.cc:182] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:232 to client_task_runner_.
