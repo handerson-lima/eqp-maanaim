@@ -443,24 +443,22 @@ class _PainelSolicitacoesPendentesScreenState
             ),
           ),
           const SizedBox(height: AppSpacing.s8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  _termoBusca.isEmpty
-                      ? 'Exibindo todas as solicitações pendentes'
-                      : 'Filtrado por "$_termoBusca"',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 500;
+              final infoText = Text(
+                _termoBusca.isEmpty
+                    ? 'Exibindo todas as solicitações pendentes'
+                    : 'Filtrado por "$_termoBusca"',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
                 ),
-              ),
-              const SizedBox(width: AppSpacing.s8),
-              Wrap(
-                spacing: 8,
+              );
+
+              final botoes = Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   TextButton.icon(
                     onPressed: () {
@@ -476,6 +474,7 @@ class _PainelSolicitacoesPendentesScreenState
                     icon: const Icon(Icons.unfold_more, size: 16),
                     label: const Text('Expandir Todas', style: TextStyle(fontSize: 12)),
                   ),
+                  const SizedBox(width: 8),
                   TextButton.icon(
                     onPressed: () {
                       setState(() {
@@ -490,8 +489,31 @@ class _PainelSolicitacoesPendentesScreenState
                     label: const Text('Recolher Todas', style: TextStyle(fontSize: 12)),
                   ),
                 ],
-              ),
-            ],
+              );
+
+              if (isMobile) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    infoText,
+                    const SizedBox(height: AppSpacing.s4),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: botoes,
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(child: infoText),
+                  const SizedBox(width: AppSpacing.s8),
+                  botoes,
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -621,10 +643,11 @@ class _PainelSolicitacoesPendentesScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 420;
+
+              final avatarWidget = Container(
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
@@ -642,41 +665,9 @@ class _PainelSolicitacoesPendentesScreenState
                     color: AppColors.navy900,
                   ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.s8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.nomeVoluntario,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.navy900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.badge_outlined, size: 14, color: AppColors.textSecondary),
-                        const SizedBox(width: 4),
-                        Text(
-                          'CPF: ${item.cpfMascarado}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Container(
+              );
+
+              final badgeWidget = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: fundoSt,
@@ -691,8 +682,72 @@ class _PainelSolicitacoesPendentesScreenState
                     color: corSt,
                   ),
                 ),
-              ),
-            ],
+              );
+
+              final infoCol = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.nomeVoluntario,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navy900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.badge_outlined, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          'CPF: ${item.cpfMascarado}',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+
+              if (isCompact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        avatarWidget,
+                        const SizedBox(width: AppSpacing.s8),
+                        Expanded(child: infoCol),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.s8),
+                    badgeWidget,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  avatarWidget,
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(child: infoCol),
+                  const SizedBox(width: AppSpacing.s8),
+                  badgeWidget,
+                ],
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.s8),
           const Divider(height: 1, color: AppColors.border),

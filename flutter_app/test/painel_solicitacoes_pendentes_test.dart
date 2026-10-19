@@ -178,5 +178,24 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('renderiza perfeitamente no mobile estreito (360x640) sem overflow',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final gateway = MockSolicitacoesPendentesGateway(initialItems: itensExemplo);
+      await tester.pumpWidget(criarTela(gateway));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Carlos Eduardo'), findsOneWidget);
+      expect(find.text('Aguardando Pastor Local'), findsOneWidget);
+    });
   });
 }
+
