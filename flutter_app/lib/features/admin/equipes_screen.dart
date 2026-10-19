@@ -104,8 +104,17 @@ class _EquipesScreenState extends State<EquipesScreen> {
                   erroServidor = 'Já existe uma equipe cadastrada com este nome.';
                 } else if (msg.contains('aborted') || msg.contains('concorrência')) {
                   erroServidor = 'Conflito de versão: a equipe foi alterada por outro usuário. Recarregue a página.';
+                } else if (msg.contains('permission-denied') ||
+                    msg.contains('unauthenticated') ||
+                    msg.contains('sem autoridade')) {
+                  erroServidor =
+                      'Acesso administrativo não autorizado: verifique suas permissões.';
+                } else if (msg.contains('invalid-argument')) {
+                  erroServidor =
+                      'Dados inválidos. Verifique os campos informados e tente novamente.';
                 } else {
-                  erroServidor = 'Não foi possível salvar a equipe. Verifique os dados e tente novamente.';
+                  erroServidor =
+                      'Não foi possível salvar a equipe. Verifique os dados e tente novamente.';
                 }
               });
             }

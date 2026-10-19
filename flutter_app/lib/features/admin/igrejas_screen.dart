@@ -107,8 +107,17 @@ class _IgrejasScreenState extends State<IgrejasScreen> {
                   erroServidor = 'Já existe uma igreja cadastrada com este código.';
                 } else if (msg.contains('aborted') || msg.contains('concorrência')) {
                   erroServidor = 'Conflito de versão: a igreja foi alterada por outro usuário. Recarregue a página.';
+                } else if (msg.contains('permission-denied') ||
+                    msg.contains('unauthenticated') ||
+                    msg.contains('sem autoridade')) {
+                  erroServidor =
+                      'Acesso administrativo não autorizado: verifique suas permissões.';
+                } else if (msg.contains('invalid-argument')) {
+                  erroServidor =
+                      'Dados inválidos. Verifique os campos informados e tente novamente.';
                 } else {
-                  erroServidor = 'Não foi possível salvar a igreja. Verifique os dados e tente novamente.';
+                  erroServidor =
+                      'Não foi possível salvar a igreja. Verifique os dados e tente novamente.';
                 }
               });
             }
