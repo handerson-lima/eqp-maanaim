@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../ui/identidade.dart';
+import 'auditoria_presentation_helper.dart';
 import 'auditoria_service.dart';
 
 /// Superfície de Auditoria e Relatórios autorizados com mobile-first e acessibilidade WCAG 2.2 AA (AD-8, AD-9, AD-12, UI-CONTRACTS §3).
@@ -253,6 +254,11 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Text(
+                    AuditoriaPresentationHelper.obterTituloAcao(item.acao),
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: AppSpacing.s8),
                   Wrap(
                     spacing: AppSpacing.s8,
                     runSpacing: AppSpacing.s4,
@@ -402,12 +408,55 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
     );
   }
 
+  Widget _buildChipCategoriaFiltro({required String label, required String? prefixoAcao}) {
+    final selecionado = (prefixoAcao == null && _acaoController.text.trim().isEmpty) ||
+        (prefixoAcao != null && _acaoController.text.trim().toUpperCase().contains(prefixoAcao));
+
+    return FilterChip(
+      label: Text(label),
+      selected: selecionado,
+      onSelected: (_) {
+        setState(() {
+          if (prefixoAcao == null) {
+            _acaoController.clear();
+          } else {
+            _acaoController.text = prefixoAcao;
+          }
+        });
+        _carregarAuditoria();
+      },
+      selectedColor: const Color(0xFFE0F2FE),
+      backgroundColor: const Color(0xFFF8FAFC),
+      labelStyle: TextStyle(
+        fontFamily: AppTypography.fontFamily,
+        fontSize: 12,
+        fontWeight: selecionado ? FontWeight.w600 : FontWeight.w500,
+        color: selecionado ? AppColors.blue600 : AppColors.textSecondary,
+      ),
+    );
+  }
+
   Widget _buildFiltrosAuditoria() {
     return SectionCard(
-      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+      padding: const EdgeInsets.all(AppSpacing.s16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildChipCategoriaFiltro(label: 'Todas as Ações', prefixoAcao: null),
+                const SizedBox(width: AppSpacing.s8),
+                _buildChipCategoriaFiltro(label: 'Consultas & Acessos', prefixoAcao: 'CONSULTA'),
+                const SizedBox(width: AppSpacing.s8),
+                _buildChipCategoriaFiltro(label: 'Avaliações & Decisões', prefixoAcao: 'DECIS'),
+                const SizedBox(width: AppSpacing.s8),
+                _buildChipCategoriaFiltro(label: 'Termos & Governança', prefixoAcao: 'TERMO'),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
           Wrap(
             spacing: AppSpacing.s12,
             runSpacing: AppSpacing.s12,
@@ -665,57 +714,177 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s12),
       itemBuilder: (context, i) {
         final item = itens[i];
-        final dataFormatada = item.timestamp.length > 19
-            ? item.timestamp.substring(0, 19).replaceAll('T', ' ')
-            : item.timestamp;
+        final tituloAmigavel = AuditoriaPresentationHelper.obterTituloAcao(item.acao);
+        final categoria = AuditoriaPresentationHelper.obterCategoria(item.acao);
+        final configCat = AuditoriaPresentationHelper.obterConfigCategoria(categoria);
+        final dataAmigavel = AuditoriaPresentationHelper.formatarDataHoraAmigavel(item.timestamp);
+        final atorLegivel = AuditoriaPresentationHelper.obterRotuloAtor(item.atorUid);
 
         return SectionCard(
-          padding: const EdgeInsets.all(AppSpacing.cardPadding),
+          padding: const EdgeInsets.all(AppSpacing.s16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Linha 1: Categoria Badge + Data Amigável
               Wrap(
                 alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: AppSpacing.s8,
                 runSpacing: AppSpacing.s4,
                 children: [
-                  StatusChip(status: item.acao),
-                  Text(dataFormatada, style: AppTypography.caption),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: configCat.corFundo,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: configCat.corTexto.withAlpha(50),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(configCat.icone, size: 14, color: configCat.corTexto),
+                        const SizedBox(width: AppSpacing.s4),
+                        Text(
+                          configCat.rotulo,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: configCat.corTexto,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    dataAmigavel,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.s8),
+
+              // Linha 2: TÍTULO HUMANO DA AÇÃO (Destaque Principal)
               Text(
-                'Comando: ${item.commandId}',
-                style: AppTypography.body.copyWith(fontWeight: FontWeight.w600, fontSize: 13),
+                tituloAmigavel,
+                style: const TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  height: 1.3,
+                ),
               ),
-              const SizedBox(height: AppSpacing.s4),
-              Text('Ator: ${item.atorUid}', style: AppTypography.caption),
+              const SizedBox(height: AppSpacing.s8),
+
+              // Linha 3: Quem realizou (Ator com contexto humanizado)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_circle_outlined, size: 16, color: AppColors.navy900),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: Text(
+                        'Ator: ${item.atorUid}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s4),
+                    Text(
+                      atorLegivel,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Linha 4: Entidades afetadas (se houver)
               if (item.entidades.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.s8),
                 Wrap(
-                  spacing: AppSpacing.s4,
+                  spacing: AppSpacing.s8,
                   runSpacing: AppSpacing.s4,
                   children: item.entidades.map((e) {
+                    final tipo = e['tipo'] ?? '';
+                    final id = e['id'] ?? '';
+                    final icone = AuditoriaPresentationHelper.obterIconeEntidade(tipo);
+                    final labelFormatado = AuditoriaPresentationHelper.formatarEntidade(tipo, id);
+
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF0F2F5),
+                        color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      child: Text(
-                        '${e['tipo']}: ${e['id']}',
-                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(icone, size: 13, color: AppColors.blue600),
+                          const SizedBox(width: AppSpacing.s4),
+                          Text(
+                            labelFormatado,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   }).toList(),
                 ),
               ],
-              const SizedBox(height: AppSpacing.s12),
-              SecondaryButton(
-                label: 'Ver Detalhes',
-                icon: Icons.visibility_outlined,
-                onPressed: () => _mostrarDetalhesAuditoria(item),
+
+              const SizedBox(height: AppSpacing.s8),
+              const Divider(height: 1, color: AppColors.border),
+              const SizedBox(height: AppSpacing.s8),
+
+              // Linha 5: Rodapé com metadados técnicos discretos + Botão Ver Detalhes
+              Row(
+                children: [
+                  Expanded(
+                    child: Tooltip(
+                      message: 'Identificador único imutável do comando',
+                      child: Text(
+                        'Comando: ${item.commandId}',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s8),
+                  SecondaryButton(
+                    label: 'Ver Detalhes',
+                    icon: Icons.visibility_outlined,
+                    onPressed: () => _mostrarDetalhesAuditoria(item),
+                  ),
+                ],
               ),
             ],
           ),
@@ -732,27 +901,46 @@ class _AuditoriaRelatoriosScreenState extends State<AuditoriaRelatoriosScreen> {
         child: DataTable(
           headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
           columns: const [
-            DataColumn(label: Text('Data / Hora (UTC)', style: TextStyle(fontWeight: FontWeight.w600))),
-            DataColumn(label: Text('Ação', style: TextStyle(fontWeight: FontWeight.w600))),
-            DataColumn(label: Text('Ator', style: TextStyle(fontWeight: FontWeight.w600))),
+            DataColumn(label: Text('Data / Hora', style: TextStyle(fontWeight: FontWeight.w600))),
+            DataColumn(label: Text('Ação / Evento', style: TextStyle(fontWeight: FontWeight.w600))),
+            DataColumn(label: Text('Ator Responsável', style: TextStyle(fontWeight: FontWeight.w600))),
             DataColumn(label: Text('Command ID', style: TextStyle(fontWeight: FontWeight.w600))),
             DataColumn(label: Text('Entidades Referenciadas', style: TextStyle(fontWeight: FontWeight.w600))),
             DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.w600))),
           ],
           rows: itens.map((item) {
-            final dataFormatada = item.timestamp.length > 19
-                ? item.timestamp.substring(0, 19).replaceAll('T', ' ')
-                : item.timestamp;
+            final dataFormatada = AuditoriaPresentationHelper.formatarDataHoraAmigavel(item.timestamp);
+            final tituloAcao = AuditoriaPresentationHelper.obterTituloAcao(item.acao);
+            final atorLegivel = AuditoriaPresentationHelper.obterRotuloAtor(item.atorUid);
             final entidadesFormatadas = item.entidades
-                .map((e) => '${e['tipo']}: ${e['id']}')
+                .map((e) => AuditoriaPresentationHelper.formatarEntidade(e['tipo'] ?? '', e['id'] ?? ''))
                 .join(', ');
 
             return DataRow(
               cells: [
                 DataCell(Text(dataFormatada, style: AppTypography.caption)),
-                DataCell(StatusChip(status: item.acao)),
-                DataCell(Text(item.atorUid, style: AppTypography.caption)),
-                DataCell(Text(item.commandId, style: AppTypography.caption)),
+                DataCell(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(tituloAcao, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(height: 2),
+                      StatusChip(status: item.acao),
+                    ],
+                  ),
+                ),
+                DataCell(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(item.atorUid, style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600)),
+                      Text(atorLegivel, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                DataCell(Text(item.commandId, style: const TextStyle(fontFamily: 'monospace', fontSize: 11))),
                 DataCell(
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 300),
