@@ -3,6 +3,7 @@ import '../../ui/identidade.dart';
 
 import '../auth/auth_service.dart';
 import 'catalogo_service.dart';
+import 'admin_dashboard_screen.dart';
 import 'igrejas_screen.dart';
 import 'equipes_screen.dart';
 import 'pessoas_papeis.dart';
@@ -82,6 +83,22 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   List<_AbaAdmin> get _abas => [
+    // --- Grupo: Início ---
+    _AbaAdmin(
+      item: const AppNavItem(
+        label: 'Início',
+        icon: Icons.dashboard_outlined,
+        selectedIcon: Icons.dashboard,
+        section: 'Geral',
+      ),
+      builder: () => AdminDashboardScreen(
+        onNavegar: _navegarPara,
+        temPastor: widget.pastor != null,
+        temResponsavelEquipe: widget.responsavelEquipe != null,
+        temCoordenador: widget.coordenador != null,
+      ),
+    ),
+
     // --- Grupo: Cadastros ---
     _AbaAdmin(
       item: const AppNavItem(
