@@ -5,19 +5,31 @@ class EquipeFilaPastor {
   const EquipeFilaPastor({
     required this.equipeId,
     required this.nomeEquipe,
+    this.participacaoId,
+    this.estado,
+    this.justificativa,
   });
 
   final String equipeId;
   final String nomeEquipe;
+  final String? participacaoId;
+  final String? estado;
+  final String? justificativa;
 
   factory EquipeFilaPastor.fromMap(Map<String, dynamic> map) => EquipeFilaPastor(
         equipeId: (map['equipeId'] ?? '').toString(),
         nomeEquipe: (map['nomeEquipe'] ?? '').toString(),
+        participacaoId: map['participacaoId']?.toString(),
+        estado: map['estado']?.toString(),
+        justificativa: map['justificativa']?.toString(),
       );
 
   Map<String, dynamic> toMap() => {
         'equipeId': equipeId,
         'nomeEquipe': nomeEquipe,
+        if (participacaoId != null) 'participacaoId': participacaoId,
+        if (estado != null) 'estado': estado,
+        if (justificativa != null) 'justificativa': justificativa,
       };
 }
 
@@ -37,6 +49,8 @@ class ItemFilaPastor {
     this.versao = 1,
     this.isRenovacaoAnual = false,
     this.cicloId,
+    this.decididoEm,
+    this.justificativaPastoral,
   });
 
   final String id;
@@ -53,6 +67,8 @@ class ItemFilaPastor {
   final int versao;
   final bool isRenovacaoAnual;
   final String? cicloId;
+  final String? decididoEm;
+  final String? justificativaPastoral;
 
   factory ItemFilaPastor.fromMap(Map<String, dynamic> map) {
     final equipesRaw = map['equipes'] ?? map['equipesRenovacao'];
@@ -85,6 +101,8 @@ class ItemFilaPastor {
       versao: map['versao'] is num ? (map['versao'] as num).toInt() : 1,
       isRenovacaoAnual: isRenovacao,
       cicloId: map['cicloId']?.toString(),
+      decididoEm: map['decididoEm']?.toString(),
+      justificativaPastoral: map['justificativaPastoral']?.toString(),
     );
   }
 }
@@ -111,10 +129,33 @@ class ResultadoFilaPastor {
   const ResultadoFilaPastor({
     required this.pendencias,
     required this.igrejas,
+    this.rejeitadas = const [],
   });
 
   final List<ItemFilaPastor> pendencias;
   final List<IgrejaEscopoPastor> igrejas;
+  final List<ItemFilaPastor> rejeitadas;
+}
+
+class DecisaoItemEquipePastor {
+  const DecisaoItemEquipePastor({
+    this.participacaoId,
+    this.equipeId,
+    required this.decisao,
+    this.justificativa,
+  });
+
+  final String? participacaoId;
+  final String? equipeId;
+  final String decisao; // 'APROVADO' ou 'DESFAVORAVEL'
+  final String? justificativa;
+
+  Map<String, dynamic> toMap() => {
+        if (participacaoId != null) 'participacaoId': participacaoId,
+        if (equipeId != null) 'equipeId': equipeId,
+        'decisao': decisao,
+        if (justificativa != null) 'justificativa': justificativa,
+      };
 }
 
 class EntradaDecisaoPastor {
@@ -122,8 +163,9 @@ class EntradaDecisaoPastor {
     required this.commandId,
     this.correlationId,
     required this.fichaId,
-    required this.decisao,
+    this.decisao,
     this.justificativa,
+    this.decisoesPorEquipe,
     required this.expectedVersion,
     this.cicloId,
   });
@@ -131,8 +173,9 @@ class EntradaDecisaoPastor {
   final String commandId;
   final String? correlationId;
   final String fichaId;
-  final String decisao; // 'APROVADO' ou 'DESFAVORAVEL'
+  final String? decisao; // 'APROVADO' ou 'DESFAVORAVEL' (quando global)
   final String? justificativa;
+  final List<DecisaoItemEquipePastor>? decisoesPorEquipe;
   final int expectedVersion;
   final String? cicloId;
 
@@ -141,8 +184,10 @@ class EntradaDecisaoPastor {
         if (correlationId != null) 'correlationId': correlationId,
         'fichaId': fichaId,
         if (cicloId != null) 'cicloId': cicloId,
-        'decisao': decisao,
+        if (decisao != null) 'decisao': decisao,
         if (justificativa != null) 'justificativa': justificativa,
+        if (decisoesPorEquipe != null)
+          'decisoesPorEquipe': decisoesPorEquipe!.map((d) => d.toMap()).toList(),
         'expectedVersion': expectedVersion,
       };
 }
@@ -197,6 +242,7 @@ class FirebasePastorLocalGateway implements PastorLocalGateway {
 
     final pendenciasRaw = dados['pendencias'] as List? ?? [];
     final igrejasRaw = dados['igrejas'] as List? ?? [];
+    final rejeitadasRaw = dados['rejeitadas'] as List? ?? [];
 
     final pendencias = pendenciasRaw
         .map((p) => ItemFilaPastor.fromMap((p as Map).cast<String, dynamic>()))
@@ -206,9 +252,14 @@ class FirebasePastorLocalGateway implements PastorLocalGateway {
         .map((i) => IgrejaEscopoPastor.fromMap((i as Map).cast<String, dynamic>()))
         .toList();
 
+    final rejeitadas = rejeitadasRaw
+        .map((p) => ItemFilaPastor.fromMap((p as Map).cast<String, dynamic>()))
+        .toList();
+
     return ResultadoFilaPastor(
       pendencias: pendencias,
       igrejas: igrejas,
+      rejeitadas: rejeitadas,
     );
   }
 
@@ -233,14 +284,20 @@ class MemoriaPastorLocalGateway implements PastorLocalGateway {
   MemoriaPastorLocalGateway({
     List<ItemFilaPastor>? pendenciasIniciais,
     List<IgrejaEscopoPastor>? igrejasIniciais,
+    List<ItemFilaPastor>? rejeitadasIniciais,
     this.erroAoObterFila,
   })  : _pendencias = List.of(pendenciasIniciais ?? []),
-        _igrejas = List.of(igrejasIniciais ?? []);
+        _igrejas = List.of(igrejasIniciais ?? []),
+        _rejeitadas = List.of(rejeitadasIniciais ?? []);
 
   final List<ItemFilaPastor> _pendencias;
   final List<IgrejaEscopoPastor> _igrejas;
+  final List<ItemFilaPastor> _rejeitadas;
   final Exception? erroAoObterFila;
   final Map<String, ResultadoDecisaoPastor> _recibos = {};
+  final List<EntradaDecisaoPastor> decisoesGravadas = [];
+
+  List<ItemFilaPastor> get rejeitadasIniciais => _rejeitadas;
 
   @override
   Future<ResultadoFilaPastor> obterFila() async {
@@ -248,11 +305,13 @@ class MemoriaPastorLocalGateway implements PastorLocalGateway {
     return ResultadoFilaPastor(
       pendencias: List.unmodifiable(_pendencias),
       igrejas: List.unmodifiable(_igrejas),
+      rejeitadas: List.unmodifiable(_rejeitadas),
     );
   }
 
   @override
   Future<ResultadoDecisaoPastor> decidirFicha(EntradaDecisaoPastor entrada) async {
+    decisoesGravadas.add(entrada);
     if (_recibos.containsKey(entrada.commandId)) {
       final anterior = _recibos[entrada.commandId]!;
       return ResultadoDecisaoPastor(
@@ -276,13 +335,43 @@ class MemoriaPastorLocalGateway implements PastorLocalGateway {
       throw Exception('Conflito de versão ao processar decisão pastoral.');
     }
 
-    final bool aprovado = entrada.decisao.toUpperCase() == 'APROVADO';
+    bool aprovado = true;
+    if (entrada.decisoesPorEquipe != null && entrada.decisoesPorEquipe!.isNotEmpty) {
+      final totalAprov = entrada.decisoesPorEquipe!
+          .where((d) => d.decisao.toUpperCase() == 'APROVADO')
+          .length;
+      aprovado = totalAprov > 0;
+    } else if (entrada.decisao != null) {
+      aprovado = entrada.decisao!.toUpperCase() == 'APROVADO';
+    }
+
     final novoEstado = aprovado ? 'AGUARDANDO_RESPONSAVEL_EQUIPE' : 'REJEITADA';
     final proximaAcao = aprovado
         ? 'Aguardando avaliação dos Responsáveis de Equipe'
         : 'Procure o Pastor da igreja local para mais informações';
 
     _pendencias.removeAt(index);
+
+    if (!aprovado) {
+      _rejeitadas.add(
+        ItemFilaPastor(
+          id: item.id,
+          fichaId: item.fichaId,
+          voluntarioUid: item.voluntarioUid,
+          voluntarioNome: item.voluntarioNome,
+          igrejaId: item.igrejaId,
+          nomeIgreja: item.nomeIgreja,
+          estado: 'REJEITADA',
+          proximaAcao: proximaAcao,
+          ano: item.ano,
+          equipes: item.equipes,
+          enviadoEm: item.enviadoEm,
+          versao: item.versao + 1,
+          decididoEm: DateTime.now().toUtc().toIso8601String(),
+          justificativaPastoral: entrada.justificativa,
+        ),
+      );
+    }
 
     final resultado = ResultadoDecisaoPastor(
       sucesso: true,

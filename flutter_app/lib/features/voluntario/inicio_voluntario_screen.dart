@@ -218,22 +218,26 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
             ? AppSpacing.s32
             : (ehTablet ? AppSpacing.s24 : AppSpacing.s16);
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: paddingHorizontal,
-            vertical: AppSpacing.s24,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1200),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _construirCardEstadoVoluntario(),
-                  _construirTopCards(ehDesktop),
-                  const SizedBox(height: AppSpacing.s24),
-                  _construirSecaoMinhasEquipes(ehDesktop),
-                ],
+        return RefreshIndicator(
+          onRefresh: _carregarDados,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.symmetric(
+              horizontal: paddingHorizontal,
+              vertical: AppSpacing.s24,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _construirCardEstadoVoluntario(),
+                    _construirTopCards(ehDesktop),
+                    const SizedBox(height: AppSpacing.s24),
+                    _construirSecaoMinhasEquipes(ehDesktop),
+                  ],
+                ),
               ),
             ),
           ),
@@ -243,7 +247,9 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
   }
 
   Widget _construirCardEstadoVoluntario() {
-    final temRejeitada = _participacoes.any((p) => p.isRejeitada);
+    final temRejeitada = (_ficha?.isRejeitada == true) ||
+        (_ficha?.mensagemVoluntario == mensagemNeutraCanonica) ||
+        _participacoes.any((p) => p.isRejeitada || p.isDecisaoDesfavoravel);
     if (temRejeitada) {
       return Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.s24),
@@ -557,9 +563,12 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
         progresso = 1.0;
         corSubtitulo = AppColors.success;
       }
-    } else if (_participacoes.isNotEmpty) {
+    } else if (_participacoes.any((p) => p.isPendente)) {
       subtituloVigencia = 'Em aprovação';
       corSubtitulo = AppColors.warning;
+    } else if (_participacoes.any((p) => p.isRejeitada)) {
+      subtituloVigencia = 'Procure o Pastor';
+      corSubtitulo = AppColors.navy900;
     }
 
     return Container(
@@ -784,7 +793,13 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
     final emJanela = p.isEmJanelaRenovacao;
     final baixando = _baixandoPdfParticipacaoId == p.id;
     final isAtiva = p.isAtiva;
-    final isNegativa = p.isRejeitada || p.estado.contains('CANCELADA');
+    final fichaNegativa = _ficha?.isRejeitada == true ||
+        _ficha?.mensagemVoluntario == mensagemNeutraCanonica;
+    final isNegativa = p.isDecisaoDesfavoravel ||
+        p.isRejeitada ||
+        p.estado.contains('CANCELADA') ||
+        p.proximaAcao == mensagemNeutraCanonica ||
+        (fichaNegativa && !isAtiva);
 
     final String dataContextual;
     if (isAtiva && p.vigenciaInicio != null) {
@@ -793,6 +808,8 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
     } else if (!isNegativa && p.vigenciaInicio != null) {
       dataContextual =
           'Enviada em ${VigenciaBadge.formatarData(p.vigenciaInicio)}';
+    } else if (isNegativa) {
+      dataContextual = '';
     } else {
       dataContextual = isAtiva ? 'Participação ativa' : 'Em tramitação';
     }
@@ -800,13 +817,13 @@ class _InicioVoluntarioScreenState extends State<InicioVoluntarioScreen> {
     final Widget chipStatus;
     if (isAtiva) {
       chipStatus = const StatusChip(status: 'ATIVA', label: 'ATIVA');
-    } else if (p.isRascunho) {
-      chipStatus = const StatusChip(status: 'RASCUNHO', label: 'RASCUNHO');
     } else if (isNegativa) {
       chipStatus = const Text(
         mensagemNeutraCanonica,
         style: TextStyle(color: AppColors.navy900, fontWeight: FontWeight.w600),
       );
+    } else if (p.isRascunho) {
+      chipStatus = const StatusChip(status: 'RASCUNHO', label: 'RASCUNHO');
     } else {
       chipStatus = const StatusChip(
         status: 'AGUARDANDO',

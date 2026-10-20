@@ -381,4 +381,96 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('decisão pastoral independente: permite selecionar equipe para recusa individual e aprovar demais', (tester) async {
+    final gateway = MemoriaPastorLocalGateway(
+      pendenciasIniciais: [itemExemplo1],
+      igrejasIniciais: [igreja1],
+    );
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    // Abre modal de recusa da ficha com 2 equipes
+    await tester.ensureVisible(find.byKey(const Key('btnRecusar_ficha-01')));
+    await tester.tap(find.byKey(const Key('btnRecusar_ficha-01')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Equipes a recusar:'), findsOneWidget);
+    expect(find.byKey(const Key('checkRecusaEquipe_eq-01')), findsOneWidget);
+    expect(find.byKey(const Key('checkRecusaEquipe_eq-02')), findsOneWidget);
+
+    // Desmarca eq-02 para que ela seja aprovada, mantendo eq-01 para recusa
+    await tester.tap(find.byKey(const Key('checkRecusaEquipe_eq-02')));
+    await tester.pumpAndSettle();
+
+    // Digita a justificativa
+    await tester.enterText(
+      find.byKey(const Key('campoJustificativaRecusa')),
+      'Encaminhado preferencialmente para apoio no acolhimento.',
+    );
+    await tester.pumpAndSettle();
+
+    // Confirma
+    await tester.tap(find.byKey(const Key('btnConfirmarRecusaModal')));
+    await tester.pumpAndSettle();
+
+    // Ficha foi processada e removida da lista de pendências
+    expect(find.byKey(const Key('cardFicha_ficha-01')), findsNothing);
+
+    // Verifica que gateway recebeu decisoesPorEquipe com as decisões granulares
+    expect(gateway.decisoesGravadas.length, 1);
+    final gravada = gateway.decisoesGravadas.first;
+    expect(gravada.decisoesPorEquipe, isNotNull);
+    expect(gravada.decisoesPorEquipe!.length, 2);
+
+    final decEq1 = gravada.decisoesPorEquipe!.firstWhere((d) => d.equipeId == 'eq-01');
+    final decEq2 = gravada.decisoesPorEquipe!.firstWhere((d) => d.equipeId == 'eq-02');
+    expect(decEq1.decisao, 'DESFAVORAVEL');
+    expect(decEq1.justificativa, 'Encaminhado preferencialmente para apoio no acolhimento.');
+    expect(decEq2.decisao, 'APROVADO');
+  });
+
+  testWidgets('alterna entre abas Pendências e Rejeitadas exibindo detalhes e justificativa pastoral', (tester) async {
+    final itemRejeitadoExemplo = ItemFilaPastor(
+      id: 'rej-01',
+      fichaId: 'ficha-rej-01',
+      voluntarioUid: 'vol-rej-01',
+      voluntarioNome: 'Lucas Santos',
+      igrejaId: 'igreja-01',
+      nomeIgreja: 'Igreja Central',
+      estado: 'REJEITADA',
+      proximaAcao: 'PASTOR_LOCAL_CONSULTA',
+      ano: 2026,
+      equipes: const [
+        EquipeFilaPastor(equipeId: 'eq-99', nomeEquipe: 'Diaconia'),
+      ],
+      enviadoEm: '2026-10-01T10:00:00Z',
+      decididoEm: '2026-10-02T14:30:00Z',
+      justificativaPastoral: 'Necessário completar discipulado prévio.',
+      versao: 2,
+    );
+
+    final gateway = MemoriaPastorLocalGateway(
+      pendenciasIniciais: [itemExemplo1],
+      igrejasIniciais: [igreja1],
+    );
+    gateway.rejeitadasIniciais.add(itemRejeitadoExemplo);
+
+    await tester.pumpWidget(criarApp(gateway));
+    await tester.pumpAndSettle();
+
+    // Na aba Pendências
+    expect(find.text('Carlos Eduardo Silva'), findsOneWidget);
+    expect(find.text('Lucas Santos'), findsNothing);
+
+    // Clica na aba Rejeitadas
+    await tester.tap(find.textContaining('Fichas Rejeitadas'));
+    await tester.pumpAndSettle();
+
+    // Agora exibe o voluntário rejeitado com justificativa
+    expect(find.text('Lucas Santos'), findsOneWidget);
+    expect(find.text('Necessário completar discipulado prévio.'), findsOneWidget);
+    expect(find.text('Carlos Eduardo Silva'), findsNothing);
+  });
 }

@@ -68,12 +68,20 @@ export class ComandoDivergenteError extends Error {
   }
 }
 
+export interface DecisaoItemEquipePastor {
+  participacaoId: string;
+  equipeId?: string;
+  decisao: TipoDecisaoPastoral;
+  justificativa?: string;
+}
+
 export interface EntradaDecidirFichaPastorLocal {
   commandId: string;
   correlationId?: string;
   fichaId: string;
-  decisao: TipoDecisaoPastoral;
+  decisao?: TipoDecisaoPastoral;
   justificativa?: string;
+  decisoesPorEquipe?: DecisaoItemEquipePastor[];
   expectedVersion: number;
   payloadHash: string;
 }
@@ -98,8 +106,16 @@ export interface ItemFilaPastorLocal {
   estado: string;
   proximaAcao: string;
   ano: number;
-  equipes: Array<{ equipeId: string; nomeEquipe: string }>;
+  equipes: Array<{
+    participacaoId?: string;
+    equipeId: string;
+    nomeEquipe: string;
+    estado?: string;
+    justificativa?: string;
+  }>;
   enviadoEm: string;
+  decididoEm?: string;
+  justificativaPastoral?: string;
 }
 
 export interface IgrejaEscopoPastor {
@@ -111,6 +127,7 @@ export interface IgrejaEscopoPastor {
 export interface ResultadoFilaPastorLocal {
   pendencias: ItemFilaPastorLocal[];
   igrejas: IgrejaEscopoPastor[];
+  rejeitadas: ItemFilaPastorLocal[];
 }
 
 export function normalizarDecisao(valor: unknown): TipoDecisaoPastoral {
@@ -135,14 +152,20 @@ export function normalizarDecisao(valor: unknown): TipoDecisaoPastoral {
 
 export function calcularPayloadHashDecisaoPastor(dados: {
   fichaId: string;
-  decisao: TipoDecisaoPastoral;
+  decisao?: TipoDecisaoPastoral;
   justificativa?: string;
+  decisoesPorEquipe?: DecisaoItemEquipePastor[];
   expectedVersion: number;
 }): string {
   const payloadNormalizado = JSON.stringify({
     fichaId: dados.fichaId,
-    decisao: dados.decisao,
+    decisao: dados.decisao ?? '',
     justificativa: dados.justificativa?.trim() ?? '',
+    decisoesPorEquipe: dados.decisoesPorEquipe?.map((d) => ({
+      participacaoId: d.participacaoId,
+      decisao: d.decisao,
+      justificativa: d.justificativa?.trim() ?? '',
+    })) ?? [],
     expectedVersion: dados.expectedVersion,
   });
   return createHash('sha256').update(payloadNormalizado).digest('hex');
@@ -180,11 +203,56 @@ export function validarDecidirFichaPastor(
     throw new DecisaoInvalidaError('fichaId é obrigatório e possui formato inválido.');
   }
 
-  const decisao = normalizarDecisao(p.decisao);
-
+  let decisao: TipoDecisaoPastoral | undefined;
   let justificativa: string | undefined;
+
+  if (p.decisao !== undefined && p.decisao !== null) {
+    decisao = normalizarDecisao(p.decisao);
+  }
+
   if (p.justificativa !== undefined && p.justificativa !== null) {
     justificativa = String(p.justificativa).trim();
+  }
+
+  let decisoesPorEquipe: DecisaoItemEquipePastor[] | undefined;
+  if (Array.isArray(p.decisoesPorEquipe) && p.decisoesPorEquipe.length > 0) {
+    decisoesPorEquipe = p.decisoesPorEquipe.map((item: any) => {
+      if (!item || typeof item !== 'object') {
+        throw new DecisaoInvalidaError('Item de decisão por equipe inválido.');
+      }
+      const partId = String(item.participacaoId ?? '').trim();
+      if (!partId) {
+        throw new DecisaoInvalidaError('participacaoId é obrigatório na decisão por equipe.');
+      }
+      const itemDecisao = normalizarDecisao(item.decisao);
+      let itemJustificativa = item.justificativa !== undefined && item.justificativa !== null
+        ? String(item.justificativa).trim()
+        : undefined;
+
+      if (itemDecisao === 'DESFAVORAVEL') {
+        if (!itemJustificativa || itemJustificativa.length < 5) {
+          throw new JustificativaObrigatoriaError();
+        }
+        if (itemJustificativa.length > 500) {
+          throw new DecisaoInvalidaError(
+            'Justificativa da equipe não pode exceder 500 caracteres.',
+          );
+        }
+      }
+
+      return {
+        participacaoId: partId,
+        equipeId: item.equipeId ? String(item.equipeId).trim() : undefined,
+        decisao: itemDecisao,
+        justificativa: itemJustificativa,
+      };
+    });
+  }
+
+  if (!decisao && (!decisoesPorEquipe || decisoesPorEquipe.length === 0)) {
+    throw new DecisaoInvalidaError(
+      'É obrigatório fornecer uma decisão global ou decisões individuais por equipe.',
+    );
   }
 
   if (decisao === 'DESFAVORAVEL') {
@@ -214,6 +282,7 @@ export function validarDecidirFichaPastor(
     fichaId,
     decisao,
     justificativa,
+    decisoesPorEquipe,
     expectedVersion,
   });
 
@@ -223,6 +292,7 @@ export function validarDecidirFichaPastor(
     fichaId,
     decisao,
     justificativa,
+    decisoesPorEquipe,
     expectedVersion,
     payloadHash,
   };

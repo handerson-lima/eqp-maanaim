@@ -185,10 +185,14 @@ export async function salvarMinhaFichaRepo(
     }
 
     if (filaSnap.exists) {
+      const igrejaData = igrejaSnap.data() ?? {};
+      const pastorLocalPessoaId = (igrejaData.pastorLocalVigentePessoaId as string) || null;
       tx.set(
         filaRef,
         {
           igrejaId: entrada.igrejaId,
+          pastorLocalPessoaId,
+          voluntarioNome: entrada.nomeCompleto,
           atualizadoEm: FieldValue.serverTimestamp(),
         },
         { merge: true },

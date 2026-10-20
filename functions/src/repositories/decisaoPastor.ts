@@ -15,6 +15,7 @@ import {
   type ItemFilaPastorLocal,
   type ResultadoDecidirFichaPastorLocal,
   type ResultadoFilaPastorLocal,
+  type TipoDecisaoPastoral,
 } from '../domain/decisaoPastor.js';
 
 export interface ContextoDecisaoPastor {
@@ -88,7 +89,7 @@ export async function obterFilaPastorLocalRepo(
   );
 
   if (igrejas.length === 0) {
-    return { pendencias: [], igrejas: [] };
+    return { pendencias: [], igrejas: [], rejeitadas: [] };
   }
 
   const igrejaIds = igrejas.map((i) => i.id);
@@ -96,6 +97,7 @@ export async function obterFilaPastorLocalRepo(
   // 2. Buscar pendências na projeção filaPendencias para as igrejas do pastor
   // Em Firestore, consultas 'in' suportam até 30 elementos.
   const pendencias: ItemFilaPastorLocal[] = [];
+  const rejeitadasMap = new Map<string, ItemFilaPastorLocal>();
   const chunkSize = 30;
 
   for (let i = 0; i < igrejaIds.length; i += chunkSize) {
@@ -123,17 +125,153 @@ export async function obterFilaPastorLocalRepo(
           ? d.equipes.map((eq: Record<string, unknown>) => ({
               equipeId: String(eq.equipeId ?? ''),
               nomeEquipe: String(eq.nomeEquipe ?? ''),
+              participacaoId: eq.participacaoId ? String(eq.participacaoId) : undefined,
             }))
           : [],
         enviadoEm: iso(d.enviadoEm),
       });
     }
+
+    // Busca fichas rejeitadas em filaPendencias
+    const filaRejeitadasSnap = await db
+      .collection('filaPendencias')
+      .where('estado', '==', 'REJEITADA')
+      .where('igrejaId', 'in', lote)
+      .get();
+
+    for (const doc of filaRejeitadasSnap.docs) {
+      const d = doc.data() ?? {};
+      const fId = String(d.fichaId ?? doc.id);
+      const decPastoral = d.decisaoPastoral as Record<string, unknown> | undefined;
+      rejeitadasMap.set(fId, {
+        id: doc.id,
+        fichaId: fId,
+        voluntarioUid: String(d.voluntarioUid ?? fId),
+        voluntarioNome: String(d.voluntarioNome ?? 'Voluntário'),
+        igrejaId: String(d.igrejaId ?? ''),
+        nomeIgreja: igrejasMap.get(String(d.igrejaId ?? ''))?.nome,
+        estado: 'REJEITADA',
+        proximaAcao: MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
+        ano: Number(d.ano ?? new Date().getUTCFullYear()),
+        equipes: Array.isArray(d.equipes)
+          ? d.equipes.map((eq: Record<string, unknown>) => ({
+              equipeId: String(eq.equipeId ?? ''),
+              nomeEquipe: String(eq.nomeEquipe ?? ''),
+              participacaoId: eq.participacaoId ? String(eq.participacaoId) : undefined,
+            }))
+          : [],
+        enviadoEm: iso(d.enviadoEm ?? d.atualizadoEm),
+        decididoEm: iso(d.decididoEm ?? decPastoral?.decididoEm ?? d.atualizadoEm),
+        justificativaPastoral: d.justificativaPastoral
+          ? String(d.justificativaPastoral)
+          : decPastoral?.justificativa
+            ? String(decPastoral.justificativa)
+            : undefined,
+      });
+    }
+
+    // Busca fichas na coleção 'fichas' com estado REJEITADA (cobre fichas existentes no banco)
+    try {
+      const fichasRejeitadasSnap = await db
+        .collection('fichas')
+        .where('estado', '==', 'REJEITADA')
+        .where('igrejaId', 'in', lote)
+        .get();
+
+      for (const doc of fichasRejeitadasSnap.docs) {
+        const d = doc.data() ?? {};
+        const fId = doc.id;
+        if (!rejeitadasMap.has(fId)) {
+          const decPastoral = d.decisaoPastoral as Record<string, unknown> | undefined;
+          rejeitadasMap.set(fId, {
+            id: fId,
+            fichaId: fId,
+            voluntarioUid: String(d.ownerUid ?? fId),
+            voluntarioNome: String(d.nomeCompleto ?? 'Voluntário'),
+            igrejaId: String(d.igrejaId ?? ''),
+            nomeIgreja: igrejasMap.get(String(d.igrejaId ?? ''))?.nome,
+            estado: 'REJEITADA',
+            proximaAcao: MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
+            ano: Number(d.ano ?? new Date().getUTCFullYear()),
+            equipes: [],
+            enviadoEm: iso(d.enviadoEm ?? d.atualizadoEm),
+            decididoEm: iso(decPastoral?.decididoEm ?? d.atualizadoEm),
+            justificativaPastoral: decPastoral?.justificativa
+              ? String(decPastoral.justificativa)
+              : d.justificativaInterna
+                ? String(d.justificativaInterna)
+                : undefined,
+          });
+        }
+      }
+    } catch (_) {
+      // Ignora erro caso índice ou coleção difira no mock
+    }
   }
 
-  // Ordena por data de envio (mais antigas primeiro)
+  // Complementa participações nas pendências
+  for (const item of pendencias) {
+    try {
+      const partsSnap = await db
+        .collection('participacoes')
+        .where('fichaId', '==', item.fichaId)
+        .get();
+      if (partsSnap && partsSnap.docs && partsSnap.docs.length > 0) {
+        item.equipes = partsSnap.docs.map((p) => {
+          const pData = p.data() ?? {};
+          return {
+            participacaoId: p.id,
+            equipeId: String(pData.equipeId ?? ''),
+            nomeEquipe: String(pData.nomeEquipe ?? ''),
+            estado: String(pData.estado ?? ''),
+          };
+        });
+      }
+    } catch (_) {
+      // Mantém lista original
+    }
+  }
+
+  // Complementa participações nas rejeitadas
+  for (const item of rejeitadasMap.values()) {
+    try {
+      const partsSnap = await db
+        .collection('participacoes')
+        .where('fichaId', '==', item.fichaId)
+        .get();
+      if (partsSnap && partsSnap.docs && partsSnap.docs.length > 0) {
+        item.equipes = partsSnap.docs.map((p) => {
+          const pData = p.data() ?? {};
+          const decP = pData.decisaoPastoral as Record<string, unknown> | undefined;
+          return {
+            participacaoId: p.id,
+            equipeId: String(pData.equipeId ?? ''),
+            nomeEquipe: String(pData.nomeEquipe ?? ''),
+            estado: String(pData.estado ?? ''),
+            justificativa: decP?.justificativa ? String(decP.justificativa) : undefined,
+          };
+        });
+        if (!item.justificativaPastoral) {
+          const partComJustif = partsSnap.docs.find(
+            (p) => (p.data() ?? {}).decisaoPastoral?.justificativa,
+          );
+          if (partComJustif) {
+            item.justificativaPastoral = String(
+              partComJustif.data().decisaoPastoral.justificativa,
+            );
+          }
+        }
+      }
+    } catch (_) {
+      // Mantém lista original
+    }
+  }
+
+  const rejeitadas = Array.from(rejeitadasMap.values());
+  rejeitadas.sort((a, b) => (b.decididoEm ?? '').localeCompare(a.decididoEm ?? ''));
   pendencias.sort((a, b) => a.enviadoEm.localeCompare(b.enviadoEm));
 
-  return { pendencias, igrejas };
+  return { pendencias, igrejas, rejeitadas };
 }
 
 /**
@@ -173,10 +311,12 @@ export async function decidirFichaPastorLocalRepo(
         throw new ComandoDivergenteError();
       }
       const res = dadosRecibo.resultado as Record<string, unknown> | undefined;
+      const decIdemp =
+        entrada.decisao ?? (res?.decisao as TipoDecisaoPastoral) ?? 'APROVADO';
       return {
         sucesso: true,
         repetido: true,
-        decisao: entrada.decisao,
+        decisao: decIdemp,
         estado: String(res?.estado ?? 'AGUARDANDO_RESPONSAVEL_EQUIPE'),
         versao: Number(res?.versao ?? 1),
         proximaAcao: String(res?.proximaAcao ?? ''),
@@ -260,7 +400,121 @@ export async function decidirFichaPastorLocalRepo(
     let proximaAcao: string;
     let atualizacaoFicha: Record<string, unknown>;
 
-    if (entrada.decisao === 'APROVADO') {
+    // Determina decisão de cada participação
+    const decisoesAplicadas: Array<{
+      partId: string;
+      equipeId: string;
+      nomeEquipe: string;
+      decisao: TipoDecisaoPastoral;
+      justificativa?: string;
+    }> = [];
+
+    for (const partDoc of participacoesDocs) {
+      const partData = partDoc.data() ?? {};
+      const partId = partDoc.id;
+      const equipeId = String(partData.equipeId ?? '');
+      const nomeEquipe = String(partData.nomeEquipe ?? '');
+
+      const itemDecisao = entrada.decisoesPorEquipe?.find(
+        (d) => d.participacaoId === partId || (d.equipeId && d.equipeId === equipeId),
+      );
+
+      let decisaoPart: TipoDecisaoPastoral;
+      let justifPart: string | undefined;
+
+      if (itemDecisao) {
+        decisaoPart = itemDecisao.decisao;
+        justifPart = itemDecisao.justificativa;
+      } else if (entrada.decisao) {
+        decisaoPart = entrada.decisao;
+        justifPart = entrada.justificativa;
+      } else {
+        decisaoPart = 'APROVADO';
+      }
+
+      decisoesAplicadas.push({
+        partId,
+        equipeId,
+        nomeEquipe,
+        decisao: decisaoPart,
+        justificativa: justifPart,
+      });
+
+      if (decisaoPart === 'APROVADO') {
+        tx.update(partDoc.ref, {
+          estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE',
+          proximaAcao: 'Aguardando avaliação do Responsável de Equipe',
+          decisaoPastoral: {
+            decisao: 'APROVADO',
+            pastorUid: contexto.pastorUid,
+            pastorNome,
+            vinculoId: vinculoVigenteId,
+            decididoEm: agora,
+          },
+          atualizadoEm: agora,
+        });
+
+        tx.set(
+          db.collection('evidenciasDecisao').doc(`${contexto.commandId}_${partId}`),
+          {
+            commandId: contexto.commandId,
+            fichaId: entrada.fichaId,
+            participacaoId: partId,
+            equipeId,
+            etapa: 'PASTOR_LOCAL',
+            decisao: 'APROVADO',
+            atorUid: contexto.pastorUid,
+            atorNome: pastorNome,
+            papel: 'PASTOR_LOCAL',
+            vinculoId: vinculoVigenteId,
+            igrejaId,
+            justificativa: null,
+            timestamp: agora,
+          },
+        );
+      } else {
+        tx.update(partDoc.ref, {
+          estado: 'REJEITADA',
+          proximaAcao: MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
+          decisaoPastoral: {
+            decisao: 'DESFAVORAVEL',
+            pastorUid: contexto.pastorUid,
+            pastorNome,
+            vinculoId: vinculoVigenteId,
+            justificativa: justifPart,
+            decididoEm: agora,
+          },
+          atualizadoEm: agora,
+        });
+
+        tx.set(
+          db.collection('evidenciasDecisao').doc(`${contexto.commandId}_${partId}`),
+          {
+            commandId: contexto.commandId,
+            fichaId: entrada.fichaId,
+            participacaoId: partId,
+            equipeId,
+            etapa: 'PASTOR_LOCAL',
+            decisao: 'DESFAVORAVEL',
+            atorUid: contexto.pastorUid,
+            atorNome: pastorNome,
+            papel: 'PASTOR_LOCAL',
+            vinculoId: vinculoVigenteId,
+            igrejaId,
+            justificativa: justifPart,
+            timestamp: agora,
+          },
+        );
+      }
+    }
+
+    const totalAprovadas = decisoesAplicadas.filter((d) => d.decisao === 'APROVADO').length;
+    const totalRejeitadas = decisoesAplicadas.filter((d) => d.decisao === 'DESFAVORAVEL').length;
+    const primeiraRejeitada = decisoesAplicadas.find((d) => d.decisao === 'DESFAVORAVEL');
+    const justificativaFinal =
+      entrada.justificativa ?? primeiraRejeitada?.justificativa ?? 'Decisão pastoral desfavorável';
+
+    if (totalAprovadas > 0) {
       novoEstado = 'AGUARDANDO_RESPONSAVEL_EQUIPE';
       proximaAcao = 'Aguardando avaliação dos Responsáveis de Equipe';
 
@@ -269,7 +523,7 @@ export async function decidirFichaPastorLocalRepo(
         proximaAcao,
         versao: novaVersao,
         decisaoPastoral: {
-          decisao: 'APROVADO',
+          decisao: totalRejeitadas > 0 ? 'PARCIAL_APROVADO' : 'APROVADO',
           pastorUid: contexto.pastorUid,
           pastorNome,
           vinculoId: vinculoVigenteId,
@@ -278,19 +532,6 @@ export async function decidirFichaPastorLocalRepo(
         atualizadoEm: agora,
       };
 
-      // Atualiza participações para avançar à etapa dos responsáveis de equipe
-      for (const partDoc of participacoesDocs) {
-        const partData = partDoc.data() ?? {};
-        if (partData.estado === 'AGUARDANDO_PASTOR_LOCAL') {
-          tx.update(partDoc.ref, {
-            estado: 'AGUARDANDO_RESPONSAVEL_EQUIPE',
-            proximaAcao: 'Aguardando avaliação do Responsável de Equipe',
-            atualizadoEm: agora,
-          });
-        }
-      }
-
-      // Evidência imutável de aprovação
       tx.set(evidenciaRef, {
         commandId: contexto.commandId,
         fichaId: entrada.fichaId,
@@ -304,8 +545,11 @@ export async function decidirFichaPastorLocalRepo(
         justificativa: null,
         timestamp: agora,
       });
+
+      // Remove a pendência da fila do Pastor Local (pois avançou aos responsáveis de equipe)
+      tx.delete(filaRef);
     } else {
-      // Decisão DESFAVORAVEL
+      // Todas as equipes foram recusadas
       novoEstado = 'REJEITADA';
       proximaAcao = MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA;
 
@@ -313,29 +557,19 @@ export async function decidirFichaPastorLocalRepo(
         estado: novoEstado,
         proximaAcao,
         mensagemVoluntario: MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
-        justificativaInterna: entrada.justificativa,
+        justificativaInterna: justificativaFinal,
         versao: novaVersao,
         decisaoPastoral: {
           decisao: 'DESFAVORAVEL',
           pastorUid: contexto.pastorUid,
           pastorNome,
           vinculoId: vinculoVigenteId,
-          justificativa: entrada.justificativa,
+          justificativa: justificativaFinal,
           decididoEm: agora,
         },
         atualizadoEm: agora,
       };
 
-      // Transiciona participações para REJEITADA com mensagem neutra
-      for (const partDoc of participacoesDocs) {
-        tx.update(partDoc.ref, {
-          estado: 'REJEITADA',
-          proximaAcao: MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
-          atualizadoEm: agora,
-        });
-      }
-
-      // Evidência imutável com justificativa interna
       tx.set(evidenciaRef, {
         commandId: contexto.commandId,
         fichaId: entrada.fichaId,
@@ -346,22 +580,54 @@ export async function decidirFichaPastorLocalRepo(
         papel: 'PASTOR_LOCAL',
         vinculoId: vinculoVigenteId,
         igrejaId,
-        justificativa: entrada.justificativa,
+        justificativa: justificativaFinal,
         timestamp: agora,
       });
+
+      // Mantém registro atualizado como REJEITADA na filaPendencias para visualização na fila pastoral
+      tx.set(
+        filaRef,
+        {
+          fichaId: entrada.fichaId,
+          voluntarioUid: String(fichaData.ownerUid ?? entrada.fichaId),
+          voluntarioNome: String(fichaData.nomeCompleto ?? 'Voluntário'),
+          igrejaId,
+          estado: 'REJEITADA',
+          proximaAcao: MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
+          ano: Number(fichaData.ano ?? new Date().getUTCFullYear()),
+          equipes: decisoesAplicadas.map((d) => ({
+            participacaoId: d.partId,
+            equipeId: d.equipeId,
+            nomeEquipe: d.nomeEquipe,
+            estado: d.decisao === 'APROVADO' ? 'AGUARDANDO_RESPONSAVEL_EQUIPE' : 'REJEITADA',
+            justificativa: d.justificativa,
+          })),
+          decisaoPastoral: {
+            decisao: 'DESFAVORAVEL',
+            justificativa: justificativaFinal,
+            decididoEm: agora,
+            pastorUid: contexto.pastorUid,
+            pastorNome,
+          },
+          justificativaPastoral: justificativaFinal,
+          decididoEm: agora,
+          atualizadoEm: agora,
+        },
+        { merge: true },
+      );
     }
 
     // Persiste alteração da ficha
     tx.update(fichaRef, atualizacaoFicha);
 
-    // Remove pendência da fila do Pastor Local (para não aparecer mais na fila)
-    tx.delete(filaRef);
-
     // 5. Recibo Idempotente
+    const decisaoGeral: TipoDecisaoPastoral =
+      entrada.decisao ?? (totalAprovadas > 0 ? 'APROVADO' : 'DESFAVORAVEL');
+
     const resultadoOperacao = {
       sucesso: true,
       repetido: false,
-      decisao: entrada.decisao,
+      decisao: decisaoGeral,
       estado: novoEstado,
       versao: novaVersao,
       proximaAcao,

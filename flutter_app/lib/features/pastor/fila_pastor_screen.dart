@@ -37,10 +37,12 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
   bool _carregando = true;
   String? _erro;
   List<ItemFilaPastor> _pendencias = [];
+  List<ItemFilaPastor> _rejeitadas = [];
   List<IgrejaEscopoPastor> _igrejas = [];
   String? _igrejaFiltroId;
   String? _processandoFichaId;
   String? _filtroKpi; // null = todas; 'RENOVACOES' = apenas renovações
+  String _abaAtiva = 'PENDENTES'; // 'PENDENTES' ou 'REJEITADAS'
   int? _metricasAtivos;
   int? _metricasProximosVencimento;
 
@@ -78,6 +80,7 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
       if (!mounted) return;
       setState(() {
         _pendencias = List.of(resultado.pendencias);
+        _rejeitadas = List.of(resultado.rejeitadas);
         _igrejas = List.of(resultado.igrejas);
         _carregando = false;
       });
@@ -107,8 +110,17 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
     return base;
   }
 
+  List<ItemFilaPastor> get _rejeitadasNoEscopoIgreja {
+    if (_igrejaFiltroId == null || _igrejaFiltroId!.isEmpty) {
+      final idsAutorizados = _igrejas.map((i) => i.id).toSet();
+      return _rejeitadas.where((p) => idsAutorizados.contains(p.igrejaId) || idsAutorizados.isEmpty).toList();
+    }
+    return _rejeitadas.where((p) => p.igrejaId == _igrejaFiltroId).toList();
+  }
+
   int get _countPendencias => _pendenciasNoEscopoIgreja.length;
   int get _countRenovacoes => _pendenciasNoEscopoIgreja.where((p) => p.isRenovacaoAnual).length;
+  int get _countRejeitadas => _rejeitadasNoEscopoIgreja.length;
 
   String _formatarData(String iso) {
     if (iso.isEmpty) return '-';
@@ -194,99 +206,180 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
   Future<void> _abrirModalRecusa(ItemFilaPastor item) async {
     final formKey = GlobalKey<FormState>();
     final controller = TextEditingController();
+    final temMultiplasEquipes = item.equipes.length > 1;
+    final equipesRecusadasIds = item.equipes.map((e) => e.equipeId).toSet();
 
-    final resultado = await showDialog<String>(
+    final resultado = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        actionsOverflowButtonSpacing: AppSpacing.s8,
-        title: const Text('Decisão Pastoral Desfavorável'),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 440),
-          child: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Voluntário: ${item.voluntarioNome}',
-                    style: AppTypography.h2,
-                  ),
-                  const SizedBox(height: AppSpacing.s12),
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.s12),
-                    decoration: BoxDecoration(
-                      color: AppColors.warningBg,
-                      borderRadius: AppGeometry.cardBorderRadius,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.info_outline, color: AppColors.warning, size: 20),
-                        const SizedBox(width: AppSpacing.s8),
-                        Expanded(
-                          child: Text(
-                            'Atenção: A justificativa registrada permanecerá estritamente interna. '
-                            'Para o voluntário, a mensagem exibida será exclusivamente: '
-                            '"Procure o Pastor da igreja local para mais informações".',
-                            style: AppTypography.caption.copyWith(color: AppColors.warning),
-                          ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final todasRecusadas = equipesRecusadasIds.length == item.equipes.length;
+          final nenhumaRecusada = equipesRecusadasIds.isEmpty;
+
+          return AlertDialog(
+            actionsOverflowButtonSpacing: AppSpacing.s8,
+            title: const Text('Decisão Pastoral Desfavorável'),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Voluntário: ${item.voluntarioNome}',
+                        style: AppTypography.h3,
+                      ),
+                      const SizedBox(height: AppSpacing.s12),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.s12),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningBg,
+                          borderRadius: AppGeometry.cardBorderRadius,
                         ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline, color: AppColors.warning, size: 20),
+                            const SizedBox(width: AppSpacing.s8),
+                            Expanded(
+                              child: Text(
+                                'Atenção: A justificativa registrada permanecerá estritamente interna. '
+                                'Para o voluntário, a mensagem exibida será exclusivamente: '
+                                '"Procure o Pastor da igreja local para mais informações".',
+                                style: AppTypography.caption.copyWith(color: AppColors.warning),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (temMultiplasEquipes) ...[
+                        const SizedBox(height: AppSpacing.s16),
+                        Text(
+                          'Equipes a recusar:',
+                          style: AppTypography.body.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: AppSpacing.s4),
+                        Text(
+                          'Selecione quais equipes devem ser recusadas. As equipes não marcadas serão aprovadas e avançarão para os respectivos responsáveis.',
+                          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: AppSpacing.s8),
+                        ...item.equipes.map((eq) {
+                          final isRecusada = equipesRecusadasIds.contains(eq.equipeId);
+                          return CheckboxListTile(
+                            key: Key('checkRecusaEquipe_${eq.equipeId}'),
+                            title: Text(eq.nomeEquipe, style: AppTypography.body),
+                            subtitle: Text(
+                              isRecusada ? 'Será recusada nesta etapa' : 'Será aprovada para o Responsável',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isRecusada ? AppColors.danger : AppColors.success,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            value: isRecusada,
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            activeColor: AppColors.danger,
+                            onChanged: (val) {
+                              setModalState(() {
+                                if (val == true) {
+                                  equipesRecusadasIds.add(eq.equipeId);
+                                } else {
+                                  equipesRecusadasIds.remove(eq.equipeId);
+                                }
+                              });
+                            },
+                          );
+                        }),
+                        if (nenhumaRecusada)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Selecione ao menos 1 equipe para recusa, ou cancele para aprovar todas.',
+                              style: AppTypography.caption.copyWith(color: AppColors.danger),
+                            ),
+                          ),
                       ],
-                    ),
+                      const SizedBox(height: AppSpacing.s16),
+                      TextFormField(
+                        key: const Key('campoJustificativaRecusa'),
+                        controller: controller,
+                        maxLines: 3,
+                        maxLength: 500,
+                        decoration: const InputDecoration(
+                          labelText: 'Justificativa Pastoral Interna *',
+                          hintText: 'Informe o motivo da decisão desfavorável (mínimo 5 caracteres)',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (valor) {
+                          if (valor == null || valor.trim().length < 5) {
+                            return 'Informe uma justificativa de ao menos 5 caracteres.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.s16),
-                  TextFormField(
-                    key: const Key('campoJustificativaRecusa'),
-                    controller: controller,
-                    maxLines: 3,
-                    maxLength: 500,
-                    decoration: const InputDecoration(
-                      labelText: 'Justificativa Pastoral Interna *',
-                      hintText: 'Informe o motivo da decisão desfavorável (mínimo 5 caracteres)',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (valor) {
-                      if (valor == null || valor.trim().length < 5) {
-                        return 'Informe uma justificativa de ao menos 5 caracteres.';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(null),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            key: const Key('btnConfirmarRecusaModal'),
-            onPressed: () {
-              if (formKey.currentState?.validate() == true) {
-                Navigator.of(ctx).pop(controller.text.trim());
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(120, AppGeometry.minTouchTarget),
-            ),
-            child: const Text('Confirmar Recusa'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                key: const Key('btnConfirmarRecusaModal'),
+                onPressed: nenhumaRecusada
+                    ? null
+                    : () {
+                        if (formKey.currentState?.validate() == true) {
+                          Navigator.of(ctx).pop(true);
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(120, AppGeometry.minTouchTarget),
+                ),
+                child: Text(
+                  todasRecusadas || !temMultiplasEquipes
+                      ? 'Confirmar Recusa'
+                      : 'Confirmar Decisões',
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
 
-    if (resultado != null && resultado.isNotEmpty) {
+    if (resultado == true) {
+      final justificativa = controller.text.trim();
+      List<DecisaoItemEquipePastor>? decisoesPorEquipe;
+      final todasRecusadas = equipesRecusadasIds.length == item.equipes.length;
+
+      if (temMultiplasEquipes) {
+        decisoesPorEquipe = item.equipes.map((eq) {
+          final recusada = equipesRecusadasIds.contains(eq.equipeId);
+          return DecisaoItemEquipePastor(
+            participacaoId: eq.participacaoId,
+            equipeId: eq.equipeId,
+            decisao: recusada ? 'DESFAVORAVEL' : 'APROVADO',
+            justificativa: recusada ? justificativa : null,
+          );
+        }).toList();
+      }
+
       await _executarDecisao(
         item: item,
-        decisao: 'DESFAVORAVEL',
-        justificativa: resultado,
+        decisao: todasRecusadas ? 'DESFAVORAVEL' : 'APROVADO',
+        justificativa: justificativa,
+        decisoesPorEquipe: decisoesPorEquipe,
       );
     }
   }
@@ -295,6 +388,7 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
     required ItemFilaPastor item,
     required String decisao,
     String? justificativa,
+    List<DecisaoItemEquipePastor>? decisoesPorEquipe,
   }) async {
     setState(() => _processandoFichaId = item.fichaId);
 
@@ -307,6 +401,7 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
         decisao: decisao,
         justificativa: justificativa,
         expectedVersion: item.versao,
+        decisoesPorEquipe: decisoesPorEquipe,
       );
 
       if (item.isRenovacaoAnual) {
@@ -317,20 +412,51 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
 
       if (!mounted) return;
 
+      final todasRecusadas = decisao == 'DESFAVORAVEL' &&
+          (decisoesPorEquipe == null ||
+              decisoesPorEquipe.every((d) => d.decisao == 'DESFAVORAVEL'));
+
       setState(() {
         _pendencias.removeWhere((p) => p.fichaId == item.fichaId);
+        if (todasRecusadas) {
+          final itemRejeitado = ItemFilaPastor(
+            id: item.id,
+            fichaId: item.fichaId,
+            voluntarioUid: item.voluntarioUid,
+            voluntarioNome: item.voluntarioNome,
+            igrejaId: item.igrejaId,
+            nomeIgreja: item.nomeIgreja,
+            estado: 'REJEITADA',
+            proximaAcao: 'PASTOR_LOCAL_CONSULTA',
+            enviadoEm: item.enviadoEm,
+            decididoEm: DateTime.now().toIso8601String(),
+            justificativaPastoral: justificativa,
+            equipes: item.equipes,
+            isRenovacaoAnual: item.isRenovacaoAnual,
+            ano: item.ano,
+            cicloId: item.cicloId,
+            versao: item.versao + 1,
+          );
+          _rejeitadas.insert(0, itemRejeitado);
+        }
         _processandoFichaId = null;
       });
 
+      final String mensagemFeedback;
+      if (decisao == 'APROVADO' && decisoesPorEquipe == null) {
+        mensagemFeedback = 'Ficha de ${item.voluntarioNome} aprovada com sucesso!';
+      } else if (todasRecusadas) {
+        mensagemFeedback = 'Decisão desfavorável registrada com sucesso.';
+      } else {
+        final aprovadas = decisoesPorEquipe!.where((d) => d.decisao == 'APROVADO').length;
+        final recusadas = decisoesPorEquipe.where((d) => d.decisao == 'DESFAVORAVEL').length;
+        mensagemFeedback = 'Decisão registrada: $aprovadas equipe(s) aprovada(s) e $recusadas recusada(s).';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            decisao == 'APROVADO'
-                ? 'Ficha de ${item.voluntarioNome} aprovada com sucesso!'
-                : 'Decisão desfavorável registrada com sucesso.',
-          ),
-          backgroundColor:
-              decisao == 'APROVADO' ? AppColors.success : AppColors.danger,
+          content: Text(mensagemFeedback),
+          backgroundColor: todasRecusadas ? AppColors.danger : AppColors.success,
         ),
       );
     } catch (e) {
@@ -463,23 +589,39 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
                   const SizedBox(height: AppSpacing.s8),
                   _buildKpis(constraints.maxWidth),
                   const SizedBox(height: AppSpacing.s8),
-                  if (_filtroKpi != null) ...[
+                  if (_filtroKpi != null && _abaAtiva == 'PENDENTES') ...[
                     _buildBannerFiltroAtivo(),
                     const SizedBox(height: AppSpacing.s8),
                   ],
                   _buildTituloSecaoPendencias(),
                   const SizedBox(height: AppSpacing.s8),
-                  if (_pendenciasFiltradas.isEmpty)
-                    _buildListaVazia()
-                  else if (isDesktop)
-                    _buildTabelaDesktop()
-                  else
-                    ..._pendenciasFiltradas.map(
-                      (item) => Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.s8),
-                        child: _buildCardPendencia(item),
+                  _buildAbasFila(),
+                  const SizedBox(height: AppSpacing.s12),
+                  if (_abaAtiva == 'PENDENTES') ...[
+                    if (_pendenciasFiltradas.isEmpty)
+                      _buildListaVazia()
+                    else if (isDesktop)
+                      _buildTabelaDesktop()
+                    else
+                      ..._pendenciasFiltradas.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                          child: _buildCardPendencia(item),
+                        ),
                       ),
-                    ),
+                  ] else ...[
+                    if (_rejeitadasNoEscopoIgreja.isEmpty)
+                      _buildListaVaziaRejeitadas()
+                    else if (isDesktop)
+                      _buildTabelaRejeitadasDesktop()
+                    else
+                      ..._rejeitadasNoEscopoIgreja.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                          child: _buildCardRejeitada(item),
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),
@@ -520,9 +662,43 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
     );
   }
 
+  Widget _buildAbasFila() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
+        child: SegmentedButton<String>(
+          key: const Key('segmentedButtonAbasFila'),
+          segments: [
+            ButtonSegment<String>(
+              value: 'PENDENTES',
+              label: Text('Pendências ($_countPendencias)'),
+              icon: const Icon(Icons.assignment_outlined, size: 18),
+            ),
+            ButtonSegment<String>(
+              value: 'REJEITADAS',
+              label: Text('Fichas Rejeitadas ($_countRejeitadas)'),
+              icon: const Icon(Icons.cancel_outlined, size: 18),
+            ),
+          ],
+          selected: {_abaAtiva},
+          onSelectionChanged: (novaSelecao) {
+            setState(() {
+              _abaAtiva = novaSelecao.first;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildCabecalho(bool isDesktop) {
-    final nomePastor = widget.userName ?? 'Carlos';
-    final formatado = nomePastor.startsWith('Pr.') ? nomePastor : 'Pr. $nomePastor';
+    final nomePastor = (widget.userName != null && widget.userName!.trim().isNotEmpty)
+        ? widget.userName!.trim()
+        : 'Pastor Local';
+    final formatado = (nomePastor == 'Pastor Local' || nomePastor.startsWith('Pr.'))
+        ? nomePastor
+        : 'Pr. $nomePastor';
     final saudacao = 'Olá, $formatado';
 
     final infoPastor = Column(
@@ -1071,6 +1247,219 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
                     foregroundColor: Colors.white,
                     minimumSize: const Size(120, AppGeometry.minTouchTarget),
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListaVaziaRejeitadas() {
+    return const SectionCard(
+      padding: EdgeInsets.zero,
+      child: EmptyState(
+        icon: Icons.check_circle_outline,
+        iconColor: AppColors.textSecondary,
+        title: 'Nenhuma ficha rejeitada',
+        message: 'Não há solicitações com decisão desfavorável nas suas igrejas.',
+      ),
+    );
+  }
+
+  Widget _buildTabelaRejeitadasDesktop() {
+    return SectionCard(
+      padding: EdgeInsets.zero,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 960),
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+            dataRowMinHeight: 64,
+            dataRowMaxHeight: 96,
+            columns: const [
+              DataColumn(label: Text('Voluntário', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Igreja', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Decidido em', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Justificativa Pastoral Interna', style: TextStyle(fontWeight: FontWeight.bold))),
+            ],
+            rows: _rejeitadasNoEscopoIgreja.map((item) {
+              return DataRow(
+                key: ValueKey('rowFichaRejeitada_${item.fichaId}'),
+                cells: [
+                  DataCell(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          item.voluntarioNome,
+                          style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        if (item.ano > 0)
+                          Text('Ciclo ${item.ano}', style: AppTypography.caption),
+                      ],
+                    ),
+                  ),
+                  DataCell(
+                    Text(item.nomeIgreja ?? 'Igreja', style: AppTypography.body),
+                  ),
+                  DataCell(
+                    Wrap(
+                      spacing: 4,
+                      children: item.equipes.map((e) {
+                        return Chip(
+                          label: Text(e.nomeEquipe, style: const TextStyle(fontSize: 12)),
+                          padding: EdgeInsets.zero,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  DataCell(
+                    Text(_formatarData(item.decididoEm ?? item.enviadoEm), style: AppTypography.body),
+                  ),
+                  const DataCell(
+                    StatusChip(
+                      status: 'DESFAVORAVEL',
+                      label: 'DESFAVORÁVEL',
+                    ),
+                  ),
+                  DataCell(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Text(
+                          (item.justificativaPastoral != null && item.justificativaPastoral!.isNotEmpty)
+                              ? item.justificativaPastoral!
+                              : 'Decisão desfavorável registrada pelo Pastor da igreja local.',
+                          style: AppTypography.caption.copyWith(color: AppColors.navy900),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardRejeitada(ItemFilaPastor item) {
+    return SectionCard(
+      key: Key('cardFichaRejeitada_${item.fichaId}'),
+      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.voluntarioNome,
+                      style: AppTypography.h3,
+                    ),
+                    const SizedBox(height: AppSpacing.s4),
+                    if (item.nomeIgreja != null)
+                      Row(
+                        children: [
+                          const Icon(Icons.church_outlined, size: 16, color: AppColors.blue600),
+                          const SizedBox(width: AppSpacing.s4),
+                          Expanded(
+                            child: Text(
+                              item.nomeIgreja!,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.body.copyWith(
+                                color: AppColors.blue600,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              const StatusChip(
+                status: 'DESFAVORAVEL',
+                label: 'DESFAVORÁVEL',
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          Text(
+            'Equipes solicitadas:',
+            style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.s4),
+          Wrap(
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s4,
+            children: item.equipes.map((e) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s8,
+                  vertical: AppSpacing.s4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  e.nomeEquipe,
+                  style: AppTypography.body.copyWith(fontSize: 13),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.s12),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.lock_outline, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Justificativa Pastoral Interna (Decidido em ${_formatarData(item.decididoEm ?? item.enviadoEm)}):',
+                      style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  (item.justificativaPastoral != null && item.justificativaPastoral!.isNotEmpty)
+                      ? item.justificativaPastoral!
+                      : 'Decisão desfavorável registrada pelo Pastor da igreja local.',
+                  style: AppTypography.body.copyWith(color: AppColors.navy900),
                 ),
               ],
             ),

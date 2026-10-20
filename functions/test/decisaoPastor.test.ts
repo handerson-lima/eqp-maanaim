@@ -484,6 +484,109 @@ describe('Story 3.1: Repositório de Fila e Decisão do Pastor Local', () => {
     );
   });
 
+  it('permite decidir cada equipe de forma independente: rejeição de uma não cancela as outras', async () => {
+    const db = criarMockDb({
+      igrejas: {
+        [igrejaDoPastorId]: {
+          nome: 'Igreja Central',
+          pastorLocalVigentePessoaId: pastorUid,
+          pastorLocalVigenteVinculoId: 'vinc-01',
+          ativo: true,
+        },
+      },
+      vinculosIgreja: {
+        'vinc-01': {
+          pessoaId: pastorUid,
+          entidadeId: igrejaDoPastorId,
+          estado: 'VIGENTE',
+        },
+      },
+      pessoas: {
+        [pastorUid]: { nomeCompleto: 'Pastor João' },
+      },
+      fichas: {
+        'ficha-01': {
+          estado: 'AGUARDANDO_PASTOR_LOCAL',
+          igrejaId: igrejaDoPastorId,
+          versao: 1,
+        },
+      },
+      participacoes: [
+        {
+          id: 'part-cantina',
+          fichaId: 'ficha-01',
+          estado: 'AGUARDANDO_PASTOR_LOCAL',
+          data: { equipeId: 'eq-cantina', nomeEquipe: 'Cantina', estado: 'AGUARDANDO_PASTOR_LOCAL' },
+        },
+        {
+          id: 'part-secretaria',
+          fichaId: 'ficha-01',
+          estado: 'AGUARDANDO_PASTOR_LOCAL',
+          data: { equipeId: 'eq-secretaria', nomeEquipe: 'Secretaria', estado: 'AGUARDANDO_PASTOR_LOCAL' },
+        },
+        {
+          id: 'part-test',
+          fichaId: 'ficha-01',
+          estado: 'AGUARDANDO_PASTOR_LOCAL',
+          data: { equipeId: 'eq-test', nomeEquipe: 'eqp-test', estado: 'AGUARDANDO_PASTOR_LOCAL' },
+        },
+      ],
+    });
+
+    const entrada = validarDecidirFichaPastor({
+      commandId: 'cmd-decisao-indep-001',
+      fichaId: 'ficha-01',
+      decisoesPorEquipe: [
+        {
+          participacaoId: 'part-cantina',
+          decisao: 'APROVADO',
+        },
+        {
+          participacaoId: 'part-secretaria',
+          decisao: 'APROVADO',
+        },
+        {
+          participacaoId: 'part-test',
+          decisao: 'DESFAVORAVEL',
+          justificativa: 'Voluntário precisa de maior tempo na igreja antes de assumir equipe de teste.',
+        },
+      ],
+      expectedVersion: 1,
+    });
+
+    const resultado = await decidirFichaPastorLocalRepo(
+      db,
+      { commandId: entrada.commandId, pastorUid },
+      entrada,
+    );
+
+    expect(resultado.sucesso).toBe(true);
+    // Como 2 equipes foram aprovadas, a ficha avança (AD-11)
+    expect(resultado.estado).toBe('AGUARDANDO_RESPONSAVEL_EQUIPE');
+
+    // Verifica que a participação de teste foi para REJEITADA
+    const updatePartTest = db._updates.find((u: any) => u.ref.id === 'part-test');
+    expect(updatePartTest).toBeDefined();
+    expect(updatePartTest.data.estado).toBe('REJEITADA');
+    expect(updatePartTest.data.proximaAcao).toBe('Procure o Pastor da igreja local para mais informações');
+
+    // Verifica que as participações de Cantina e Secretaria avançaram
+    const updatePartCantina = db._updates.find((u: any) => u.ref.id === 'part-cantina');
+    expect(updatePartCantina).toBeDefined();
+    expect(updatePartCantina.data.estado).toBe('AGUARDANDO_RESPONSAVEL_EQUIPE');
+
+    const updatePartSecretaria = db._updates.find((u: any) => u.ref.id === 'part-secretaria');
+    expect(updatePartSecretaria).toBeDefined();
+    expect(updatePartSecretaria.data.estado).toBe('AGUARDANDO_RESPONSAVEL_EQUIPE');
+
+    // Verifica que a ficha NÃO foi marcada com mensagem global de rejeição
+    const updateFicha = db._updates.find((u: any) => u.ref.id === 'ficha-01');
+    expect(updateFicha).toBeDefined();
+    expect(updateFicha.data.estado).toBe('AGUARDANDO_RESPONSAVEL_EQUIPE');
+    expect(updateFicha.data.mensagemVoluntario).toBeUndefined();
+  });
+
+
   it('rejeita decisão se o chamador não for o Pastor Local vigente da igreja da ficha', async () => {
     const db = criarMockDb({
       igrejas: {

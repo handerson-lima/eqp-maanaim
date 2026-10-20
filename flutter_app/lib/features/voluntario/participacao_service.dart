@@ -78,6 +78,14 @@ class ParticipacaoModel {
   bool get isExpirada => estado == 'EXPIRADA';
   bool get isInativa => estado == 'INATIVA';
 
+  /// Decisões negativas projetadas como orientação pastoral ao voluntário (AD-12).
+  bool get isDecisaoDesfavoravel =>
+      isRejeitada ||
+      isCancelada ||
+      estado == 'ORIENTACAO' ||
+      estado == 'ORIENTACAO_PASTORAL' ||
+      proximaAcao == mensagemNeutraCanonica;
+
   /// Retorna verdadeiro se a participação estiver ativa e dentro da janela de renovação (AD-7 / Story 5.1).
   bool get isEmJanelaRenovacao =>
       isAtiva &&
@@ -91,7 +99,7 @@ class ParticipacaoModel {
   /// Estados terminais não bloqueiam uma nova solicitação (AD-11). Deve manter
   /// paridade com `ESTADOS_TERMINAIS_PARTICIPACAO` no backend.
   bool get isTerminal =>
-      isRejeitada || isCancelada || isExpirada || isInativa;
+      isRejeitada || isCancelada || isExpirada || isInativa || isDecisaoDesfavoravel;
 
   bool get isPendente => !isRascunho && !isAtiva && !isTerminal;
 

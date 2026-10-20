@@ -110,6 +110,8 @@ Future<void> main() async {
       vinculos: FirebaseVinculosGateway(functions),
       termos: FirebaseTermosService(functions: functions),
       ficha: FirebaseFichaGateway(functions),
+      participacao: FirebaseParticipacaoGateway(functions),
+      termoVoluntario: FirebaseTermoGateway(functions: functions),
       pastor: FirebasePastorLocalGateway(functions),
       responsavelEquipe: FirebaseResponsavelEquipeGateway(functions),
       coordenador: FirebaseCoordenadorGateway(functions),
@@ -602,6 +604,7 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           gateway: widget.pastor!,
           dashboardRenovacaoGateway: widget.dashboardRenovacao,
           onSair: _sair,
+          userName: nomeValido,
           dentroDeShell: true,
         );
       } else if ((destino == AppRotas.equipe ||
@@ -724,7 +727,15 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
         },
         userName: nomeValido ?? 'Voluntário',
         userRole: _obterPapelExibicao(contexto),
-        userStatus: 'ATIVA',
+        userStatus: _obterPapelExibicao(contexto) == 'Voluntário'
+            ? (contexto.estadoFicha == 'ATIVA'
+                ? 'ATIVA'
+                : (contexto.estadoFicha == 'RASCUNHO'
+                    ? 'RASCUNHO'
+                    : (contexto.estadoFicha?.startsWith('AGUARDANDO') == true
+                        ? 'EM_APROVACAO'
+                        : null)))
+            : 'ATIVA',
         onLogout: _sair,
         topBarActions: [
           IconButton(
