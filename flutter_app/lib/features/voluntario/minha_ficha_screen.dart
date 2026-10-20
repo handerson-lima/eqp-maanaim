@@ -366,10 +366,12 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
 
       final igrejasAtivas = respostaCatalogo.igrejas
           .where((i) => i.ativo)
-          .toList(growable: false);
+          .toList()
+        ..sort((a, b) => normalizarBusca(a.nome).compareTo(normalizarBusca(b.nome)));
       final equipesAtivas = respostaCatalogo.equipes
           .where((e) => e.ativo)
-          .toList(growable: false);
+          .toList()
+        ..sort((a, b) => normalizarBusca(a.nome).compareTo(normalizarBusca(b.nome)));
 
       if (mounted) {
         setState(() {
@@ -979,28 +981,59 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       key: const Key('card_resumo_cadastral'),
       title: 'Dados Cadastrais',
       subtitle: _bloqueiaEdicaoCadastral
-          ? 'Dados cadastrais bloqueados para edição durante o processo de avaliação.'
+          ? 'Dados pessoais em avaliação. A igreja local pode ser alterada a qualquer momento.'
           : 'Consulte seus dados cadastrais permanentes no Maanaim.',
-      headerAction: _bloqueiaEdicaoCadastral
-          ? null
-          : OutlinedButton.icon(
-              key: const Key('btn_editar_dados'),
-              onPressed: () => setState(() => _modoEdicao = true),
-              icon: const Icon(Icons.edit_outlined, size: 16),
-              label: const Text('Editar dados'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(44, 44),
-                foregroundColor: AppColors.navy900,
-                side: const BorderSide(color: AppColors.navy900),
-              ),
-            ),
+      headerAction: OutlinedButton.icon(
+        key: const Key('btn_editar_dados'),
+        onPressed: () => setState(() => _modoEdicao = true),
+        icon: const Icon(Icons.edit_outlined, size: 16),
+        label: Text(_bloqueiaEdicaoCadastral ? 'Alterar igreja' : 'Editar dados'),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          foregroundColor: AppColors.navy900,
+          side: const BorderSide(color: AppColors.navy900),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildLinhaInfo('Nome Completo', _ficha!.nomeCompleto),
           _buildLinhaInfo('Profissão', _ficha!.profissao),
           _buildLinhaInfo('CPF', _ficha!.cpf, destaqueMonospaced: true),
-          if (nomeIgreja != null) _buildLinhaInfo('Igreja Local', nomeIgreja),
+          if (nomeIgreja != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 130,
+                    child: Text(
+                      'Igreja Local',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      nomeIgreja,
+                      style: AppTypography.body.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  TextButton.icon(
+                    key: const Key('btn_alterar_igreja_atalho'),
+                    onPressed: () => setState(() => _modoEdicao = true),
+                    icon: const Icon(Icons.edit_outlined, size: 14),
+                    label: const Text('Alterar'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.blue600,
+                      minimumSize: const Size(44, 44),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _buildLinhaInfo('Versão da Ficha', 'v${_ficha!.versao}'),
           const SizedBox(height: AppSpacing.s12),
           Row(
@@ -1028,7 +1061,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
       key: const Key('form_edicao_cadastral'),
       title: 'Dados Cadastrais',
       subtitle: _bloqueiaEdicaoCadastral
-          ? 'Dados cadastrais bloqueados para edição durante o processo de avaliação.'
+          ? 'Dados pessoais bloqueados durante o processo de avaliação. Você pode alterar sua igreja local a qualquer momento.'
           : 'Campos marcados são obrigatórios para emissão do termo e aprovação.',
       child: Form(
         key: _formKey,
@@ -1089,7 +1122,9 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                 hintText: 'Selecione a sua igreja',
                 prefixIcon: Icon(Icons.church_outlined, size: 20),
               ),
-              items: _igrejas
+              items: (_igrejas.toList()
+                    ..sort((a, b) => normalizarBusca(a.nome)
+                        .compareTo(normalizarBusca(b.nome))))
                   .map(
                     (igreja) => DropdownMenuItem(
                       value: igreja.id,
@@ -1100,7 +1135,7 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     ),
                   )
                   .toList(),
-              onChanged: _bloqueiaEdicaoCadastral
+              onChanged: _salvando
                   ? null
                   : (novoId) {
                       setState(() {
@@ -1116,7 +1151,10 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               spacing: AppSpacing.s12,
               runSpacing: AppSpacing.s8,
               children: [
-                if (_modoEdicao && _ficha != null) ...[
+                if ((_modoEdicao ||
+                        (_bloqueiaEdicaoCadastral &&
+                            _igrejaSelecionadaId != _ficha?.igrejaId)) &&
+                    _ficha != null) ...[
                   OutlinedButton(
                     key: const Key('btn_cancelar_edicao'),
                     onPressed: () {
@@ -1131,16 +1169,18 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(44, 44),
                     ),
-                    child: const Text('Cancelar Edição'),
+                    child: const Text('Cancelar'),
                   ),
                   const SizedBox(width: AppSpacing.s12),
                 ],
                 PrimaryButton(
                   key: const Key('botao_salvar_ficha'),
-                  label: 'Salvar Ficha',
+                  label: _salvando ? 'Salvando...' : 'Salvar Ficha',
                   icon: Icons.save_outlined,
                   isLoading: _salvando,
-                  onPressed: (_bloqueiaEdicaoCadastral || _salvando)
+                  onPressed: (_salvando ||
+                          (_bloqueiaEdicaoCadastral &&
+                              _igrejaSelecionadaId == _ficha?.igrejaId))
                       ? null
                       : _salvarFicha,
                 ),

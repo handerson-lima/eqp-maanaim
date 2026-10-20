@@ -173,13 +173,17 @@ class FirebaseCatalogoGateway implements CatalogoGateway {
       final resposta =
           await _functions.httpsCallable('consultarCatalogo').call(payload);
       final dados = (resposta.data as Map).cast<String, dynamic>();
+      final igrejas = (dados['igrejas'] as List? ?? const [])
+          .map((item) => _mapearIgreja((item as Map).cast<String, dynamic>()))
+          .toList()
+        ..sort((a, b) => normalizarBusca(a.nome).compareTo(normalizarBusca(b.nome)));
+      final equipes = (dados['equipes'] as List? ?? const [])
+          .map((item) => _mapearEquipe((item as Map).cast<String, dynamic>()))
+          .toList()
+        ..sort((a, b) => normalizarBusca(a.nome).compareTo(normalizarBusca(b.nome)));
       return CatalogoResposta(
-        igrejas: (dados['igrejas'] as List? ?? const [])
-            .map((item) => _mapearIgreja((item as Map).cast<String, dynamic>()))
-            .toList(growable: false),
-        equipes: (dados['equipes'] as List? ?? const [])
-            .map((item) => _mapearEquipe((item as Map).cast<String, dynamic>()))
-            .toList(growable: false),
+        igrejas: igrejas,
+        equipes: equipes,
       );
     } on FirebaseFunctionsException catch (e) {
       // Proibição canônica de fallback silencioso que mascare falha administrativa
@@ -215,7 +219,8 @@ class FirebaseCatalogoGateway implements CatalogoGateway {
         ativo: d['ativo'] as bool? ?? true,
         versao: (d['versao'] as num?)?.toInt() ?? 1,
       );
-    }).toList();
+    }).toList()
+      ..sort((a, b) => normalizarBusca(a.nome).compareTo(normalizarBusca(b.nome)));
 
     final equipes = equipesSnap.docs.map((doc) {
       final d = doc.data();
@@ -225,7 +230,8 @@ class FirebaseCatalogoGateway implements CatalogoGateway {
         ativo: d['ativo'] as bool? ?? true,
         versao: (d['versao'] as num?)?.toInt() ?? 1,
       );
-    }).toList();
+    }).toList()
+      ..sort((a, b) => normalizarBusca(a.nome).compareTo(normalizarBusca(b.nome)));
 
     final igrejasFiltradas = termo != null && termo.trim().isNotEmpty
         ? filtrarIgrejas(igrejas, termo)

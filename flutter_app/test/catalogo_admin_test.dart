@@ -118,6 +118,8 @@ void main() {
                     igrejas: _igrejas, equipes: _equipes)),
             seed: SeedFake())));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Igrejas').first);
+    await tester.pumpAndSettle();
     expect(find.byType(IgrejasScreen), findsOneWidget);
     expect(find.text('Igapó'), findsWidgets);
     expect(find.textContaining('240001'), findsWidgets);

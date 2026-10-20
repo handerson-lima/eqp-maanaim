@@ -106,6 +106,7 @@ export async function salvarMinhaFichaRepo(
   const fichaRef = db.collection('fichas').doc(contexto.uid);
   const igrejaRef = db.collection('igrejas').doc(entrada.igrejaId);
   const auditoriaRef = db.collection('auditOutbox').doc(contexto.commandId);
+  const filaRef = db.collection('filaPendencias').doc(contexto.uid);
 
   return await db.runTransaction(async (tx) => {
     // 1. Idempotência por recibo em `commands`
@@ -136,6 +137,7 @@ export async function salvarMinhaFichaRepo(
     // 3. Verificação de versão e estado da ficha
     const fichaSnap = await tx.get(fichaRef);
     const dadosAtuais = fichaSnap.exists ? (fichaSnap.data() ?? {}) : null;
+    const filaSnap = await tx.get(filaRef);
 
     if (dadosAtuais) {
       const versaoAtual = Number(dadosAtuais.versao ?? 1);
@@ -180,6 +182,17 @@ export async function salvarMinhaFichaRepo(
       tx.set(fichaRef, novosDadosFicha);
     } else {
       tx.set(fichaRef, novosDadosFicha, { merge: true });
+    }
+
+    if (filaSnap.exists) {
+      tx.set(
+        filaRef,
+        {
+          igrejaId: entrada.igrejaId,
+          atualizadoEm: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
     }
 
     // Grava recibo do comando

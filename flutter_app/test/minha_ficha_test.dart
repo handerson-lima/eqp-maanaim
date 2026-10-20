@@ -1,6 +1,7 @@
 import 'package:eqp_maanaim/features/admin/catalogo_service.dart';
 import 'package:eqp_maanaim/features/voluntario/ficha_service.dart';
 import 'package:eqp_maanaim/features/voluntario/minha_ficha_screen.dart';
+import 'package:eqp_maanaim/ui/components/buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -321,4 +322,132 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+      'permite alterar e salvar a igreja local mesmo quando a ficha está em avaliação',
+      (tester) async {
+    final fichaFake = FichaFake(
+      fichaInicial: const FichaModel(
+        id: 'ficha-01',
+        nomeCompleto: 'Gabriel Silva',
+        profissao: 'Engenheiro',
+        cpf: '529.982.247-25',
+        igrejaId: 'ig-central',
+        estado: 'AGUARDANDO_PASTOR_LOCAL',
+        versao: 1,
+      ),
+    );
+    final catalogoFake = CatalogoFake(
+      resposta: CatalogoResposta(
+        igrejas: [
+          ...igrejasPadrao,
+          const IgrejaCatalogo(
+            id: 'ig-bairro',
+            nome: 'Igreja do Bairro',
+            codigo: '002',
+            ativo: true,
+          ),
+        ],
+        equipes: const [],
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1200, 1000));
+    await tester.pumpWidget(criarApp(fichaFake, catalogoFake));
+    await tester.pumpAndSettle();
+
+    // Campos de nome, profissão e CPF devem estar em modo somente leitura
+    final campoNome = tester.widget<TextField>(
+      find.descendant(
+        of: find.byKey(const Key('campo_nome_completo')),
+        matching: find.byType(TextField),
+      ),
+    );
+    expect(campoNome.readOnly, isTrue);
+
+    // Dropdown de igreja está habilitado
+    final campoIgreja = find.byKey(const Key('campo_igreja'));
+    expect(campoIgreja, findsOneWidget);
+
+    // Botão de salvar inicialmente desabilitado enquanto não alterar a igreja
+    final botaoSalvar = tester.widget<PrimaryButton>(
+      find.byKey(const Key('botao_salvar_ficha')),
+    );
+    expect(botaoSalvar.onPressed, isNull);
+
+    // Altera a igreja local
+    await tester.ensureVisible(campoIgreja);
+    await tester.tap(campoIgreja);
+    await tester.pumpAndSettle();
+    final opcaoIgreja = find.text('Igreja do Bairro - 002').last;
+    await tester.ensureVisible(opcaoIgreja);
+    await tester.tap(opcaoIgreja);
+    await tester.pumpAndSettle();
+
+    // Agora o botão de salvar está habilitado
+    final botaoSalvarHabilitado = tester.widget<PrimaryButton>(
+      find.byKey(const Key('botao_salvar_ficha')),
+    );
+    expect(botaoSalvarHabilitado.onPressed, isNotNull);
+
+    // Clica em salvar
+    final btnSalvar = find.byKey(const Key('botao_salvar_ficha'));
+    await tester.ensureVisible(btnSalvar);
+    await tester.tap(btnSalvar);
+    await tester.pumpAndSettle();
+
+    // Verifica que salvou com a nova igreja mantendo os demais dados
+    expect(fichaFake.chamadasSalvar, 1);
+    expect(fichaFake.ultimaEntrada?.igrejaId, 'ig-bairro');
+    expect(fichaFake.ultimaEntrada?.nomeCompleto, 'Gabriel Silva');
+    expect(find.text('Ficha salva com sucesso.'), findsWidgets);
+  });
+
+  testWidgets('organiza igrejas em ordem alfabética no dropdown de seleção',
+      (tester) async {
+    final igrejasDesordenadas = [
+      const IgrejaCatalogo(
+        id: 'ig-z',
+        nome: 'Zumbi',
+        codigo: '003',
+        ativo: true,
+      ),
+      const IgrejaCatalogo(
+        id: 'ig-a',
+        nome: 'Alecrim',
+        codigo: '001',
+        ativo: true,
+      ),
+      const IgrejaCatalogo(
+        id: 'ig-m',
+        nome: 'Mirassol',
+        codigo: '002',
+        ativo: true,
+      ),
+    ];
+    final fichaFake = FichaFake();
+    final catalogoFake = CatalogoFake(
+      resposta: CatalogoResposta(
+        igrejas: igrejasDesordenadas,
+        equipes: const [],
+      ),
+    );
+
+    await tester.pumpWidget(criarApp(fichaFake, catalogoFake));
+    await tester.pumpAndSettle();
+
+    final campoIgreja = find.byKey(const Key('campo_igreja'));
+    await tester.ensureVisible(campoIgreja);
+    await tester.tap(campoIgreja);
+    await tester.pumpAndSettle();
+
+    final itens = tester
+        .widgetList<DropdownMenuItem<String>>(
+          find.byType(DropdownMenuItem<String>),
+        )
+        .toList();
+
+    expect(itens.map((i) => i.value).toList(), ['ig-a', 'ig-m', 'ig-z']);
+  });
 }
+
