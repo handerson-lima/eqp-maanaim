@@ -580,5 +580,68 @@ void main() {
       // A participação ativa em Louvor permanece intacta!
       expect(participacaoGateway.participacoes.any((p) => p.equipeId == 'eq-louvor' && p.isAtiva), isTrue);
     });
+
+    testWidgets('8. Voluntário com ficha ATIVA detecta modo adicional automaticamente',
+        (tester) async {
+      final fichaAtiva = const FichaModel(
+        id: 'ficha-ativa-01',
+        nomeCompleto: 'Handerson Silvestre',
+        profissao: 'Engenheiro',
+        cpf: '12345678900',
+        igrejaId: 'ig-central',
+        estado: 'ATIVA',
+        versao: 2,
+      );
+      final fichaGw = FichaFakeGateway(ficha: fichaAtiva);
+
+      final participacaoAtiva = const ParticipacaoModel(
+        id: 'part-ativa-01',
+        fichaId: 'ficha-ativa-01',
+        equipeId: 'eq-louvor',
+        nomeEquipe: 'Louvor e Adoração',
+        estado: 'ATIVA',
+        ciclo: 'INICIAL',
+        proximaAcao: 'Voluntariado ativo',
+      );
+      final partGw = ParticipacaoFakeGateway(participacoes: [participacaoAtiva]);
+
+      await tester.binding.setSurfaceSize(const Size(1200, 1000));
+      await tester.pumpWidget(
+        _construirAppTeste(
+          child: SolicitacaoEquipeScreen(
+            fichaGateway: fichaGw,
+            catalogoGateway: catalogoGateway,
+            participacaoGateway: partGw,
+            termoGateway: termoGateway,
+            // modoAdicional OMITIDO (default false)
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Título deve ser de Solicitar Equipe Adicional
+      expect(find.text('Solicitar Equipe Adicional'), findsOneWidget);
+
+      // Seleciona Mídia
+      await _tocar(tester, find.byKey(const Key('card_equipe_eq-midia')));
+      expect(find.text('1 equipe(s) selecionada(s)'), findsOneWidget);
+
+      // Avança para o Termo
+      await _tocar(tester, find.byKey(const Key('btn_avancar_etapa_solicitacao')));
+      await _tocar(tester, find.byKey(const Key('checkbox_aceite_termo_solicitacao')));
+
+      // Avança para Revisão
+      await _tocar(tester, find.byKey(const Key('btn_avancar_etapa_solicitacao')));
+
+      // Avança para Envio e Submete
+      await _tocar(tester, find.byKey(const Key('btn_avancar_etapa_solicitacao')));
+      await _tocar(tester, find.byKey(const Key('btn_confirmar_envio_solicitacao')));
+
+      // Deve ter chamado solicitarEquipeAdicional e NÃO enviarFichaAprovacao
+      expect(partGw.chamadasSolicitarAdicional, equals(1));
+      expect(partGw.ultimaEquipeAdicional, equals('eq-midia'));
+      expect(fichaGw.chamadasEnvio, equals(0));
+    });
   });
 }
+

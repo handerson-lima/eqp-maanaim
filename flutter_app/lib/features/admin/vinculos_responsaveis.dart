@@ -618,11 +618,26 @@ class _VinculosResponsaveisState extends State<VinculosResponsaveis> {
         _executando = false;
         _futuro = widget.gateway.consultar();
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      final msg = e.toString();
       setState(() {
-        _erroAcao =
-            'Não foi possível concluir a operação. Recarregue e tente novamente.';
+        if (msg.contains('invalid-argument') || msg.contains('PESSOA_INEXISTENTE')) {
+          _erroAcao =
+              'Não foi possível vincular: pessoa não encontrada no cadastro de pessoas.';
+        } else if (msg.contains('permission-denied') || msg.contains('sem autoridade')) {
+          _erroAcao =
+              'Acesso administrativo não autorizado: verifique suas permissões.';
+        } else if (msg.contains('aborted') || msg.contains('concorrência') || msg.contains('CONFLITO')) {
+          _erroAcao =
+              'Conflito de versão: o vínculo foi alterado por outro usuário. Recarregue a página.';
+        } else if (msg.contains('failed-precondition')) {
+          _erroAcao =
+              'Operação inválida para o estado atual da entidade ou data informada.';
+        } else {
+          _erroAcao =
+              'Não foi possível concluir a operação. Recarregue e tente novamente.';
+        }
         _aviso = null;
         _executando = false;
       });

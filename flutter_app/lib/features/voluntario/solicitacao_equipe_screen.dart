@@ -80,6 +80,11 @@ class _SolicitacaoEquipeScreenState extends State<SolicitacaoEquipeScreen> {
   bool _envioConcluidoComSucesso = false;
   String? _protocoloOuRecibo;
 
+  bool get _isModoAdicional =>
+      widget.modoAdicional ||
+      (_ficha != null && _ficha!.isAtiva) ||
+      _participacoes.any((p) => p.isAtiva || p.isPendente);
+
   @override
   void initState() {
     super.initState();
@@ -125,7 +130,7 @@ class _SolicitacaoEquipeScreenState extends State<SolicitacaoEquipeScreen> {
       }
 
       // Pré-seleciona equipes que já estavam em rascunho (se não for modo estritamente adicional)
-      if (!widget.modoAdicional) {
+      if (!_isModoAdicional) {
         final rascunhos = _participacoes
             .where((p) => p.isRascunho)
             .map((p) => p.equipeId)
@@ -196,9 +201,10 @@ class _SolicitacaoEquipeScreenState extends State<SolicitacaoEquipeScreen> {
       }
 
       // Sincroniza rascunho com o backend se disponível e não for modo estritamente adicional
-      if (widget.participacaoGateway != null && !widget.modoAdicional) {
+      if (widget.participacaoGateway != null && !_isModoAdicional) {
         widget.participacaoGateway!.salvarParticipacoesRascunho(
           _equipesSelecionadasIds.toList(),
+          commandId: comandoOpaco(),
         ).catchError((_) => <ParticipacaoModel>[]);
       }
     } else if (_etapaAtual == 1) {
@@ -239,12 +245,10 @@ class _SolicitacaoEquipeScreenState extends State<SolicitacaoEquipeScreen> {
     });
 
     try {
-      final commandId = comandoOpaco();
-
       // 1. Se aceitou termo nesta sessão e o gateway está presente, registra o aceite no servidor
       if (_termoAceitoNestaSessao && widget.termoGateway != null && _termoVigente != null) {
         await widget.termoGateway!.aceitarTermoVigente(
-          commandId: commandId,
+          commandId: comandoOpaco(),
           versaoId: _termoVigente!.id,
           hashSha256: _termoVigente!.hashSha256,
           declaracaoLidoEConcordo: true,
@@ -252,14 +256,15 @@ class _SolicitacaoEquipeScreenState extends State<SolicitacaoEquipeScreen> {
       }
 
       // 2. Processa o envio conforme o modo (adicional ou inicial)
-      if (widget.modoAdicional) {
+      if (_isModoAdicional) {
         // Modo Adicional: solicita cada equipe selecionada individualmente (AD-5, AD-11)
         if (widget.participacaoGateway != null) {
           for (final equipeId in _equipesSelecionadasIds) {
-            await widget.participacaoGateway!.solicitarEquipeAdicional(
+            final part = await widget.participacaoGateway!.solicitarEquipeAdicional(
               equipeId,
               commandId: comandoOpaco(),
             );
+            _protocoloOuRecibo = 'Protocolo #${part.cicloAtualId ?? part.id}';
           }
         }
       } else {
@@ -267,13 +272,13 @@ class _SolicitacaoEquipeScreenState extends State<SolicitacaoEquipeScreen> {
         if (widget.participacaoGateway != null) {
           await widget.participacaoGateway!.salvarParticipacoesRascunho(
             _equipesSelecionadasIds.toList(),
-            commandId: commandId,
+            commandId: comandoOpaco(),
           );
         }
 
         if (widget.fichaGateway != null) {
           final resp = await widget.fichaGateway!.enviarFichaAprovacao(
-            commandId: commandId,
+            commandId: comandoOpaco(),
             expectedVersion: _ficha?.versao,
           );
           _protocoloOuRecibo = 'Protocolo #${resp.versao}';
@@ -382,10 +387,10 @@ class _SolicitacaoEquipeScreenState extends State<SolicitacaoEquipeScreen> {
             children: [
               // Cabeçalho institucional
               PageHeader(
-                title: widget.modoAdicional
+                title: _isModoAdicional
                     ? 'Solicitar Equipe Adicional'
                     : 'Nova Solicitação de Equipe',
-                subtitle: widget.modoAdicional
+                subtitle: _isModoAdicional
                     ? 'Amplie sua atuação no voluntariado sem interromper suas participações ativas.'
                     : 'Preencha as etapas guiadas para solicitar suas equipes no Maanaim.',
               ),
@@ -583,10 +588,14 @@ class _SolicitacaoEquipeScreenState extends State<SolicitacaoEquipeScreen> {
             ? null
             : () {
                 setState(() {
-                  if (widget.modoAdicional) {
-                    // No modo adicional unitário, seleciona apenas uma equipe
-                    _equipesSelecionadasIds.clear();
-                    _equipesSelecionadasIds.add(equipe.id);
+                  if (_isModoAdicional) {
+                    // No modo adicional unitário, seleciona apenas uma equipe por vez
+                    if (selecionada) {
+                      _equipesSelecionadasIds.remove(equipe.id);
+                    } else {
+                      _equipesSelecionadasIds.clear();
+                      _equipesSelecionadasIds.add(equipe.id);
+                    }
                   } else {
                     if (selecionada) {
                       _equipesSelecionadasIds.remove(equipe.id);
