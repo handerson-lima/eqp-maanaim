@@ -45,11 +45,20 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
   String _abaAtiva = 'PENDENTES'; // 'PENDENTES' ou 'REJEITADAS'
   int? _metricasAtivos;
   int? _metricasProximosVencimento;
+  final ScrollController _scrollControllerTabelaPendencias = ScrollController();
+  final ScrollController _scrollControllerTabelaRejeitadas = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _carregarFila();
+  }
+
+  @override
+  void dispose() {
+    _scrollControllerTabelaPendencias.dispose();
+    _scrollControllerTabelaRejeitadas.dispose();
+    super.dispose();
   }
 
   Future<void> _carregarFila() async {
@@ -966,135 +975,153 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
   Widget _buildTabelaDesktop() {
     return SectionCard(
       padding: EdgeInsets.zero,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 960),
-          child: DataTable(
-            headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-            dataRowMinHeight: 64,
-            dataRowMaxHeight: 80,
-            columns: const [
-              DataColumn(label: Text('Voluntário', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Igreja', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Enviado em', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Status / Tipo', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
-            ],
-            rows: _pendenciasFiltradas.map((item) {
-              final processando = _processandoFichaId == item.fichaId;
-              return DataRow(
-                key: ValueKey('rowFicha_${item.fichaId}'),
-                cells: [
-                  DataCell(
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          item.voluntarioNome,
-                          style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Scrollbar(
+            controller: _scrollControllerTabelaPendencias,
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              controller: _scrollControllerTabelaPendencias,
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: DataTable(
+                  columnSpacing: AppSpacing.s16,
+                  horizontalMargin: AppSpacing.s16,
+                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                  dataRowMinHeight: 64,
+                  dataRowMaxHeight: 80,
+                  columns: const [
+                    DataColumn(label: Text('Voluntário', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Igreja', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Enviado em', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Status / Tipo', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
+                  ],
+                  rows: _pendenciasFiltradas.map((item) {
+                    final processando = _processandoFichaId == item.fichaId;
+                    return DataRow(
+                      key: ValueKey('rowFicha_${item.fichaId}'),
+                      cells: [
+                        DataCell(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                item.voluntarioNome,
+                                style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              if (item.ano > 0)
+                                Text('Ciclo ${item.ano}', style: AppTypography.caption),
+                            ],
+                          ),
                         ),
-                        if (item.ano > 0)
-                          Text('Ciclo ${item.ano}', style: AppTypography.caption),
-                      ],
-                    ),
-                  ),
-                  DataCell(
-                    Text(item.nomeIgreja ?? 'Igreja', style: AppTypography.body),
-                  ),
-                  DataCell(
-                    Wrap(
-                      spacing: 4,
-                      children: item.equipes.map((e) {
-                        return Chip(
-                          label: Text(e.nomeEquipe, style: const TextStyle(fontSize: 12)),
-                          padding: EdgeInsets.zero,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  DataCell(
-                    Text(_formatarData(item.enviadoEm), style: AppTypography.body),
-                  ),
-                  DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (item.isRenovacaoAnual) ...[
-                          Container(
-                            key: Key('badgeRenovacaoAnual_${item.fichaId}'),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.blue50,
-                              border: Border.all(color: AppColors.blue600),
-                              borderRadius: BorderRadius.circular(4),
+                        DataCell(
+                          Text(item.nomeIgreja ?? 'Igreja', style: AppTypography.body),
+                        ),
+                        DataCell(
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 220),
+                            child: Wrap(
+                              spacing: 4,
+                              runSpacing: 4,
+                              children: item.equipes.map((e) {
+                                return Chip(
+                                  label: Text(e.nomeEquipe, style: const TextStyle(fontSize: 12)),
+                                  padding: EdgeInsets.zero,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                );
+                              }).toList(),
                             ),
-                            child: const Text('Renovação', style: TextStyle(color: AppColors.blue600, fontSize: 11)),
                           ),
-                          const SizedBox(width: 6),
-                        ],
-                        const StatusChip(
-                          status: 'AGUARDANDO',
-                          label: 'AGUARDANDO AVALIAÇÃO',
+                        ),
+                        DataCell(
+                          Text(_formatarData(item.enviadoEm), style: AppTypography.body),
+                        ),
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (item.isRenovacaoAnual) ...[
+                                Container(
+                                  key: Key('badgeRenovacaoAnual_${item.fichaId}'),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.blue50,
+                                    border: Border.all(color: AppColors.blue600),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text('Renovação', style: TextStyle(color: AppColors.blue600, fontSize: 11)),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              const StatusChip(
+                                status: 'AGUARDANDO',
+                                label: 'AGUARDANDO AVALIAÇÃO',
+                              ),
+                            ],
+                          ),
+                        ),
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ElevatedButton.icon(
+                                key: Key('btnAnalisar_${item.fichaId}'),
+                                onPressed: processando ? null : () => _abrirDetalheSolicitacao(item),
+                                icon: const Icon(Icons.assignment_outlined, size: 16),
+                                label: const Text('Analisar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.blue600,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  minimumSize: const Size(0, AppGeometry.minTouchTarget),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              OutlinedButton(
+                                key: Key('btnRecusar_${item.fichaId}'),
+                                onPressed: processando ? null : () => _abrirModalRecusa(item),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.danger,
+                                  side: const BorderSide(color: AppColors.danger),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  minimumSize: const Size(0, AppGeometry.minTouchTarget),
+                                ),
+                                child: const Text('Recusar'),
+                              ),
+                              const SizedBox(width: 6),
+                              ElevatedButton.icon(
+                                key: Key('btnAprovar_${item.fichaId}'),
+                                onPressed: processando ? null : () => _abrirModalAprovacao(item),
+                                icon: processando
+                                    ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : const Icon(Icons.check, size: 16),
+                                label: const Text('Aprovar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.success,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  minimumSize: const Size(0, AppGeometry.minTouchTarget),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
-                  ),
-                  DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ElevatedButton.icon(
-                          key: Key('btnAnalisar_${item.fichaId}'),
-                          onPressed: processando ? null : () => _abrirDetalheSolicitacao(item),
-                          icon: const Icon(Icons.assignment_outlined, size: 16),
-                          label: const Text('Analisar'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.blue600,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(100, AppGeometry.minTouchTarget),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        OutlinedButton(
-                          key: Key('btnRecusar_${item.fichaId}'),
-                          onPressed: processando ? null : () => _abrirModalRecusa(item),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.danger,
-                            side: const BorderSide(color: AppColors.danger),
-                            minimumSize: const Size(90, AppGeometry.minTouchTarget),
-                          ),
-                          child: const Text('Recusar'),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          key: Key('btnAprovar_${item.fichaId}'),
-                          onPressed: processando ? null : () => _abrirModalAprovacao(item),
-                          icon: processando
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.check, size: 16),
-                          label: const Text('Aprovar'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.success,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(100, AppGeometry.minTouchTarget),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1271,22 +1298,30 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
   Widget _buildTabelaRejeitadasDesktop() {
     return SectionCard(
       padding: EdgeInsets.zero,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 960),
-          child: DataTable(
-            headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-            dataRowMinHeight: 64,
-            dataRowMaxHeight: 96,
-            columns: const [
-              DataColumn(label: Text('Voluntário', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Igreja', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Decidido em', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Justificativa Pastoral Interna', style: TextStyle(fontWeight: FontWeight.bold))),
-            ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Scrollbar(
+            controller: _scrollControllerTabelaRejeitadas,
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              controller: _scrollControllerTabelaRejeitadas,
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: DataTable(
+                  columnSpacing: AppSpacing.s16,
+                  horizontalMargin: AppSpacing.s16,
+                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                  dataRowMinHeight: 64,
+                  dataRowMaxHeight: 96,
+                  columns: const [
+                    DataColumn(label: Text('Voluntário', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Igreja', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Equipes', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Decidido em', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Justificativa Pastoral Interna', style: TextStyle(fontWeight: FontWeight.bold))),
+                  ],
             rows: _rejeitadasNoEscopoIgreja.map((item) {
               return DataRow(
                 key: ValueKey('rowFichaRejeitada_${item.fichaId}'),
@@ -1353,8 +1388,11 @@ class _FilaPastorScreenState extends State<FilaPastorScreen> {
                 ],
               );
             }).toList(),
-          ),
-        ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
