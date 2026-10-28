@@ -82,7 +82,8 @@ class _FilaResponsavelEquipeScreenState
           _equipeFiltroId = null;
         }
       });
-    } catch (e) {
+    } catch (e, s) {
+      debugPrint('ERRO CARREGAR FILA EQUIPE: $e\n$s');
       if (!mounted) return;
       setState(() {
         _erro = 'Não foi possível carregar a fila de equipe. Tente novamente.';

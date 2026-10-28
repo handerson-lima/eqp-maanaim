@@ -17,6 +17,14 @@
       ]
     },
     {
+      "collectionGroup": "participacoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "equipeId", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "fichas",
       "queryScope": "COLLECTION",
       "fields": [

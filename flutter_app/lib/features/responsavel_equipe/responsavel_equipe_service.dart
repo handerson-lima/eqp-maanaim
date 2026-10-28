@@ -200,8 +200,8 @@ class FirebaseResponsavelEquipeGateway implements ResponsavelEquipeGateway {
   @override
   Future<ResultadoFilaResponsavelEquipe> obterFila() async {
     final callable = _functions.httpsCallable('obterFilaResponsavelEquipe');
-    final response = await callable.call<Map<String, dynamic>>();
-    final data = response.data;
+    final response = await callable.call();
+    final data = (response.data as Map).cast<String, dynamic>();
 
     final pendenciasRaw = data['pendencias'] as List<dynamic>? ?? [];
     final equipesRaw = data['equipes'] as List<dynamic>? ?? [];
@@ -228,9 +228,9 @@ class FirebaseResponsavelEquipeGateway implements ResponsavelEquipeGateway {
   ) async {
     final callable =
         _functions.httpsCallable('decidirParticipacaoResponsavelEquipe');
-    final response =
-        await callable.call<Map<String, dynamic>>(entrada.toMap());
-    return ResultadoDecisaoResponsavelEquipe.fromMap(response.data);
+    final response = await callable.call(entrada.toMap());
+    final data = (response.data as Map).cast<String, dynamic>();
+    return ResultadoDecisaoResponsavelEquipe.fromMap(data);
   }
 
   @override
@@ -239,9 +239,9 @@ class FirebaseResponsavelEquipeGateway implements ResponsavelEquipeGateway {
   ) async {
     final callable =
         _functions.httpsCallable('decidirCicloAnualResponsavel');
-    final response =
-        await callable.call<Map<String, dynamic>>(entrada.toMap());
-    return ResultadoDecisaoResponsavelEquipe.fromMap(response.data);
+    final response = await callable.call(entrada.toMap());
+    final data = (response.data as Map).cast<String, dynamic>();
+    return ResultadoDecisaoResponsavelEquipe.fromMap(data);
   }
 }
 
