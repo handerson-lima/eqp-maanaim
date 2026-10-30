@@ -80,7 +80,7 @@ Future<void> main() async {
       ),
     );
     await FirebaseAppCheck.instance.activate(
-      webProvider: ReCaptchaV3Provider(appCheckSiteKey),
+      webProvider: ReCaptchaEnterpriseProvider(appCheckSiteKey),
     );
     const usarEmuladores = bool.fromEnvironment('FIREBASE_USE_EMULATORS');
     if (usarEmuladores) {
