@@ -1,3 +1,4 @@
+import { getAuth } from 'firebase-admin/auth';
 import { type Firestore } from 'firebase-admin/firestore';
 import {
   PAPEL_COORDENADOR,
@@ -158,10 +159,27 @@ export async function obterDetalheSolicitacaoRepo(
     })
     .sort((a, b) => a.nomeEquipe.localeCompare(b.nomeEquipe));
 
+  let fotoUrl: string | null =
+    typeof ficha.fotoUrl === 'string' && ficha.fotoUrl.trim()
+      ? ficha.fotoUrl.trim()
+      : null;
+
+  if (!fotoUrl && voluntarioUid) {
+    try {
+      const userAuth = await getAuth().getUser(voluntarioUid);
+      if (userAuth?.photoURL) {
+        fotoUrl = userAuth.photoURL;
+      }
+    } catch (_) {
+      // Ignora erro se usuário não for encontrado no Auth
+    }
+  }
+
   return {
     fichaId,
     voluntarioUid,
     voluntarioNome: String(ficha.nomeCompleto ?? ''),
+    fotoUrl,
     igrejaId,
     estadoFicha: String(ficha.estado ?? 'RASCUNHO'),
     versao: Number(ficha.versao ?? 1),

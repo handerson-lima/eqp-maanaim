@@ -38,6 +38,7 @@ export interface DetalheSolicitacao {
   fichaId: string;
   voluntarioUid: string;
   voluntarioNome: string;
+  fotoUrl?: string | null;
   igrejaId: string;
   estadoFicha: string;
   versao: number;

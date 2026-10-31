@@ -74,11 +74,13 @@ DetalheSolicitacaoDados _criarDadosExemplo({
   bool multiEquipe = true,
   String estadoFicha = 'AGUARDANDO_PASTOR_LOCAL',
   List<DocumentoEvidenciaModel>? documentos,
+  String? fotoUrl,
 }) {
   return DetalheSolicitacaoDados(
     fichaId: 'ficha-123',
     voluntarioUid: 'user-456',
     voluntarioNome: 'Carlos Silva',
+    fotoUrl: fotoUrl,
     cpfMascarado: '12345678900',
     profissao: 'Engenheiro Civil',
     igrejaId: 'igreja-1',
@@ -452,6 +454,186 @@ void main() {
       expect(find.byKey(const Key('btnVerFichaPdf')), findsNothing);
       expect(find.byType(TextButton), findsNothing);
     });
+
+    testWidgets('Foto do Voluntário: Exibe fotoUrl em CircleAvatar com fallback para inicial',
+        (tester) async {
+      final gatewayComFoto = MockDetalheSolicitacaoGateway(
+        dados: _criarDadosExemplo(fotoUrl: 'https://exemplo.com/voluntario.png'),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DetalheSolicitacaoScreen(
+            fichaId: 'ficha-123',
+            papel: PapelContextualAnalise.pastorLocal,
+            gateway: gatewayComFoto,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final avatarFinder = find.byKey(const Key('avatarVoluntarioFoto'));
+      expect(avatarFinder, findsOneWidget);
+      final avatarWidget = tester.widget<CircleAvatar>(avatarFinder);
+      expect(avatarWidget.foregroundImage, isNotNull);
+      expect((avatarWidget.foregroundImage as NetworkImage).url, 'https://exemplo.com/voluntario.png');
+    });
+
+    testWidgets(
+        'Deliberação Individual Pastor Local: Permite aprovar uma equipe e rejeitar outra individualmente',
+        (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final gateway = MockDetalheSolicitacaoGateway(dados: _criarDadosExemplo(multiEquipe: true));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DetalheSolicitacaoScreen(
+            fichaId: 'ficha-123',
+            papel: PapelContextualAnalise.pastorLocal,
+            gateway: gateway,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verifica se os botões de deliberação por equipe estão presentes
+      expect(find.byKey(const Key('btnAprovarEquipe_eq-louvor')), findsOneWidget);
+      expect(find.byKey(const Key('btnRejeitarEquipe_eq-louvor')), findsOneWidget);
+      expect(find.byKey(const Key('btnAprovarEquipe_eq-recepcao')), findsOneWidget);
+      expect(find.byKey(const Key('btnRejeitarEquipe_eq-recepcao')), findsOneWidget);
+
+      // Rejeita a equipe de recepção
+      await tester.tap(find.byKey(const Key('btnRejeitarEquipe_eq-recepcao')));
+      await tester.pumpAndSettle();
+
+      // Preenche a observação para justificar
+      await tester.enterText(
+        find.byKey(const Key('inputObservacaoDecisao')),
+        'Recepção no momento não tem vagas suficientes.',
+      );
+      await tester.pumpAndSettle();
+
+      // Clica em Aprovar deliberação pastoral
+      await tester.ensureVisible(find.byKey(const Key('btnAprovarPastorDetalhe')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btnAprovarPastorDetalhe')));
+      await tester.pumpAndSettle();
+
+      // Confirma no modal
+      expect(find.byKey(const Key('btnConfirmarModalAprovacaoPastor')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('btnConfirmarModalAprovacaoPastor')));
+      await tester.pumpAndSettle();
+
+      // Valida que o gateway recebeu a deliberação com equipes individualizadas
+      expect(gateway.ultimaEntradaPastor, isNotNull);
+      expect(gateway.ultimaEntradaPastor!.decisao, 'APROVADO');
+      final decisoes = gateway.ultimaEntradaPastor!.decisoesPorEquipe;
+      expect(decisoes, isNotNull);
+      expect(decisoes!.length, 2);
+
+      final decLouvor = decisoes.firstWhere((d) => d.equipeId == 'eq-louvor');
+      expect(decLouvor.decisao, 'APROVADO');
+
+      final decRecepcao = decisoes.firstWhere((d) => d.equipeId == 'eq-recepcao');
+      expect(decRecepcao.decisao, 'DESFAVORAVEL');
+    });
+
+    testWidgets(
+        'Deliberação Individual Coordenador Geral: Permite aprovar uma equipe e rejeitar outra individualmente',
+        (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final dadosCoord = DetalheSolicitacaoDados(
+        fichaId: 'ficha-123',
+        voluntarioUid: 'user-456',
+        voluntarioNome: 'Carlos Silva',
+        cpfMascarado: '12345678900',
+        profissao: 'Engenheiro Civil',
+        igrejaId: 'igreja-1',
+        nomeIgreja: 'Igreja Central',
+        estadoFicha: 'AGUARDANDO_COORDENADOR',
+        versao: 2,
+        enviadoEm: '2026-10-09T10:00:00Z',
+        participacoes: const [
+          ItemParticipacaoDetalhe(
+            id: 'part-1',
+            equipeId: 'eq-louvor',
+            nomeEquipe: 'Grupo de Louvor',
+            estado: 'AGUARDANDO_COORDENADOR',
+            ciclo: 'INICIAL',
+          ),
+          ItemParticipacaoDetalhe(
+            id: 'part-2',
+            equipeId: 'eq-recepcao',
+            nomeEquipe: 'Equipe de Recepção',
+            estado: 'AGUARDANDO_COORDENADOR',
+            ciclo: 'INICIAL',
+          ),
+        ],
+        documentos: const [],
+      );
+
+      final gateway = MockDetalheSolicitacaoGateway(dados: dadosCoord);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DetalheSolicitacaoScreen(
+            fichaId: 'ficha-123',
+            papel: PapelContextualAnalise.coordenadorGeral,
+            gateway: gateway,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Rejeita a equipe de recepção no seletor
+      await tester.ensureVisible(find.byKey(const Key('btnRejeitarEquipe_eq-recepcao')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btnRejeitarEquipe_eq-recepcao')));
+      await tester.pumpAndSettle();
+
+      // Confirma reunião de pastores
+      await tester.ensureVisible(find.byKey(const Key('checkConfirmacaoReuniaoPastores')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('checkConfirmacaoReuniaoPastores')));
+      await tester.pumpAndSettle();
+
+      // Preenche observação justificativa
+      await tester.enterText(
+        find.byKey(const Key('inputObservacaoDecisao')),
+        'Homologação parcial deliberada na reunião de pastores.',
+      );
+      await tester.pumpAndSettle();
+
+      // Clica em Homologar
+      await tester.ensureVisible(find.byKey(const Key('btnHomologarCoordenadorDetalhe')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btnHomologarCoordenadorDetalhe')));
+      await tester.pumpAndSettle();
+
+      // Confirma no modal
+      expect(find.byKey(const Key('btnConfirmarModalHomologacaoCoord')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('btnConfirmarModalHomologacaoCoord')));
+      await tester.pumpAndSettle();
+
+      // Valida envio das decisões por equipe ao gateway
+      expect(gateway.ultimaEntradaCoordenador, isNotNull);
+      expect(gateway.ultimaEntradaCoordenador!.decisao, 'APROVADO');
+      final decisoes = gateway.ultimaEntradaCoordenador!.decisoesPorEquipe;
+      expect(decisoes, isNotNull);
+      expect(decisoes!.length, 2);
+
+      final decLouvor = decisoes.firstWhere((d) => d.equipeId == 'eq-louvor');
+      expect(decLouvor.decisao, 'APROVADO');
+
+      final decRecepcao = decisoes.firstWhere((d) => d.equipeId == 'eq-recepcao');
+      expect(decRecepcao.decisao, 'DESFAVORAVEL');
+    });
   });
 
   group('Story 8.7 — Integração das Filas com Ação Analisar', () {
@@ -788,6 +970,7 @@ class MockCoordenadorGatewaySimples implements CoordenadorGateway {
     required String decisao,
     required bool confirmouReuniaoPastores,
     String? observacao,
+    List<Map<String, dynamic>>? decisoesPorEquipe,
     required int expectedVersion,
   }) async {
     return const ResultadoDecisaoCoordenador(

@@ -186,6 +186,7 @@ abstract interface class CoordenadorGateway {
     required String decisao,
     required bool confirmouReuniaoPastores,
     String? observacao,
+    List<Map<String, dynamic>>? decisoesPorEquipe,
     required int expectedVersion,
   });
 
@@ -226,6 +227,7 @@ class FirebaseCoordenadorGateway implements CoordenadorGateway {
     required String decisao,
     required bool confirmouReuniaoPastores,
     String? observacao,
+    List<Map<String, dynamic>>? decisoesPorEquipe,
     required int expectedVersion,
   }) async {
     final callable = _functions.httpsCallable('decidirAtivacaoCoordenador');
@@ -236,6 +238,7 @@ class FirebaseCoordenadorGateway implements CoordenadorGateway {
       'decisao': decisao,
       'confirmouReuniaoPastores': confirmouReuniaoPastores,
       if (observacao != null) 'observacao': observacao,
+      if (decisoesPorEquipe != null) 'decisoesPorEquipe': decisoesPorEquipe,
       'expectedVersion': expectedVersion,
     });
     final dados = resp.data.cast<String, dynamic>();
@@ -295,6 +298,7 @@ class MemoriaCoordenadorGateway implements CoordenadorGateway {
     required String decisao,
     required bool confirmouReuniaoPastores,
     String? observacao,
+    List<Map<String, dynamic>>? decisoesPorEquipe,
     required int expectedVersion,
   }) async {
     if (erroAoDecidir != null) throw erroAoDecidir!;

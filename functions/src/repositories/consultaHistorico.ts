@@ -1,3 +1,4 @@
+import { getAuth } from 'firebase-admin/auth';
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import {
   AcessoNaoAutorizadoError,
@@ -262,9 +263,26 @@ export async function consultarFichaAutorizadaRepo(
     ? MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA
     : (fichaData.mensagemVoluntario ? String(fichaData.mensagemVoluntario) : null);
 
+  const ownerUid = String(fichaData.ownerUid ?? fichaDoc.id);
+  let fotoUrl: string | null =
+    typeof fichaData.fotoUrl === 'string' && fichaData.fotoUrl.trim()
+      ? fichaData.fotoUrl.trim()
+      : null;
+
+  if (!fotoUrl && ownerUid) {
+    try {
+      const userAuth = await getAuth().getUser(ownerUid);
+      if (userAuth?.photoURL) {
+        fotoUrl = userAuth.photoURL;
+      }
+    } catch (_) {
+      // Ignora erro se usuário não for encontrado no Auth
+    }
+  }
+
   const fichaModel: FichaConsultaAutorizada = {
     id: fichaDoc.id,
-    ownerUid: String(fichaData.ownerUid ?? fichaDoc.id),
+    ownerUid,
     nomeCompleto: String(fichaData.nomeCompleto ?? ''),
     profissao: String(fichaData.profissao ?? ''),
     cpfMascarado,
@@ -277,6 +295,7 @@ export async function consultarFichaAutorizadaRepo(
     versao: Number(fichaData.versao ?? 1),
     proximaAcao: proximaAcaoFicha,
     mensagemVoluntario: mensagemVoluntarioFicha,
+    fotoUrl,
     atualizadoEm: serializarTimestamp(fichaData.atualizadoEm),
     criadoEm: serializarTimestamp(fichaData.criadoEm),
   };

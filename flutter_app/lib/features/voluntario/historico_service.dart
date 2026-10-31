@@ -72,6 +72,7 @@ class FichaConsultaModel {
     required this.versao,
     this.proximaAcao,
     this.mensagemVoluntario,
+    this.fotoUrl,
     this.atualizadoEm,
     this.criadoEm,
   });
@@ -88,6 +89,7 @@ class FichaConsultaModel {
   final int versao;
   final String? proximaAcao;
   final String? mensagemVoluntario;
+  final String? fotoUrl;
   final String? atualizadoEm;
   final String? criadoEm;
 
@@ -108,6 +110,7 @@ class FichaConsultaModel {
       versao: (map['versao'] as num?)?.toInt() ?? 1,
       proximaAcao: map['proximaAcao'] as String?,
       mensagemVoluntario: map['mensagemVoluntario'] as String?,
+      fotoUrl: map['fotoUrl'] as String?,
       atualizadoEm: map['atualizadoEm'] as String?,
       criadoEm: map['criadoEm'] as String?,
     );

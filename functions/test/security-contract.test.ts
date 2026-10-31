@@ -65,7 +65,7 @@ describe('contratos de segurança executáveis', () => {
   it('ativa App Check Web antes de apresentar a interface', () => {
     expect(bootstrapWeb).toContain("FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY");
     expect(bootstrapWeb).toContain('FirebaseAppCheck.instance');
-    expect(bootstrapWeb).toContain('ReCaptchaV3Provider(appCheckSiteKey)');
+    expect(bootstrapWeb).toMatch(/ReCaptcha(Enterprise|V3)Provider\(appCheckSiteKey\)/);
     const chamadaApp = bootstrapWeb.search(/runApp\(\s*MaanaimApp/);
     expect(chamadaApp).toBeGreaterThan(-1);
     expect(bootstrapWeb.indexOf('FirebaseAppCheck.instance')).toBeLessThan(chamadaApp);

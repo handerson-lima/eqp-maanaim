@@ -166,10 +166,14 @@ class CompostoDetalheSolicitacaoGateway implements DetalheSolicitacaoGateway {
       ),
     ];
 
+    final fotoUrl = detalheRaw?['fotoUrl'] as String? ??
+        fichaConsulta?.fotoUrl;
+
     return DetalheSolicitacaoDados(
       fichaId: fichaId,
       voluntarioUid: voluntarioUid,
       voluntarioNome: voluntarioNome,
+      fotoUrl: fotoUrl,
       cpfMascarado: fichaConsulta?.cpfMascarado,
       profissao: fichaConsulta?.profissao,
       igrejaId: igrejaId,
@@ -265,6 +269,7 @@ class CompostoDetalheSolicitacaoGateway implements DetalheSolicitacaoGateway {
           decisao: entrada.decisao,
           confirmouReuniaoPastores: entrada.confirmacaoReuniaoPastores,
           observacao: entrada.observacao ?? entrada.justificativa,
+          decisoesPorEquipe: entrada.decisoesPorEquipe?.map((d) => d.toMap()).toList(),
           expectedVersion: entrada.expectedVersion,
         );
       }

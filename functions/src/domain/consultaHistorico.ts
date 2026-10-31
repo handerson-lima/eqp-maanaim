@@ -60,6 +60,7 @@ export interface FichaConsultaAutorizada {
   versao: number;
   proximaAcao: string | null;
   mensagemVoluntario: string | null;
+  fotoUrl?: string | null;
   atualizadoEm: string | null;
   criadoEm: string | null;
 }

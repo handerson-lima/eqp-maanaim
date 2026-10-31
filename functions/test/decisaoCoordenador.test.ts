@@ -789,6 +789,76 @@ describe('Story 3.3: Repositório e Transações de Ativação do Coordenador', 
       ),
     ).rejects.toThrow(SemAutoridadeCoordenadorError);
   });
+
+  it('decidirAtivacaoCoordenadorRepo permite aprovar e rejeitar equipes individualmente', async () => {
+    const db = criarMockDb({
+      autoridades: {
+        [coordUid]: { ativa: true, papeis: ['COORDENADOR'] },
+      },
+      fichas: {
+        [fichaId]: {
+          ownerUid: 'vol-coord-01',
+          estado: 'AGUARDANDO_COORDENADOR',
+          versao: 1,
+        },
+      },
+      participacoes: [
+        {
+          id: 'part-cantina',
+          fichaId,
+          equipeId: 'eq-cantina',
+          estado: 'AGUARDANDO_COORDENADOR',
+          data: { versao: 1, nomeEquipe: 'Cantina' },
+        },
+        {
+          id: 'part-secretaria',
+          fichaId,
+          equipeId: 'eq-secretaria',
+          estado: 'AGUARDANDO_COORDENADOR',
+          data: { versao: 1, nomeEquipe: 'Secretaria' },
+        },
+      ],
+    });
+
+    const entrada = validarDecidirAtivacaoCoordenador({
+      commandId: 'cmd-coord-indep-12345678',
+      fichaId,
+      decisao: 'APROVADO',
+      confirmouReuniaoPastores: true,
+      decisoesPorEquipe: [
+        {
+          participacaoId: 'part-cantina',
+          decisao: 'APROVADO',
+        },
+        {
+          participacaoId: 'part-secretaria',
+          decisao: 'DESFAVORAVEL',
+          justificativa: 'Equipe de secretaria já preencheu todas as vagas.',
+        },
+      ],
+      expectedVersion: 1,
+    });
+
+    const res = await decidirAtivacaoCoordenadorRepo(
+      db,
+      {
+        commandId: entrada.commandId,
+        coordenadorUid: coordUid,
+      },
+      entrada,
+    );
+
+    expect(res.sucesso).toBe(true);
+    expect(res.participacoesAtivadas).toContain('part-cantina');
+    expect(res.participacoesRejeitadas).toContain('part-secretaria');
+    expect(res.estadoFicha).toBe('ATIVA'); // Ficha ativa porque ao menos 1 equipe foi ativada
+
+    const updateCantina = db._updates.find((u: any) => u.ref.id === 'part-cantina');
+    expect(updateCantina?.data.estado).toBe('ATIVA');
+
+    const updateSecretaria = db._updates.find((u: any) => u.ref.id === 'part-secretaria');
+    expect(updateSecretaria?.data.estado).toBe('REJEITADA');
+  });
 });
 
 describe('Story 3.3: Callables e Proteção de Autenticação', () => {

@@ -104,6 +104,7 @@ class DetalheSolicitacaoDados {
     required this.fichaId,
     required this.voluntarioUid,
     required this.voluntarioNome,
+    this.fotoUrl,
     this.codigoFicha,
     this.idade,
     this.telefone,
@@ -128,6 +129,7 @@ class DetalheSolicitacaoDados {
   final String fichaId;
   final String voluntarioUid;
   final String voluntarioNome;
+  final String? fotoUrl;
   final String? codigoFicha;
   final int? idade;
   final String? telefone;
@@ -183,6 +185,7 @@ class DetalheSolicitacaoDados {
       fichaId: map['fichaId'] as String? ?? '',
       voluntarioUid: map['voluntarioUid'] as String? ?? '',
       voluntarioNome: map['voluntarioNome'] as String? ?? '',
+      fotoUrl: map['fotoUrl'] as String?,
       codigoFicha: map['codigoFicha'] as String?,
       idade: (map['idade'] as num?)?.toInt(),
       telefone: map['telefone'] as String?,
@@ -218,6 +221,28 @@ class DetalheSolicitacaoDados {
   }
 }
 
+/// Item de decisão individual por equipe do Coordenador Geral.
+class DecisaoItemEquipeCoordenador {
+  const DecisaoItemEquipeCoordenador({
+    required this.participacaoId,
+    this.equipeId,
+    required this.decisao,
+    this.justificativa,
+  });
+
+  final String participacaoId;
+  final String? equipeId;
+  final String decisao; // 'APROVADO' ou 'DESFAVORAVEL'
+  final String? justificativa;
+
+  Map<String, dynamic> toMap() => {
+        'participacaoId': participacaoId,
+        if (equipeId != null) 'equipeId': equipeId,
+        'decisao': decisao,
+        if (justificativa != null) 'justificativa': justificativa,
+      };
+}
+
 /// Resultado de uma ação tomada no painel de decisão contextual.
 class ResultadoDecisaoContextual {
   const ResultadoDecisaoContextual({
@@ -245,6 +270,7 @@ class EntradaDecisaoCoordenadorContextual {
     required this.confirmacaoReuniaoPastores,
     this.justificativa,
     this.observacao,
+    this.decisoesPorEquipe,
     required this.expectedVersion,
   });
 
@@ -255,6 +281,7 @@ class EntradaDecisaoCoordenadorContextual {
   final bool confirmacaoReuniaoPastores;
   final String? justificativa;
   final String? observacao;
+  final List<DecisaoItemEquipeCoordenador>? decisoesPorEquipe;
   final int expectedVersion;
 }
 

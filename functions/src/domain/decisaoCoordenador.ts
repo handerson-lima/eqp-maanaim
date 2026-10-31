@@ -75,6 +75,13 @@ export class ComandoDivergenteError extends Error {
   }
 }
 
+export interface DecisaoItemEquipeCoordenador {
+  participacaoId: string;
+  equipeId?: string;
+  decisao: TipoDecisaoCoordenador;
+  justificativa?: string;
+}
+
 export interface EntradaDecidirAtivacaoCoordenador {
   commandId: string;
   correlationId?: string;
@@ -82,6 +89,7 @@ export interface EntradaDecidirAtivacaoCoordenador {
   decisao: TipoDecisaoCoordenador;
   confirmouReuniaoPastores: boolean;
   observacao?: string;
+  decisoesPorEquipe?: DecisaoItemEquipeCoordenador[];
   expectedVersion: number;
   payloadHash: string;
 }
@@ -147,6 +155,7 @@ export function calcularPayloadHashDecisaoCoordenador(dados: {
   decisao: TipoDecisaoCoordenador;
   confirmouReuniaoPastores: boolean;
   observacao?: string;
+  decisoesPorEquipe?: DecisaoItemEquipeCoordenador[];
   expectedVersion: number;
 }): string {
   const payloadNormalizado = JSON.stringify({
@@ -154,6 +163,11 @@ export function calcularPayloadHashDecisaoCoordenador(dados: {
     decisao: dados.decisao,
     confirmouReuniaoPastores: dados.confirmouReuniaoPastores,
     observacao: dados.observacao?.trim() ?? '',
+    decisoesPorEquipe: dados.decisoesPorEquipe?.map((d) => ({
+      participacaoId: d.participacaoId,
+      decisao: d.decisao,
+      justificativa: d.justificativa?.trim() ?? '',
+    })) ?? [],
     expectedVersion: dados.expectedVersion,
   });
   return createHash('sha256').update(payloadNormalizado).digest('hex');
@@ -191,10 +205,43 @@ export function validarDecidirAtivacaoCoordenador(
     throw new DecisaoInvalidaError('fichaId é obrigatório e possui formato inválido.');
   }
 
-  const decisao = normalizarDecisaoCoordenador(p.decisao);
+  let decisao: TipoDecisaoCoordenador = 'APROVADO';
+  if (p.decisao !== undefined && p.decisao !== null) {
+    decisao = normalizarDecisaoCoordenador(p.decisao);
+  }
+
+  let decisoesPorEquipe: DecisaoItemEquipeCoordenador[] | undefined;
+  if (Array.isArray(p.decisoesPorEquipe) && p.decisoesPorEquipe.length > 0) {
+    decisoesPorEquipe = p.decisoesPorEquipe.map((item: any) => {
+      if (!item || typeof item !== 'object') {
+        throw new DecisaoInvalidaError('Item de decisão por equipe inválido.');
+      }
+      const partId = String(item.participacaoId ?? '').trim();
+      if (!partId) {
+        throw new DecisaoInvalidaError('participacaoId é obrigatório na decisão por equipe.');
+      }
+      const itemDecisao = normalizarDecisaoCoordenador(item.decisao);
+      let itemJustificativa =
+        item.justificativa !== undefined && item.justificativa !== null
+          ? String(item.justificativa).trim()
+          : undefined;
+
+      return {
+        participacaoId: partId,
+        equipeId: item.equipeId ? String(item.equipeId).trim() : undefined,
+        decisao: itemDecisao,
+        justificativa: itemJustificativa,
+      };
+    });
+  }
+
   const confirmouReuniaoPastores = p.confirmouReuniaoPastores === true;
 
-  if (decisao === 'APROVADO' && !confirmouReuniaoPastores) {
+  const temAprovada = decisoesPorEquipe
+    ? decisoesPorEquipe.some((d) => d.decisao === 'APROVADO')
+    : decisao === 'APROVADO';
+
+  if (temAprovada && !confirmouReuniaoPastores) {
     throw new ReuniaoPastoresNaoConfirmadaError();
   }
 
@@ -209,8 +256,16 @@ export function validarDecidirAtivacaoCoordenador(
     );
   }
 
-  if (decisao === 'DESFAVORAVEL') {
-    if (!observacao || observacao.length < 5) {
+  const todasDesfavoraveis = decisoesPorEquipe
+    ? decisoesPorEquipe.every((d) => d.decisao === 'DESFAVORAVEL')
+    : decisao === 'DESFAVORAVEL';
+
+  if (todasDesfavoraveis) {
+    const algumaJustifValida =
+      (observacao && observacao.length >= 5) ||
+      (decisoesPorEquipe &&
+        decisoesPorEquipe.some((d) => d.justificativa && d.justificativa.length >= 5));
+    if (!algumaJustifValida) {
       throw new JustificativaObrigatoriaError();
     }
   }
@@ -232,6 +287,7 @@ export function validarDecidirAtivacaoCoordenador(
     decisao,
     confirmouReuniaoPastores,
     observacao,
+    decisoesPorEquipe,
     expectedVersion,
   });
 
@@ -242,6 +298,7 @@ export function validarDecidirAtivacaoCoordenador(
     decisao,
     confirmouReuniaoPastores,
     observacao,
+    decisoesPorEquipe,
     expectedVersion,
     payloadHash,
   };

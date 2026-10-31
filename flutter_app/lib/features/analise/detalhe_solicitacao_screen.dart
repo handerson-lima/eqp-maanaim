@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../comando.dart';
 import '../../ui/components/cpf_formatter.dart';
@@ -55,6 +56,10 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
   bool _confirmacaoReuniaoPastores = false;
   final TextEditingController _observacaoController = TextEditingController();
 
+  // Deliberação por equipe individual (Pastor Local e Coordenador Geral)
+  final Map<String, String> _decisoesEquipes = {};
+  final Map<String, TextEditingController> _justificativasEquipes = {};
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +69,9 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
   @override
   void dispose() {
     _observacaoController.dispose();
+    for (final c in _justificativasEquipes.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -90,6 +98,10 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
       if (!mounted) return;
       setState(() {
         _dados = res;
+        for (final p in res.participacoes) {
+          _decisoesEquipes[p.id] ??= 'APROVADO';
+          _justificativasEquipes[p.id] ??= TextEditingController();
+        }
         _carregando = false;
       });
     } catch (e) {
@@ -108,14 +120,55 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
     final dados = _dados;
     if (dados == null || _processandoDecisao) return;
 
+    final aprovadas = dados.participacoes
+        .where((p) => (_decisoesEquipes[p.id] ?? 'APROVADO') == 'APROVADO')
+        .toList();
+    final rejeitadas = dados.participacoes
+        .where((p) => (_decisoesEquipes[p.id] ?? 'APROVADO') == 'DESFAVORAVEL')
+        .toList();
+
+    // Se todas forem rejeitadas pelo seletor, direciona para recusa com justificativa
+    if (aprovadas.isEmpty && rejeitadas.isNotEmpty) {
+      await _executarRecusaPastor();
+      return;
+    }
+
+    // Se houver equipes rejeitadas, valida justificativa
+    if (rejeitadas.isNotEmpty) {
+      final obsGeral = _observacaoController.text.trim();
+      final faltaJustif = rejeitadas.any((p) {
+        final j = _justificativasEquipes[p.id]?.text.trim() ?? '';
+        return j.length < 5 && obsGeral.length < 5;
+      });
+      if (faltaJustif) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Informe a justificativa (mínimo 5 caracteres) para a(s) equipe(s) rejeitada(s).',
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+    }
+
+    final nomesAprovadas = aprovadas.map((p) => p.nomeEquipe).join(', ');
+    final nomesRejeitadas = rejeitadas.map((p) => p.nomeEquipe).join(', ');
+
+    final mensagemDialog = rejeitadas.isEmpty
+        ? 'Deseja aprovar a solicitação de ${dados.voluntarioNome}?\n\n'
+            'Consequência: A solicitação será encaminhada para avaliação dos responsáveis das equipes solicitadas.'
+        : 'Confirma a deliberação pastoral para ${dados.voluntarioNome}?\n\n'
+            '• Equipes a encaminhar: $nomesAprovadas\n'
+            '• Equipes rejeitadas nesta etapa: $nomesRejeitadas\n\n'
+            'Consequência: As equipes aprovadas avançarão para os responsáveis, e as rejeitadas serão encerradas.';
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmar Aprovação Pastoral'),
-        content: Text(
-          'Deseja aprovar a solicitação de ${dados.voluntarioNome}?\n\n'
-          'Consequência: A solicitação será encaminhada para avaliação dos responsáveis das equipes solicitadas.',
-        ),
+        content: Text(mensagemDialog),
         actions: [
           TextButton(
             key: const Key('btnCancelarModalAprovacaoPastor'),
@@ -124,7 +177,9 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
           ),
           ElevatedButton(
             key: const Key('btnConfirmarModalAprovacaoPastor'),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: rejeitadas.isEmpty ? AppColors.success : AppColors.blue600,
+            ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('Confirmar Aprovação'),
           ),
@@ -137,11 +192,26 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
     setState(() => _processandoDecisao = true);
 
     try {
+      final obsGeral = _observacaoController.text.trim();
+      final decisoes = dados.participacoes.map((p) {
+        final dec = _decisoesEquipes[p.id] ?? 'APROVADO';
+        final j = _justificativasEquipes[p.id]?.text.trim();
+        final justifEfetiva = (j != null && j.isNotEmpty) ? j : (obsGeral.isNotEmpty ? obsGeral : null);
+        return DecisaoItemEquipePastor(
+          participacaoId: p.id,
+          equipeId: p.equipeId,
+          decisao: dec,
+          justificativa: dec == 'DESFAVORAVEL' ? justifEfetiva : null,
+        );
+      }).toList();
+
       final entrada = EntradaDecisaoPastor(
         commandId: comandoOpaco(),
         fichaId: dados.fichaId,
         cicloId: dados.cicloId,
         decisao: 'APROVADO',
+        justificativa: obsGeral.isNotEmpty ? obsGeral : null,
+        decisoesPorEquipe: decisoes,
         expectedVersion: dados.versao,
       );
 
@@ -152,7 +222,9 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
 
       if (!mounted) return;
       _notificarSucesso(
-        'Solicitação aprovada com sucesso!',
+        rejeitadas.isEmpty
+            ? 'Solicitação aprovada com sucesso!'
+            : 'Deliberação registrada: ${aprovadas.length} equipe(s) aprovada(s), ${rejeitadas.length} rejeitada(s).',
         'APROVADO',
       );
     } catch (e) {
@@ -308,7 +380,19 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
     final dados = _dados;
     if (dados == null || _processandoDecisao) return;
 
-    if (!_confirmacaoReuniaoPastores) {
+    final candidatas = dados.participacoes
+        .where((p) => p.isPendenteCoordenador || p.estado == 'AGUARDANDO_COORDENADOR')
+        .toList();
+    final elegiveis = candidatas.isNotEmpty ? candidatas : dados.participacoes;
+
+    final aprovadas = elegiveis
+        .where((p) => (_decisoesEquipes[p.id] ?? 'APROVADO') == 'APROVADO')
+        .toList();
+    final rejeitadas = elegiveis
+        .where((p) => (_decisoesEquipes[p.id] ?? 'APROVADO') == 'DESFAVORAVEL')
+        .toList();
+
+    if (aprovadas.isNotEmpty && !_confirmacaoReuniaoPastores) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('É obrigatório confirmar a deliberação na Reunião de Pastores.'),
@@ -318,14 +402,41 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
       return;
     }
 
+    if (rejeitadas.isNotEmpty) {
+      final obsGeral = _observacaoController.text.trim();
+      final faltaJustif = rejeitadas.any((p) {
+        final j = _justificativasEquipes[p.id]?.text.trim() ?? '';
+        return j.length < 5 && obsGeral.length < 5;
+      });
+      if (faltaJustif) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Informe a justificativa (mínimo 5 caracteres) para a(s) equipe(s) rejeitada(s).',
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+    }
+
+    final nomesAprovadas = aprovadas.map((p) => p.nomeEquipe).join(', ');
+    final nomesRejeitadas = rejeitadas.map((p) => p.nomeEquipe).join(', ');
+
+    final mensagemDialog = rejeitadas.isEmpty
+        ? 'Confirma a homologação da solicitação de ${dados.voluntarioNome}?\n\n'
+            'Consequência: A ficha e as participações aprovadas serão ativadas com emissão de documentos.'
+        : 'Confirma a homologação para ${dados.voluntarioNome}?\n\n'
+            '• Equipes a homologar e ativar: $nomesAprovadas\n'
+            '• Equipes rejeitadas: $nomesRejeitadas\n\n'
+            'Consequência: As equipes aprovadas serão ativadas e as rejeitadas serão encerradas.';
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmar Homologação e Ativação'),
-        content: Text(
-          'Confirma a homologação da solicitação de ${dados.voluntarioNome}?\n\n'
-          'Consequência: A ficha e as participações aprovadas serão ativadas com emissão de documentos.',
-        ),
+        content: Text(mensagemDialog),
         actions: [
           TextButton(
             key: const Key('btnCancelarModalHomologacaoCoord'),
@@ -347,12 +458,27 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
     setState(() => _processandoDecisao = true);
 
     try {
+      final obsGeral = _observacaoController.text.trim();
+      final decisoes = elegiveis.map((p) {
+        final dec = _decisoesEquipes[p.id] ?? 'APROVADO';
+        final j = _justificativasEquipes[p.id]?.text.trim();
+        final justifEfetiva = (j != null && j.isNotEmpty) ? j : (obsGeral.isNotEmpty ? obsGeral : null);
+        return DecisaoItemEquipeCoordenador(
+          participacaoId: p.id,
+          equipeId: p.equipeId,
+          decisao: dec,
+          justificativa: dec == 'DESFAVORAVEL' ? justifEfetiva : null,
+        );
+      }).toList();
+
       final entrada = EntradaDecisaoCoordenadorContextual(
         commandId: comandoOpaco(),
         fichaId: dados.fichaId,
         cicloId: dados.cicloId,
-        decisao: 'APROVADO',
-        confirmacaoReuniaoPastores: true,
+        decisao: (aprovadas.isNotEmpty || rejeitadas.isEmpty) ? 'APROVADO' : 'DESFAVORAVEL',
+        confirmacaoReuniaoPastores: _confirmacaoReuniaoPastores,
+        observacao: obsGeral.isNotEmpty ? obsGeral : null,
+        decisoesPorEquipe: decisoes.isNotEmpty ? decisoes : null,
         expectedVersion: dados.versao,
       );
 
@@ -363,7 +489,9 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
 
       if (!mounted) return;
       _notificarSucesso(
-        'Solicitação homologada e ativada com sucesso!',
+        rejeitadas.isEmpty
+            ? 'Solicitação homologada e ativada com sucesso!'
+            : 'Homologação concluída: ${aprovadas.length} ativada(s), ${rejeitadas.length} rejeitada(s).',
         'HOMOLOGADO',
       );
     } catch (e) {
@@ -960,15 +1088,38 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: AppColors.blue600.withValues(alpha: 0.1),
-                child: Text(
-                  dados.voluntarioNome.isNotEmpty
-                      ? dados.voluntarioNome.substring(0, 1).toUpperCase()
-                      : 'V',
-                  style: AppTypography.h2.copyWith(color: AppColors.blue600),
-                ),
+              Builder(
+                builder: (context) {
+                  String? fotoEfetiva;
+                  if (dados.fotoUrl != null && dados.fotoUrl!.trim().isNotEmpty) {
+                    fotoEfetiva = dados.fotoUrl!.trim();
+                  } else {
+                    try {
+                      if (FirebaseAuth.instance.currentUser?.uid == dados.voluntarioUid) {
+                        fotoEfetiva = FirebaseAuth.instance.currentUser?.photoURL;
+                      }
+                    } catch (_) {
+                      // Firebase não inicializado em testes de unidade
+                    }
+                  }
+                  return CircleAvatar(
+                    key: const Key('avatarVoluntarioFoto'),
+                    radius: 28,
+                    backgroundColor: AppColors.blue600.withValues(alpha: 0.1),
+                    foregroundImage: (fotoEfetiva != null && fotoEfetiva.isNotEmpty)
+                        ? NetworkImage(fotoEfetiva)
+                        : null,
+                    onForegroundImageError: (fotoEfetiva != null && fotoEfetiva.isNotEmpty)
+                        ? (exception, stackTrace) {}
+                        : null,
+                    child: Text(
+                      dados.voluntarioNome.isNotEmpty
+                          ? dados.voluntarioNome.substring(0, 1).toUpperCase()
+                          : 'V',
+                      style: AppTypography.h2.copyWith(color: AppColors.blue600),
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: AppSpacing.s16),
               Expanded(
@@ -1130,15 +1281,35 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
 
     final ehAguardando = p.estado.startsWith('AGUARDANDO');
 
+    final podeDeliberarPastor = widget.papel == PapelContextualAnalise.pastorLocal &&
+        (dados.estadoFicha == 'AGUARDANDO_PASTOR_LOCAL' || p.isPendentePastor || ehAguardando);
+    final podeDeliberarCoordenador = widget.papel == PapelContextualAnalise.coordenadorGeral &&
+        (p.isPendenteCoordenador || p.estado == 'AGUARDANDO_COORDENADOR');
+    final podeDeliberarIndividualmente = podeDeliberarPastor || podeDeliberarCoordenador;
+
+    final decisaoAtual = _decisoesEquipes[p.id] ?? 'APROVADO';
+    final isAprovado = decisaoAtual == 'APROVADO';
+    final isRejeitado = decisaoAtual == 'DESFAVORAVEL';
+
     return Container(
       key: Key('cardParticipacao_${p.equipeId}'),
       margin: const EdgeInsets.only(bottom: AppSpacing.s12),
       padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: ehEscopoDoUsuario ? AppColors.blue50.withValues(alpha: 0.3) : AppColors.surface,
+        color: ehEscopoDoUsuario
+            ? AppColors.blue50.withValues(alpha: 0.3)
+            : (podeDeliberarIndividualmente && isRejeitado)
+                ? AppColors.danger.withValues(alpha: 0.04)
+                : AppColors.surface,
         borderRadius: AppGeometry.cardBorderRadius,
         border: Border.all(
-          color: ehEscopoDoUsuario ? AppColors.blue600 : AppColors.border,
+          color: ehEscopoDoUsuario
+              ? AppColors.blue600
+              : (podeDeliberarIndividualmente && isRejeitado)
+                  ? AppColors.danger.withValues(alpha: 0.5)
+                  : (podeDeliberarIndividualmente && isAprovado)
+                      ? AppColors.success.withValues(alpha: 0.4)
+                      : AppColors.border,
           width: ehEscopoDoUsuario ? 1.5 : 1,
         ),
       ),
@@ -1209,6 +1380,132 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
               ],
             ],
           ),
+          if (podeDeliberarIndividualmente) ...[
+            const SizedBox(height: AppSpacing.s12),
+            const Divider(height: 1),
+            const SizedBox(height: AppSpacing.s8),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
+              children: [
+                Text(
+                  widget.papel == PapelContextualAnalise.pastorLocal
+                      ? 'Deliberação para esta equipe:'
+                      : 'Homologação para esta equipe:',
+                  style: AppTypography.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.navy900,
+                  ),
+                ),
+                Wrap(
+                  spacing: AppSpacing.s8,
+                  runSpacing: AppSpacing.s8,
+                  children: [
+                    InkWell(
+                      key: Key('btnAprovarEquipe_${p.equipeId}'),
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: _processandoDecisao
+                          ? null
+                          : () {
+                              setState(() {
+                                _decisoesEquipes[p.id] = 'APROVADO';
+                              });
+                            },
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 36, minWidth: 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isAprovado ? AppColors.success : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isAprovado ? AppColors.success : AppColors.border,
+                            width: isAprovado ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              size: 16,
+                              color: isAprovado ? Colors.white : AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Aprovar',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isAprovado ? Colors.white : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      key: Key('btnRejeitarEquipe_${p.equipeId}'),
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: _processandoDecisao
+                          ? null
+                          : () {
+                              setState(() {
+                                _decisoesEquipes[p.id] = 'DESFAVORAVEL';
+                              });
+                            },
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 36, minWidth: 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isRejeitado ? AppColors.danger : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isRejeitado ? AppColors.danger : AppColors.border,
+                            width: isRejeitado ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.cancel_rounded,
+                              size: 16,
+                              color: isRejeitado ? Colors.white : AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Rejeitar',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isRejeitado ? Colors.white : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (isRejeitado) ...[
+              const SizedBox(height: AppSpacing.s8),
+              TextFormField(
+                key: Key('inputJustificativaEquipe_${p.equipeId}'),
+                controller: _justificativasEquipes[p.id],
+                maxLines: 1,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'Motivo da não aprovação desta equipe (opcional)',
+                  hintText: 'Ex: Equipe sem vagas no momento...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ],
           if (widget.papel == PapelContextualAnalise.responsavelEquipe && !ehEscopoDoUsuario) ...[
             const SizedBox(height: AppSpacing.s8),
             Container(
@@ -1362,42 +1659,147 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
   }
 
   Widget _buildAcoesPastor() {
-    return Row(
+    final dados = _dados;
+    final totalEquipes = dados?.participacoes.length ?? 0;
+    final aprovadasCount = dados?.participacoes
+            .where((p) => (_decisoesEquipes[p.id] ?? 'APROVADO') == 'APROVADO')
+            .length ??
+        0;
+    final rejeitadasCount = totalEquipes - aprovadasCount;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            key: const Key('btnRecusarPastorDetalhe'),
-            onPressed: _processandoDecisao ? null : _executarRecusaPastor,
-            icon: const Icon(Icons.close, color: Colors.white, size: 18),
-            label: const Text('✕ Rejeitar'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(0, AppGeometry.minTouchTarget),
+        if (totalEquipes > 1) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
+            margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.tune, size: 16, color: AppColors.navy900),
+                      const SizedBox(width: AppSpacing.s8),
+                      Flexible(
+                        child: Text(
+                          'Deliberação: $aprovadasCount aprovada(s), $rejeitadasCount rejeitada(s)',
+                          style: AppTypography.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.navy900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Wrap(
+                  spacing: AppSpacing.s4,
+                  runSpacing: AppSpacing.s4,
+                  children: [
+                    InkWell(
+                      key: const Key('btnAprovarTodasPastor'),
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: _processandoDecisao
+                          ? null
+                          : () {
+                              setState(() {
+                                for (final p in dados!.participacoes) {
+                                  _decisoesEquipes[p.id] = 'APROVADO';
+                                }
+                              });
+                            },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Text(
+                          'Aprovar Todas',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.blue600,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      key: const Key('btnRejeitarTodasPastor'),
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: _processandoDecisao
+                          ? null
+                          : () {
+                              setState(() {
+                                for (final p in dados!.participacoes) {
+                                  _decisoesEquipes[p.id] = 'DESFAVORAVEL';
+                                }
+                              });
+                            },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Text(
+                          'Rejeitar Todas',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.danger,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.s16),
-        Expanded(
-          child: ElevatedButton.icon(
-            key: const Key('btnAprovarPastorDetalhe'),
-            onPressed: _processandoDecisao ? null : _executarAprovacaoPastor,
-            icon: _processandoDecisao
-                ? const SizedBox.shrink()
-                : const Icon(Icons.check, color: Colors.white, size: 18),
-            label: _processandoDecisao
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text('✓ Aprovar'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(0, AppGeometry.minTouchTarget),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                key: const Key('btnRecusarPastorDetalhe'),
+                onPressed: _processandoDecisao ? null : _executarRecusaPastor,
+                icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                label: const Text('✕ Rejeitar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, AppGeometry.minTouchTarget),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: AppSpacing.s16),
+            Expanded(
+              child: ElevatedButton.icon(
+                key: const Key('btnAprovarPastorDetalhe'),
+                onPressed: _processandoDecisao ? null : _executarAprovacaoPastor,
+                icon: _processandoDecisao
+                    ? const SizedBox.shrink()
+                    : const Icon(Icons.check, color: Colors.white, size: 18),
+                label: _processandoDecisao
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('✓ Aprovar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, AppGeometry.minTouchTarget),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -1493,9 +1895,112 @@ class _DetalheSolicitacaoScreenState extends State<DetalheSolicitacaoScreen> {
   }
 
   Widget _buildAcoesCoordenador() {
+    final dados = _dados;
+    final elegiveis = dados?.participacoes
+            .where((p) => p.isPendenteCoordenador || p.estado == 'AGUARDANDO_COORDENADOR')
+            .toList() ??
+        [];
+    final totalElegiveis = elegiveis.length;
+    final aprovadasCount = elegiveis
+        .where((p) => (_decisoesEquipes[p.id] ?? 'APROVADO') == 'APROVADO')
+        .length;
+    final rejeitadasCount = totalElegiveis - aprovadasCount;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (totalElegiveis > 1) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
+            margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.tune, size: 16, color: AppColors.navy900),
+                      const SizedBox(width: AppSpacing.s8),
+                      Flexible(
+                        child: Text(
+                          'Homologação: $aprovadasCount aprovada(s), $rejeitadasCount rejeitada(s)',
+                          style: AppTypography.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.navy900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Wrap(
+                  spacing: AppSpacing.s4,
+                  runSpacing: AppSpacing.s4,
+                  children: [
+                    InkWell(
+                      key: const Key('btnAprovarTodasCoordenador'),
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: _processandoDecisao
+                          ? null
+                          : () {
+                              setState(() {
+                                for (final p in elegiveis) {
+                                  _decisoesEquipes[p.id] = 'APROVADO';
+                                }
+                              });
+                            },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Text(
+                          'Aprovar Todas',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.blue600,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      key: const Key('btnRejeitarTodasCoordenador'),
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: _processandoDecisao
+                          ? null
+                          : () {
+                              setState(() {
+                                for (final p in elegiveis) {
+                                  _decisoesEquipes[p.id] = 'DESFAVORAVEL';
+                                }
+                              });
+                            },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Text(
+                          'Rejeitar Todas',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.danger,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
         Container(
           padding: const EdgeInsets.all(AppSpacing.s12),
           decoration: BoxDecoration(

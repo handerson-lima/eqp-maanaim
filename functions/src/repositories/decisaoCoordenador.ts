@@ -367,42 +367,41 @@ export async function decidirAtivacaoCoordenadorRepo(
     let vigenciaInicioTs: Timestamp | undefined;
     let vigenciaFimTs: Timestamp | undefined;
 
-    const estadosResultantes = participacoesSnap.docs.map((partDoc) => {
-      if (!participacoesElegiveis.some((e) => e.id === partDoc.id)) {
-        return String(partDoc.data()?.estado ?? '');
-      }
-      return entrada.decisao === 'APROVADO' ? 'ATIVA' : 'REJEITADA';
-    });
-
     // Pré-leitura dos ciclos elegíveis (antes de qualquer escrita) para encerrá-los
     // em caso de decisão desfavorável, evitando ciclo não terminal órfão.
     const ciclosElegiveis = new Map<string, DocumentSnapshot>();
-    if (entrada.decisao !== 'APROVADO') {
-      for (const partDoc of participacoesElegiveis) {
-        const cicloId = String(partDoc.data()?.cicloAtualId ?? '');
-        if (cicloId) {
-          ciclosElegiveis.set(
-            partDoc.id,
-            await tx.get(db.collection('ciclos').doc(cicloId)),
-          );
-        }
+    for (const partDoc of participacoesElegiveis) {
+      const cicloId = String(partDoc.data()?.cicloAtualId ?? '');
+      if (cicloId) {
+        ciclosElegiveis.set(
+          partDoc.id,
+          await tx.get(db.collection('ciclos').doc(cicloId)),
+        );
       }
     }
 
-    if (entrada.decisao === 'APROVADO') {
-      // Vigência de exatamente um ano a partir da aprovação final (AD-7/AD-11)
-      const vigencia = calcularVigenciaAnual(agoraDate);
-      const dataFim = vigencia.vigenciaFim;
-      vigenciaInicio = vigencia.vigenciaInicio.toISOString();
-      vigenciaFim = vigencia.vigenciaFim.toISOString();
-      vigenciaInicioTs = Timestamp.fromDate(vigencia.vigenciaInicio);
-      vigenciaFimTs = Timestamp.fromDate(dataFim);
-      const anoVigencia = vigencia.anoVigencia;
+    // Vigência de exatamente um ano a partir da aprovação final (AD-7/AD-11)
+    const vigencia = calcularVigenciaAnual(agoraDate);
+    const dataFim = vigencia.vigenciaFim;
+    vigenciaInicio = vigencia.vigenciaInicio.toISOString();
+    vigenciaFim = vigencia.vigenciaFim.toISOString();
+    vigenciaInicioTs = Timestamp.fromDate(vigencia.vigenciaInicio);
+    vigenciaFimTs = Timestamp.fromDate(dataFim);
+    const anoVigencia = vigencia.anoVigencia;
 
-      for (const partDoc of participacoesElegiveis) {
-        const partData = partDoc.data() ?? {};
-        const partId = partDoc.id;
-        const versaoPart = Number(partData.versao ?? 1);
+    for (const partDoc of participacoesElegiveis) {
+      const partData = partDoc.data() ?? {};
+      const partId = partDoc.id;
+      const versaoPart = Number(partData.versao ?? 1);
+      const equipeId = String(partData.equipeId ?? '');
+
+      const itemDecisao = entrada.decisoesPorEquipe?.find(
+        (d) => d.participacaoId === partId || (d.equipeId && d.equipeId === equipeId),
+      );
+      const decisaoPart = itemDecisao ? itemDecisao.decisao : entrada.decisao;
+      const justifPart = itemDecisao?.justificativa ?? entrada.observacao;
+
+      if (decisaoPart === 'APROVADO') {
         participacoesAtivadas.push(partId);
 
         // Reutiliza a chave determinística persistida na participação para não
@@ -446,46 +445,21 @@ export async function decidirAtivacaoCoordenadorRepo(
           },
           atualizadoEm: agora,
         });
-      }
-
-      // Evidência imutável de homologação e confirmação de reunião
-      tx.set(evidenciaRef, {
-        commandId: contexto.commandId,
-        fichaId: entrada.fichaId,
-        participacoesAtivadas,
-        etapa: 'COORDENADOR_GERAL',
-        decisao: 'APROVADO',
-        atorUid: contexto.coordenadorUid,
-        atorNome: coordenadorNome,
-        papel: autoridade.papel,
-        autoridadeVersao: autoridade.autoridadeVersao,
-        vinculoId: null,
-        confirmouReuniaoPastores: entrada.confirmouReuniaoPastores,
-        observacao: entrada.observacao ?? null,
-        vigenciaInicio,
-        vigenciaFim,
-        timestamp: agora,
-      });
-    } else {
-      // Decisão DESFAVORAVEL
-      for (const partDoc of participacoesElegiveis) {
-        const partData = partDoc.data() ?? {};
-        const partId = partDoc.id;
-        const versaoPart = Number(partData.versao ?? 1);
+      } else {
         participacoesRejeitadas.push(partId);
 
         tx.update(partDoc.ref, {
           estado: 'REJEITADA',
           proximaAcao: MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
           mensagemVoluntario: MENSAGEM_VOLUNTARIO_DECISAO_NEGATIVA,
-          justificativaInterna: entrada.observacao,
+          justificativaInterna: justifPart,
           versao: versaoPart + 1,
           decisaoCoordenador: {
             decisao: 'DESFAVORAVEL',
             coordenadorUid: contexto.coordenadorUid,
             coordenadorNome,
             papel: autoridade.papel,
-            justificativa: entrada.observacao,
+            justificativa: justifPart,
             decididoEm: agora,
           },
           atualizadoEm: agora,
@@ -502,24 +476,38 @@ export async function decidirAtivacaoCoordenadorRepo(
           }
         }
       }
-
-      // Evidência imutável com justificativa interna
-      tx.set(evidenciaRef, {
-        commandId: contexto.commandId,
-        fichaId: entrada.fichaId,
-        participacoesRejeitadas,
-        etapa: 'COORDENADOR_GERAL',
-        decisao: 'DESFAVORAVEL',
-        atorUid: contexto.coordenadorUid,
-        atorNome: coordenadorNome,
-        papel: autoridade.papel,
-        autoridadeVersao: autoridade.autoridadeVersao,
-        vinculoId: null,
-        confirmouReuniaoPastores: entrada.confirmouReuniaoPastores,
-        justificativaInterna: entrada.observacao,
-        timestamp: agora,
-      });
     }
+
+    const estadosResultantes = participacoesSnap.docs.map((partDoc) => {
+      if (participacoesAtivadas.includes(partDoc.id)) {
+        return 'ATIVA';
+      }
+      if (participacoesRejeitadas.includes(partDoc.id)) {
+        return 'REJEITADA';
+      }
+      return String(partDoc.data()?.estado ?? '');
+    });
+
+    // Evidência imutável de homologação
+    tx.set(evidenciaRef, {
+      commandId: contexto.commandId,
+      fichaId: entrada.fichaId,
+      participacoesAtivadas,
+      participacoesRejeitadas,
+      etapa: 'COORDENADOR_GERAL',
+      decisao: participacoesAtivadas.length > 0 ? 'APROVADO' : 'DESFAVORAVEL',
+      atorUid: contexto.coordenadorUid,
+      atorNome: coordenadorNome,
+      papel: autoridade.papel,
+      autoridadeVersao: autoridade.autoridadeVersao,
+      vinculoId: null,
+      confirmouReuniaoPastores: entrada.confirmouReuniaoPastores,
+      observacao: entrada.observacao ?? null,
+      justificativaInterna: entrada.observacao ?? null,
+      vigenciaInicio: participacoesAtivadas.length > 0 ? vigenciaInicio : null,
+      vigenciaFim: participacoesAtivadas.length > 0 ? vigenciaFim : null,
+      timestamp: agora,
+    });
 
     // 5. Redução canônica da Ficha (AD-11) considerando todas as participações
     const reducao = reduzirEstadoFicha(estadosResultantes);
