@@ -696,6 +696,8 @@ class _MinhaFichaScreenState extends State<MinhaFichaScreen> {
               builder: (_) => EditarPerfilScreen(
                 nomeInicial: nomeValidoFicha ?? nomeValidoWidget,
                 telefoneInicial: _ficha?.telefone,
+                papelExibicao: 'Voluntário',
+                statusExibicao: estadoExibicao,
                 onVoltar: () => Navigator.of(context).maybePop(),
               ),
             ),

@@ -568,8 +568,10 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
       }
 
       String? nomeAuth;
+      String? fotoAuth;
       try {
         nomeAuth = FirebaseAuth.instance.currentUser?.displayName?.trim();
+        fotoAuth = FirebaseAuth.instance.currentUser?.photoURL?.trim();
       } catch (_) {}
       final nomeValido = (nomeAuth != null &&
               nomeAuth.isNotEmpty &&
@@ -578,12 +580,27 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
           ? nomeAuth
           : null;
 
+      final papelExibicao = _obterPapelExibicao(contexto);
+      final statusExibicao = papelExibicao == 'Voluntário'
+          ? (contexto.estadoFicha == 'ATIVA'
+              ? 'ATIVA'
+              : (contexto.estadoFicha == 'RASCUNHO'
+                  ? 'RASCUNHO'
+                  : (contexto.estadoFicha?.startsWith('AGUARDANDO') == true
+                      ? 'EM_APROVACAO'
+                      : null)))
+          : 'ATIVA';
+
       // Destino do corpo no shell único
       Widget corpo;
       if (destino == AppRotas.perfil) {
         corpo = EditarPerfilScreen(
           service: widget.perfilService,
           dentroDeShell: true,
+          fotoUrlInicial: fotoAuth,
+          nomeInicial: nomeValido,
+          papelExibicao: papelExibicao,
+          statusExibicao: statusExibicao,
           onVoltar: () => _navegarPara(
             contexto.ehPastorLocal
                 ? AppRotas.pastor
@@ -591,7 +608,9 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
                     ? AppRotas.equipe
                     : (contexto.ehCoordenador
                         ? AppRotas.coordenador
-                        : AppRotas.minhaFicha)),
+                        : (contexto.ehAdministrador
+                            ? AppRotas.admin
+                            : AppRotas.minhaFicha))),
           ),
         );
       } else if ((destino == AppRotas.pastor ||
@@ -716,6 +735,8 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
         }
       }
 
+      final emPerfil = destino == AppRotas.perfil;
+
       return AppShell(
         items: menuItens,
         selectedIndex: indiceSelecionado,
@@ -725,24 +746,50 @@ class _AreaAutenticadaState extends State<AreaAutenticada> {
             _navegarPara(rota);
           }
         },
+        title: emPerfil
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                    tooltip: 'Voltar',
+                    onPressed: () => _navegarPara(
+                      contexto.ehPastorLocal
+                          ? AppRotas.pastor
+                          : (contexto.ehResponsavelEquipe
+                              ? AppRotas.equipe
+                              : (contexto.ehCoordenador
+                                  ? AppRotas.coordenador
+                                  : (contexto.ehAdministrador
+                                      ? AppRotas.admin
+                                      : AppRotas.minhaFicha))),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s4),
+                  const Text(
+                    'Meu Perfil',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              )
+            : null,
         userName: nomeValido ?? 'Voluntário',
-        userRole: _obterPapelExibicao(contexto),
-        userStatus: _obterPapelExibicao(contexto) == 'Voluntário'
-            ? (contexto.estadoFicha == 'ATIVA'
-                ? 'ATIVA'
-                : (contexto.estadoFicha == 'RASCUNHO'
-                    ? 'RASCUNHO'
-                    : (contexto.estadoFicha?.startsWith('AGUARDANDO') == true
-                        ? 'EM_APROVACAO'
-                        : null)))
-            : 'ATIVA',
+        userRole: papelExibicao,
+        userStatus: statusExibicao,
+        userPhotoUrl: fotoAuth,
         onLogout: _sair,
         topBarActions: [
-          IconButton(
-            tooltip: 'Editar Perfil',
-            icon: const Icon(Icons.account_circle_outlined),
-            onPressed: () => _navegarPara(AppRotas.perfil),
-          ),
+          if (!emPerfil)
+            IconButton(
+              tooltip: 'Editar Perfil',
+              icon: const Icon(Icons.account_circle_outlined),
+              onPressed: () => _navegarPara(AppRotas.perfil),
+            ),
         ],
         body: corpo,
       );

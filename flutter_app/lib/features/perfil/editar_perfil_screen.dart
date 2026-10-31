@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../ui/components/buttons.dart';
+import '../../ui/components/status_chips.dart';
 import '../../ui/tokens.dart';
 import 'avatar_picker_widget.dart';
 import 'perfil_service.dart';
@@ -20,6 +21,8 @@ class EditarPerfilScreen extends StatefulWidget {
     this.nomeInicial,
     this.telefoneInicial,
     this.fotoUrlInicial,
+    this.papelExibicao,
+    this.statusExibicao,
     this.onVoltar,
     this.dentroDeShell = false,
   });
@@ -28,6 +31,8 @@ class EditarPerfilScreen extends StatefulWidget {
   final String? nomeInicial;
   final String? telefoneInicial;
   final String? fotoUrlInicial;
+  final String? papelExibicao;
+  final String? statusExibicao;
   final VoidCallback? onVoltar;
   final bool dentroDeShell;
 
@@ -421,12 +426,35 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                 child: Text(
                   perfil.nome,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
                   ),
                 ),
               ),
+              if (widget.statusExibicao != null || widget.papelExibicao != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (widget.statusExibicao != null &&
+                        widget.statusExibicao!.isNotEmpty) ...[
+                      StatusChip(status: widget.statusExibicao!),
+                      const SizedBox(width: AppSpacing.s8),
+                    ],
+                    Text(
+                      widget.papelExibicao ?? 'Voluntário',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 6),
               const Center(
                 child: Text(
                   'Toque na foto ou na câmera para alterar (máx. 2 MB)',

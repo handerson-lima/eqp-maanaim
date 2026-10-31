@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens.dart';
@@ -456,6 +457,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.userChurch,
     this.userStatus,
     this.userAvatar,
+    this.userPhotoUrl,
     this.actions,
     this.leading,
     this.showMenuButton = false,
@@ -468,6 +470,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String? userChurch;
   final String? userStatus;
   final Widget? userAvatar;
+  final String? userPhotoUrl;
   final List<Widget>? actions;
   final Widget? leading;
   final bool showMenuButton;
@@ -485,6 +488,18 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       if (userChurch != null && userChurch!.isNotEmpty) userChurch!,
     ].join(' • ');
 
+    String? photo = (userPhotoUrl != null && userPhotoUrl!.trim().isNotEmpty)
+        ? userPhotoUrl!.trim()
+        : null;
+    if (photo == null || photo.isEmpty) {
+      try {
+        final authPhoto = FirebaseAuth.instance.currentUser?.photoURL?.trim();
+        if (authPhoto != null && authPhoto.isNotEmpty) {
+          photo = authPhoto;
+        }
+      } catch (_) {}
+    }
+
     return Container(
       constraints: const BoxConstraints(minHeight: AppGeometry.topBarHeight),
       decoration: const BoxDecoration(
@@ -501,6 +516,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
         vertical: AppSpacing.s4,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (showMenuButton) ...[
             IconButton(
@@ -529,63 +545,95 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
           // Identidade do usuário
           if (hasUserIdentity) ...[
             Flexible(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  userAvatar ??
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: AppColors.blue50,
-                        child: Text(
-                          userName!.isNotEmpty ? userName![0].toUpperCase() : '?',
-                          style: const TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.blue600,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s8,
+                  vertical: AppSpacing.s4,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    userAvatar ??
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFB9D7FB),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 17,
+                            backgroundColor: AppColors.blue50,
+                            foregroundImage: (photo != null && photo.isNotEmpty)
+                                ? NetworkImage(photo)
+                                : null,
+                            onForegroundImageError: (photo != null && photo.isNotEmpty)
+                                ? (_, __) {}
+                                : null,
+                            child: Text(
+                              userName!.isNotEmpty
+                                  ? userName![0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.blue600,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                  const SizedBox(width: AppSpacing.s8),
-                  Flexible(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          userName!,
-                          style: AppTypography.label.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (userSubtitle.isNotEmpty)
+                    const SizedBox(width: AppSpacing.s12),
+                    Flexible(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           Text(
-                            userSubtitle,
-                            style: AppTypography.caption,
+                            userName!,
+                            style: AppTypography.label.copyWith(
+                              fontWeight: FontWeight.w600,
+                              height: 1.15,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                      ],
+                          if (userSubtitle.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              userSubtitle,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                                height: 1.15,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
-                  if (userStatus != null &&
-                      userStatus!.isNotEmpty &&
-                      MediaQuery.of(context).size.width >= 600) ...[
-                    const SizedBox(width: AppSpacing.s8),
-                    StatusChip(status: userStatus!),
+                    if (userStatus != null &&
+                        userStatus!.isNotEmpty &&
+                        MediaQuery.of(context).size.width >= 600) ...[
+                      const SizedBox(width: AppSpacing.s12),
+                      StatusChip(status: userStatus!),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],
 
           // Ações à direita
           if (actions != null && actions!.isNotEmpty) ...[
-            const SizedBox(width: AppSpacing.s8),
+            const SizedBox(width: AppSpacing.s4),
             ...actions!,
           ],
         ],
@@ -611,6 +659,7 @@ class AppShell extends StatefulWidget {
     this.userChurch,
     this.userStatus,
     this.userAvatar,
+    this.userPhotoUrl,
     this.topBarActions,
     this.topBarLeading,
     this.onLogout,
@@ -628,6 +677,7 @@ class AppShell extends StatefulWidget {
   final String? userChurch;
   final String? userStatus;
   final Widget? userAvatar;
+  final String? userPhotoUrl;
   final List<Widget>? topBarActions;
   final Widget? topBarLeading;
   final VoidCallback? onLogout;
@@ -657,6 +707,7 @@ class _AppShellState extends State<AppShell> {
           userChurch: widget.userChurch,
           userStatus: widget.userStatus,
           userAvatar: widget.userAvatar,
+          userPhotoUrl: widget.userPhotoUrl,
           actions: widget.topBarActions,
           leading: widget.topBarLeading,
           showMenuButton: isMobile,
